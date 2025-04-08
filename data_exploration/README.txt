@@ -1,0 +1,2 @@
+This Repository is used to expore and experiment with the LINCS2020 L1000 Data (https://clue.io/data/CMap2020#LINCS2020) 
+as well as Gene Regulatory Networks provided by the GRAND DB (https://grand.networkmedicine.org/networks/aggregate/ACH_000681/). 
