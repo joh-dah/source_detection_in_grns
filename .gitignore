@@ -1,0 +1,4 @@
+.vscode/
+__pycache__/
+data_exploration/data/
+data_eyploration/.venv
