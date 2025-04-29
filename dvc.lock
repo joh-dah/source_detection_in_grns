@@ -1,0 +1,221 @@
+schema: '2.0'
+stages:
+  generate-training-data:
+    cmd: python -W ignore -m src.data_creation --network trrust
+    deps:
+    - path: src/data_creation.py
+      hash: md5
+      md5: 720490380e71bc6f9ca5c2fd9b32e516
+      size: 7157
+    params:
+      params.yaml:
+        network: trrust
+    outs:
+    - path: data/training/raw
+      hash: md5
+      md5: 3bdcd651d430334fa0f29beb981e03ba.dir
+      size: 3427254
+      nfiles: 20
+  generate-validation-data:
+    cmd: python -W ignore -m src.data_creation --validation --network trrust
+    deps:
+    - path: src/data_creation.py
+      hash: md5
+      md5: 720490380e71bc6f9ca5c2fd9b32e516
+      size: 7157
+    params:
+      params.yaml:
+        data_creation:
+          beta:
+          - 0.005
+          - 0.01
+          n_nodes:
+          - 10
+          - 100
+          propagations_per_real_world_graph: 20
+          relative_infected:
+          - 0.1
+          - 0.5
+          n_sources: 1
+          root_seed_training: 11650217406899810833644412201113384193
+          root_seed_validation: 11650217406899810833644412201113384194
+          small_input: false
+          training_size: 20
+          validation_size: 5
+    outs:
+    - path: data/validation/raw
+      hash: md5
+      md5: ef82851f1ee2eb8c4a267203c4e1b85d.dir
+      size: 856919
+      nfiles: 5
+  process-validation-data:
+    cmd: python -W ignore -m src.data_processing --validation
+    deps:
+    - path: data/validation/raw
+      hash: md5
+      md5: ef82851f1ee2eb8c4a267203c4e1b85d.dir
+      size: 856919
+      nfiles: 5
+    - path: src/data_processing.py
+      hash: md5
+      md5: 021d79946cbf2d86234ea4048cc11358
+      size: 6578
+    params:
+      params.yaml:
+        data_creation:
+          beta:
+          - 0.005
+          - 0.01
+          n_nodes:
+          - 10
+          - 100
+          propagations_per_real_world_graph: 20
+          relative_infected:
+          - 0.1
+          - 0.5
+          n_sources: 1
+          root_seed_training: 11650217406899810833644412201113384193
+          root_seed_validation: 11650217406899810833644412201113384194
+          small_input: false
+          training_size: 20
+          validation_size: 5
+        model: GCNR
+    outs:
+    - path: data/validation/processed
+      hash: md5
+      md5: 72eaab1decdca89249b319d49caa70ed.dir
+      size: 980081
+      nfiles: 7
+  process-training-data:
+    cmd: python -W ignore -m src.data_processing
+    deps:
+    - path: data/training/raw
+      hash: md5
+      md5: 3bdcd651d430334fa0f29beb981e03ba.dir
+      size: 3427254
+      nfiles: 20
+    - path: src/data_processing.py
+      hash: md5
+      md5: 021d79946cbf2d86234ea4048cc11358
+      size: 6578
+    params:
+      params.yaml:
+        data_creation:
+          beta:
+          - 0.005
+          - 0.01
+          n_nodes:
+          - 10
+          - 100
+          propagations_per_real_world_graph: 20
+          relative_infected:
+          - 0.1
+          - 0.5
+          n_sources: 1
+          root_seed_training: 11650217406899810833644412201113384193
+          root_seed_validation: 11650217406899810833644412201113384194
+          small_input: false
+          training_size: 20
+          validation_size: 5
+        model: GCNR
+    outs:
+    - path: data/training/processed
+      hash: md5
+      md5: 341cec3956aa915f67ab7b6ac1a43be0.dir
+      size: 3912336
+      nfiles: 22
+  training:
+    cmd: python -W ignore -m src.training
+    deps:
+    - path: data/training/processed
+      hash: md5
+      md5: 341cec3956aa915f67ab7b6ac1a43be0.dir
+      size: 3912336
+      nfiles: 22
+    - path: src/training.py
+      hash: md5
+      md5: abfb6240fe917e676782bbc35ffffeb7
+      size: 7581
+    params:
+      params.yaml:
+        model: GCNR
+        model_name: GCNR_test_04_21
+        training:
+          alpha: 0.5
+          batch_size: 30
+          class_weighting: false
+          epochs: 5
+          graph_weighting: false
+          hidden_size: 512
+          layers: 5
+          learning_rate: 1e-06
+          subsample: true
+          useLogLoss: false
+          weight_decay: 1e-08
+    outs:
+    - path: models/latest.pth
+      hash: md5
+      md5: 119e20653c77b0919d33110e94697f13
+      size: 1065737
+  validation:
+    cmd: python -W ignore -m src.validation --network A549_landmark_t2
+    deps:
+    - path: data/validation/processed
+      hash: md5
+      md5: 282722095fe6a1c60faa1bd5eef8195d.dir
+      size: 2882382
+      nfiles: 22
+    - path: models/latest.pth
+      hash: md5
+      md5: bd8b17d13c566fc985ec049afe7b7e56
+      size: 1065342
+    - path: src/validation.py
+      hash: md5
+      md5: aec4279f6fbc3b1a3f31e67212c07535
+      size: 19092
+    - path: src/visualization.py
+      hash: md5
+      md5: 1d3772670597f5366195702d860ed410
+      size: 9204
+    params:
+      params.yaml:
+        model: GCNR
+        model_name: GCNR_test_04_21
+  visualization:
+    cmd: python -W ignore -m src.visualization --network A549_landmark_t2
+    deps:
+    - path: data/validation/processed
+      hash: md5
+      md5: 282722095fe6a1c60faa1bd5eef8195d.dir
+      size: 2882382
+      nfiles: 22
+    - path: models/latest.pth
+      hash: md5
+      md5: bd8b17d13c566fc985ec049afe7b7e56
+      size: 1065342
+    - path: src/visualization.py
+      hash: md5
+      md5: 1d3772670597f5366195702d860ed410
+      size: 9204
+    params:
+      params.yaml:
+        model: GCNR
+        model_name: GCNR_test_04_21
+        visualization:
+          seed: 123
+  unsupervised:
+    cmd: python -W ignore -m src.unsupervised --network A549_landmark_t2
+    deps:
+    - path: data/validation/raw
+      hash: md5
+      md5: 9c73588b217670111f534bfc060dd18c.dir
+      size: 2665614
+      nfiles: 20
+    - path: src/unsupervised.py
+      hash: md5
+      md5: 0d59788e2f102b375628b765eee097b2
+      size: 927
+    - path: src/validation.py
+      hash: md5
+      md5: aec4279f6fbc3b1a3f31e67212c07535
+      size: 19092

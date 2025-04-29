@@ -1,0 +1,36 @@
+GCNR_layer_type: GCN
+data_creation:
+    beta:
+    - 0.005
+    - 0.01
+    n_nodes:
+    - 10
+    - 100
+    propagations_per_real_world_graph: 20
+    relative_infected:
+    - 0.1
+    - 0.5
+    n_sources: 1
+    root_seed_training: 11650217406899810833644412201113384193
+    root_seed_validation: 11650217406899810833644412201113384194
+    small_input: false
+    training_size: 20
+    validation_size: 5
+network: trrust
+model: GCNR
+model_name: GCNR_test_04_21
+on_cluster: false
+training:
+    alpha: 0.5
+    batch_size: 30
+    class_weighting: false
+    epochs: 5
+    graph_weighting: false
+    hidden_size: 512
+    layers: 5
+    learning_rate: 1.0e-06
+    subsample: true
+    useLogLoss: false
+    weight_decay: 1.0e-08
+visualization:
+    seed: 123
