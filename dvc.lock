@@ -158,17 +158,17 @@ stages:
       md5: 119e20653c77b0919d33110e94697f13
       size: 1065737
   validation:
-    cmd: python -W ignore -m src.validation --network A549_landmark_t2
+    cmd: python -W ignore -m src.validation --network trrust
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: 282722095fe6a1c60faa1bd5eef8195d.dir
-      size: 2882382
-      nfiles: 22
+      md5: 72eaab1decdca89249b319d49caa70ed.dir
+      size: 980081
+      nfiles: 7
     - path: models/latest.pth
       hash: md5
-      md5: bd8b17d13c566fc985ec049afe7b7e56
-      size: 1065342
+      md5: 119e20653c77b0919d33110e94697f13
+      size: 1065737
     - path: src/validation.py
       hash: md5
       md5: aec4279f6fbc3b1a3f31e67212c07535
@@ -182,17 +182,17 @@ stages:
         model: GCNR
         model_name: GCNR_test_04_21
   visualization:
-    cmd: python -W ignore -m src.visualization --network A549_landmark_t2
+    cmd: python -W ignore -m src.visualization --network trrust
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: 282722095fe6a1c60faa1bd5eef8195d.dir
-      size: 2882382
-      nfiles: 22
+      md5: 72eaab1decdca89249b319d49caa70ed.dir
+      size: 980081
+      nfiles: 7
     - path: models/latest.pth
       hash: md5
-      md5: bd8b17d13c566fc985ec049afe7b7e56
-      size: 1065342
+      md5: 119e20653c77b0919d33110e94697f13
+      size: 1065737
     - path: src/visualization.py
       hash: md5
       md5: 1d3772670597f5366195702d860ed410
@@ -204,13 +204,13 @@ stages:
         visualization:
           seed: 123
   unsupervised:
-    cmd: python -W ignore -m src.unsupervised --network A549_landmark_t2
+    cmd: python -W ignore -m src.unsupervised --network trrust
     deps:
     - path: data/validation/raw
       hash: md5
-      md5: 9c73588b217670111f534bfc060dd18c.dir
-      size: 2665614
-      nfiles: 20
+      md5: ef82851f1ee2eb8c4a267203c4e1b85d.dir
+      size: 856919
+      nfiles: 5
     - path: src/unsupervised.py
       hash: md5
       md5: 0d59788e2f102b375628b765eee097b2

@@ -214,8 +214,8 @@ class SimulationConfig:
     graph_type_properties: Dict[str, Any] = field(default_factory=dict)
 
     source_nodes: Optional[List[int]] = None
-    source_selection_config: NetworkSourceSelectionConfig = (
-        NetworkSourceSelectionConfig()
+    source_selection_config: NetworkSourceSelectionConfig = field(
+        default_factory=NetworkSourceSelectionConfig
     )
 
 
