@@ -1,7 +1,7 @@
 schema: '2.0'
 stages:
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation --network trrust
+    cmd: python -W ignore -m src.data_creation_grins --network trrust_mock
     deps:
     - path: src/data_creation.py
       hash: md5
@@ -9,15 +9,15 @@ stages:
       size: 7157
     params:
       params.yaml:
-        network: trrust
+        network: trrust_mock
     outs:
     - path: data/training/raw
       hash: md5
-      md5: 3bdcd651d430334fa0f29beb981e03ba.dir
-      size: 3427254
-      nfiles: 20
+      md5: a906e129b3b00a1ace38ae5669be6aec.dir
+      size: 144866
+      nfiles: 9
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation --validation --network trrust
+    cmd: python -W ignore -m src.data_creation_grins --validation --network trrust_mock
     deps:
     - path: src/data_creation.py
       hash: md5
@@ -45,17 +45,17 @@ stages:
     outs:
     - path: data/validation/raw
       hash: md5
-      md5: ef82851f1ee2eb8c4a267203c4e1b85d.dir
-      size: 856919
-      nfiles: 5
+      md5: c841beca60852664090be94d2cbb8243.dir
+      size: 145055
+      nfiles: 9
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:
     - path: data/validation/raw
       hash: md5
-      md5: ef82851f1ee2eb8c4a267203c4e1b85d.dir
-      size: 856919
-      nfiles: 5
+      md5: c841beca60852664090be94d2cbb8243.dir
+      size: 145055
+      nfiles: 9
     - path: src/data_processing.py
       hash: md5
       md5: 021d79946cbf2d86234ea4048cc11358
@@ -83,17 +83,17 @@ stages:
     outs:
     - path: data/validation/processed
       hash: md5
-      md5: 72eaab1decdca89249b319d49caa70ed.dir
-      size: 980081
-      nfiles: 7
+      md5: ca8a8b9645337c709a70291d954d6b68.dir
+      size: 2522
+      nfiles: 2
   process-training-data:
     cmd: python -W ignore -m src.data_processing
     deps:
     - path: data/training/raw
       hash: md5
-      md5: 3bdcd651d430334fa0f29beb981e03ba.dir
-      size: 3427254
-      nfiles: 20
+      md5: a906e129b3b00a1ace38ae5669be6aec.dir
+      size: 144866
+      nfiles: 9
     - path: src/data_processing.py
       hash: md5
       md5: 021d79946cbf2d86234ea4048cc11358
@@ -121,9 +121,9 @@ stages:
     outs:
     - path: data/training/processed
       hash: md5
-      md5: 341cec3956aa915f67ab7b6ac1a43be0.dir
-      size: 3912336
-      nfiles: 22
+      md5: ca8a8b9645337c709a70291d954d6b68.dir
+      size: 2522
+      nfiles: 2
   training:
     cmd: python -W ignore -m src.training
     deps:

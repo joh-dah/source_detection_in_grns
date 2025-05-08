@@ -1,2 +1,0 @@
-# Master Thesis
-## Johanna Dahlkemper

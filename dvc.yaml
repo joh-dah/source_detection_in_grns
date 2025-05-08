@@ -1,6 +1,6 @@
 stages:
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation --network ${network}
+    cmd: python -W ignore -m src.data_creation_grins --network ${network}
     deps:
     - src/data_creation.py
     params:
@@ -9,13 +9,30 @@ stages:
     - data/training/raw
   
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation --validation --network ${network}
+    cmd: python -W ignore -m src.data_creation_grins --validation --network ${network}
     deps:
     - src/data_creation.py
     params:
     - data_creation
     outs:
-    - data/validation/raw
+    - data/validation/raw    
+    
+  #   cmd: python -W ignore -m src.data_creation --network ${network}
+  #   deps:
+  #   - src/data_creation.py
+  #   params:
+  #   - network
+  #   outs:
+  #   - data/training/raw
+  
+  # generate-validation-data:
+  #   cmd: python -W ignore -m src.data_creation --validation --network ${network}
+  #   deps:
+  #   - src/data_creation.py
+  #   params:
+  #   - data_creation
+  #   outs:
+  #   - data/validation/raw
 
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
@@ -37,7 +54,7 @@ stages:
       - model
       - data_creation
     outs:
-    - data/training/processed
+    - data/training/processed  
 
   training:
     cmd: python -W ignore -m src.training

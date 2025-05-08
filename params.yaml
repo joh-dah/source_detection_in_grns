@@ -16,7 +16,7 @@ data_creation:
     small_input: false
     training_size: 20
     validation_size: 5
-network: trrust
+network: trrust_mock
 model: GCNR
 model_name: GCNR_test_04_21
 on_cluster: false

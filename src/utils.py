@@ -125,17 +125,3 @@ def load_raw_data(validation: bool = False):
         raise FileNotFoundError(f"Path does not exist: {path}")
 
     return [torch.load(p, weights_only=False) for p in path.glob("*.pt")]
-
-
-def get_cellline_network(name: str):
-    """
-    Get custom dataset by name.
-    :param name: name of the network (e.g., 'A549_landmark_T2')
-    :return: loaded torch_geometric Data object
-    """
-    path = Path(const.DATA_PATH) / "cellline_network" / f"{name}.pt"
-
-    if not path.exists():
-        raise FileNotFoundError(f"Cellline network '{name}' not found at: {path}")
-
-    return torch.load(path, weights_only=False)
