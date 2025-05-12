@@ -219,3 +219,35 @@ stages:
       hash: md5
       md5: aec4279f6fbc3b1a3f31e67212c07535
       size: 19092
+  generate-training-steady-states:
+    cmd: python -W ignore -m src.steady_state_generation --network trrust_mock
+    deps:
+    - path: src/steady_state_generation.py
+      hash: md5
+      md5: 497ee2e509687c0ea7243c346440f596
+      size: 2491
+    params:
+      params.yaml:
+        network: trrust_mock
+    outs:
+    - path: data/training/raw/steady_states
+      hash: md5
+      md5: b8afe267c90ff0b3f5c274c0af7b9e15.dir
+      size: 9072
+      nfiles: 1
+  generate-validation-steady-states:
+    cmd: python -W ignore -m src.steady_state_generation --network trrust_mock --validation
+    deps:
+    - path: src/steady_state_generation.py
+      hash: md5
+      md5: 497ee2e509687c0ea7243c346440f596
+      size: 2491
+    params:
+      params.yaml:
+        network: trrust_mock
+    outs:
+    - path: data/validation/raw/steady_states
+      hash: md5
+      md5: 622ff15f29ea1f85dca3fa6cf574bb0e.dir
+      size: 8679
+      nfiles: 1
