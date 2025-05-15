@@ -5,24 +5,24 @@ stages:
     deps:
     - path: src/data_creation_racipe.py
       hash: md5
-      md5: b6004ef542616c1fe18b46734215bc28
-      size: 12546
+      md5: 548fb6df3991be4ac59f8d990f608320
+      size: 12579
     params:
       params.yaml:
         network: trrust_mock
     outs:
     - path: data/training/raw
       hash: md5
-      md5: 04339bd833777c0622b237c6cc255a64.dir
-      size: 141426
+      md5: 556a3a707c8be7c6974395f66efea664.dir
+      size: 145241
       nfiles: 29
   generate-validation-data:
     cmd: python -W ignore -m src.data_creation_racipe --validation --network trrust_mock
     deps:
     - path: src/data_creation_racipe.py
       hash: md5
-      md5: b6004ef542616c1fe18b46734215bc28
-      size: 12546
+      md5: 548fb6df3991be4ac59f8d990f608320
+      size: 12579
     params:
       params.yaml:
         data_creation:
@@ -45,16 +45,16 @@ stages:
     outs:
     - path: data/validation/raw
       hash: md5
-      md5: c3b3374435ccf754c1e91cab8d444e11.dir
-      size: 92938
+      md5: e69cc969b5e1eafa8c3b99f3fa6e21ca.dir
+      size: 93890
       nfiles: 14
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:
     - path: data/validation/raw
       hash: md5
-      md5: c3b3374435ccf754c1e91cab8d444e11.dir
-      size: 92938
+      md5: e69cc969b5e1eafa8c3b99f3fa6e21ca.dir
+      size: 93890
       nfiles: 14
     - path: src/data_processing.py
       hash: md5
@@ -83,16 +83,16 @@ stages:
     outs:
     - path: data/validation/processed
       hash: md5
-      md5: 5e69ceb4f30b0ca4a2df9da9bb91f964.dir
-      size: 17727
+      md5: a12ac593df79e99d3c0cf197c129c0d2.dir
+      size: 18367
       nfiles: 7
   process-training-data:
     cmd: python -W ignore -m src.data_processing
     deps:
     - path: data/training/raw
       hash: md5
-      md5: 04339bd833777c0622b237c6cc255a64.dir
-      size: 141426
+      md5: 556a3a707c8be7c6974395f66efea664.dir
+      size: 145241
       nfiles: 29
     - path: src/data_processing.py
       hash: md5
@@ -121,16 +121,16 @@ stages:
     outs:
     - path: data/training/processed
       hash: md5
-      md5: d2344478c2172828dd6314e5f7509270.dir
-      size: 64082
+      md5: 5c5d075ba30c3acd6f9f3a39793c4b1a.dir
+      size: 66642
       nfiles: 22
   training:
     cmd: python -W ignore -m src.training
     deps:
     - path: data/training/processed
       hash: md5
-      md5: d2344478c2172828dd6314e5f7509270.dir
-      size: 64082
+      md5: 5c5d075ba30c3acd6f9f3a39793c4b1a.dir
+      size: 66642
       nfiles: 22
     - path: src/training.py
       hash: md5
@@ -155,19 +155,19 @@ stages:
     outs:
     - path: models/latest.pth
       hash: md5
-      md5: 694a7e65ed09df0bd978b2be5e64e46f
+      md5: 5b1afa85b4a2f3eafa0b2d1b74e5f36d
       size: 1065737
   validation:
     cmd: python -W ignore -m src.validation --network trrust_mock
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: 5e69ceb4f30b0ca4a2df9da9bb91f964.dir
-      size: 17727
+      md5: a12ac593df79e99d3c0cf197c129c0d2.dir
+      size: 18367
       nfiles: 7
     - path: models/latest.pth
       hash: md5
-      md5: 694a7e65ed09df0bd978b2be5e64e46f
+      md5: 5b1afa85b4a2f3eafa0b2d1b74e5f36d
       size: 1065737
     - path: src/validation.py
       hash: md5
@@ -175,8 +175,8 @@ stages:
       size: 19092
     - path: src/visualization.py
       hash: md5
-      md5: 4429ede24f65dcacafae6c1d08184ae6
-      size: 9542
+      md5: 7f22fb6d56201fb07ea98c4c1ed24f02
+      size: 10414
     params:
       params.yaml:
         model: GCNR
@@ -186,17 +186,17 @@ stages:
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: 5e69ceb4f30b0ca4a2df9da9bb91f964.dir
-      size: 17727
+      md5: a12ac593df79e99d3c0cf197c129c0d2.dir
+      size: 18367
       nfiles: 7
     - path: models/latest.pth
       hash: md5
-      md5: 694a7e65ed09df0bd978b2be5e64e46f
+      md5: 5b1afa85b4a2f3eafa0b2d1b74e5f36d
       size: 1065737
     - path: src/visualization.py
       hash: md5
-      md5: 4429ede24f65dcacafae6c1d08184ae6
-      size: 9542
+      md5: 7f22fb6d56201fb07ea98c4c1ed24f02
+      size: 10414
     params:
       params.yaml:
         model: GCNR

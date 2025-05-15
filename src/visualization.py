@@ -23,40 +23,46 @@ def plot_graph_with_colors(
     node_values: np.ndarray,
     title: str,
     cmap: Union[Colormap, str] = "viridis",
-    layout: any = nx.kamada_kawai_layout,
+    layout: callable = nx.kamada_kawai_layout,
 ):
     """
-    Plots graph and colors nodes according to node_values.
-    :param g: graph
-    :param node_values: values for nodes
-    :param max_colored_value: highest node value that should be mapped to a unique color
-    :param title: title of plot
-    :param cmap: colormap to use
-    :param layout: graph plotting layout to use
+    Plots a graph with nodes colored according to node_values and labeled using node names.
+    
+    :param g: NetworkX graph
+    :param node_values: 1D array of node values to map to colors
+    :param title: plot title and filename
+    :param cmap: colormap (default 'viridis')
+    :param layout: layout function for node positioning
     """
     pos = layout(g)
 
-    min_colored_value = node_values.min()
-    max_colored_value = node_values.max()
- 
+    min_val = node_values.min()
+    max_val = node_values.max()
+
     plt.figure(figsize=(8, 8))
+
+    # Draw nodes with thickness depending on 'source' attribute
+    node_border_widths = [
+        5 if g.nodes[n].get("source") == 1 else 1 for n in g.nodes
+    ]
 
     nodes = nx.draw_networkx_nodes(
         g,
         pos=pos,
         node_color=node_values,
-        node_size=200,
+        node_size=300,
         cmap=cmap,
-        vmin=0,
-        vmax=node_values.max(),
-        linewidths=[5 if node["source"] == 1 else 1 for node in g.nodes.values()],
+        vmin=min_val,
+        vmax=max_val,
+        linewidths=node_border_widths,
+        edgecolors="black",
     )
-    # set edge color according to edge attribute
-    # set green for activating edges (1) and red for inhibiting edges (2)
+
+    # Set edge colors: green = activating (1), red = inhibiting (2)
     edge_colors = [
-        "green" if g[u][v]["weight"] == 1 else "red" for u, v in g.edges
+        "green" if g[u][v].get("weight") == 1 else "red"
+        for u, v in g.edges
     ]
-    nx.set_edge_attributes(g, edge_colors, "color")
     nx.draw_networkx_edges(
         g,
         pos=pos,
@@ -64,18 +70,23 @@ def plot_graph_with_colors(
         width=2,
     )
 
-
-    # Get the current axes
-    ax = plt.gca()
-
-    # Add colorbar with custom int ticks
-    sm = plt.cm.ScalarMappable(
-        cmap=cmap, norm=plt.Normalize(vmin=0, vmax=max_colored_value)
+    # Draw node labels (use actual node names from graph)
+    nx.draw_networkx_labels(
+        g, 
+        pos={node: (x, y - 0.05) for node, (x, y) in pos.items()}, 
+        font_size=10, 
+        font_color="black"
     )
-    colorbar = plt.colorbar(sm, ax=ax, shrink=0.9)
-    colorbar.set_ticks(np.arange(min_colored_value, max_colored_value + 1, 1))
-    colorbar.set_ticklabels(np.arange(min_colored_value, max_colored_value + 1, 1))
 
+    # Add colorbar
+    ax = plt.gca()
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min_val, vmax=max_val))
+    cbar = plt.colorbar(sm, ax=ax, shrink=0.9)
+    cbar.set_ticks(np.arange(min_val, max_val + 1, 1))
+    cbar.set_ticklabels(np.arange(min_val, max_val + 1, 1))
+
+    plt.axis("off")
+    plt.tight_layout()
     plt.savefig(f"{const.FIGURES_PATH}/{title}.png")
     plt.close()
 
@@ -165,73 +176,105 @@ def load_model_by_type(model_name: str):
 
 def visualize_graph_predictions(data, model, processed_data, network, index):
     """
-    Visualize the predictions for a single graph.
+    Visualizes initial, current, and predicted node statuses of a (sub)graph.
+    """
+    g = build_graph(data)
+    predictions, predictions_cmap = get_model_predictions(model, processed_data)
+
+    real_node_names = {v: k for k, v in data.node_mapping.items()}
+
+    subgraph, node_order, _ = extract_relevant_subgraph(g, data.y.numpy(), real_node_names)
+    relabeled_data = reorder_node_data(data, node_order, predictions)
+
+    plot_graph_states(
+        subgraph,
+        relabeled_data["initial_status"],
+        relabeled_data["current_status"],
+        relabeled_data["predictions"],
+        predictions_cmap,
+        network,
+        index
+    )
+
+
+
+def build_graph(data):
+    """
+    Builds a NetworkX directed graph with node and edge attributes.
     """
     initial_status = data.y.numpy()
-    status = data.x
     edge_index = data.edge_index
     edge_attr = data.edge_attr
-
-    print(f"initial status: {initial_status}")
-    print(f"status: {status}")
 
     g = nx.DiGraph()
     g.add_nodes_from(range(len(initial_status)))
     nx.set_node_attributes(g, dict(enumerate(initial_status)), "source")
     g.add_edges_from(edge_index.t().tolist())
 
-    # Ensure edge_attr is a list or numpy array
-    edge_attr = edge_attr.tolist() if isinstance(edge_attr, torch.Tensor) else edge_attr
+    if isinstance(edge_attr, torch.Tensor):
+        edge_attr = edge_attr.tolist()
 
-    # Create a dictionary mapping edges to their attributes
-    edge_attr_dict = {
-        (u, v): attr for (u, v), attr in zip(g.edges, edge_attr)
-    }
-
-    # Set edge attributes
+    edge_attr_dict = {(u, v): attr for (u, v), attr in zip(g.edges, edge_attr)}
     nx.set_edge_attributes(g, edge_attr_dict, "weight")
 
+    return g
 
+
+def get_model_predictions(model, processed_data):
+    """
+    Gets and processes model predictions.
+    """
     pred = model(processed_data)
-    pred, predictions_cmap, n_colors = process_predictions(pred)
+    pred, predictions_cmap, _ = process_predictions(pred)
+    return pred, predictions_cmap
 
-    # the graph is to big to plot all nodes. therefore, we only plot a subsection
-    
-    min_subset_size = 30
 
-    # If the graph has fewer nodes than min_subset_size, plot the entire graph
+def extract_relevant_subgraph(g, initial_status, real_node_names, min_subset_size=30):
+    """
+    Returns a relabeled subgraph with real node names and the node order.
+    """
     if len(g.nodes()) <= min_subset_size:
         subset_indices = list(g.nodes())
     else:
-        # Select the first node that is one in the initial status
         source_node = np.where(initial_status == 1)[0][0]
-        # Do a depth-first search to find min_subset_size nodes connected to the source node
-        subset_indices = list(nx.dfs_preorder_nodes(g, source_node))
-        # If the subset is larger than min_subset_size, truncate the subset
-        if len(subset_indices) > min_subset_size:
-            subset_indices = subset_indices[:min_subset_size]
+        subset_indices = list(nx.dfs_preorder_nodes(g, source_node))[:min_subset_size]
 
-    # Create a new graph with only the nodes and corresponding edges in the subset
-    g = g.subgraph(subset_indices).copy()
+    subgraph = g.subgraph(subset_indices).copy()
+    subgraph = nx.convert_node_labels_to_integers(subgraph, first_label=0, label_attribute="old_index")
 
-    # Relabel nodes to ensure indices are consecutive and get the mapping
-    g = nx.convert_node_labels_to_integers(g, first_label=0, label_attribute="old_label")
+    # Relabel nodes using real node names
+    label_mapping = {
+        i: real_node_names.get(data["old_index"], data["old_index"])
+        for i, data in subgraph.nodes(data=True)
+    }
+    subgraph = nx.relabel_nodes(subgraph, label_mapping)
 
-    # Extract the mapping from the node attributes
-    mapping = {new_label: data["old_label"] for new_label, data in g.nodes(data=True)}
+    # new_order = list of original indices in the order used in subgraph
+    new_order = [data["old_index"] for _, data in subgraph.nodes(data=True)]
 
-    # Extract the new order of nodes based on the mapping
-    new_order = [node_data["old_label"] for _, node_data in g.nodes(data=True)]
-
-    # Update status, initial_status, and pred to match the new node indices
-    status = status[new_order]
-    initial_status = initial_status[new_order]
-    pred = pred[new_order]
-
-    sir_cmap = ListedColormap(["blue", "red", "gray"])
+    return subgraph, new_order, label_mapping
 
 
-    # initial infection graph
+def reorder_node_data(data, new_order, predictions):
+    """
+    Reorders node status and prediction arrays according to new graph node order.
+    """
+    initial_status = data.y.numpy()[new_order]
+    current_status = data.x[new_order]
+    predictions = predictions[new_order]
+
+    return {
+        "initial_status": initial_status,
+        "current_status": current_status,
+        "predictions": predictions
+    }
+
+
+def plot_graph_states(g, initial_status, current_status, predictions, pred_cmap, network, index):
+    """
+    Plots the initial, current, and predicted states of a graph.
+    """
+    # Plot initial infection graph
     plot_graph_with_colors(
         g,
         np.fromiter(initial_status, dtype=int),
@@ -239,20 +282,20 @@ def visualize_graph_predictions(data, model, processed_data, network, index):
         cmap=None,
     )
 
-    # current infection graph
+    # Plot current infection graph
     plot_graph_with_colors(
         g,
-        np.fromiter(status, dtype=int),
+        np.fromiter(current_status, dtype=int),
         f"{network}_current_{index}",
         cmap=None,
     )
 
-    # predicted graph
+    # Plot predicted infection graph
     plot_graph_with_colors(
         g,
-        np.fromiter(pred, dtype=float),
+        np.fromiter(predictions, dtype=float),
         f"{network}_prediction_{index}",
-        cmap=predictions_cmap,
+        cmap=pred_cmap,
     )
 
 
