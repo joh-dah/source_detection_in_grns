@@ -21,7 +21,6 @@ from src.data_processing import SDDataset, process_gcnr_data, process_gcnsi_data
 def plot_graph_with_colors(
     g: nx.Graph,
     node_values: np.ndarray,
-    max_colored_value: int,
     title: str,
     cmap: Union[Colormap, str] = "viridis",
     layout: any = nx.kamada_kawai_layout,
@@ -35,13 +34,13 @@ def plot_graph_with_colors(
     :param cmap: colormap to use
     :param layout: graph plotting layout to use
     """
-    Path(const.FIGURES_PATH).mkdir(parents=True, exist_ok=True)
-    
     pos = layout(g)
+
+    min_colored_value = node_values.min()
+    max_colored_value = node_values.max()
  
     plt.figure(figsize=(8, 8))
 
-    node_values = np.clip(node_values, 0, max_colored_value)
     nodes = nx.draw_networkx_nodes(
         g,
         pos=pos,
@@ -49,11 +48,22 @@ def plot_graph_with_colors(
         node_size=200,
         cmap=cmap,
         vmin=0,
-        vmax=max_colored_value,
+        vmax=node_values.max(),
         linewidths=[5 if node["source"] == 1 else 1 for node in g.nodes.values()],
     )
-    nodes.set_edgecolor("black")
-    nx.draw_networkx_edges(g, pos)
+    # set edge color according to edge attribute
+    # set green for activating edges (1) and red for inhibiting edges (2)
+    edge_colors = [
+        "green" if g[u][v]["weight"] == 1 else "red" for u, v in g.edges
+    ]
+    nx.set_edge_attributes(g, edge_colors, "color")
+    nx.draw_networkx_edges(
+        g,
+        pos=pos,
+        edge_color=edge_colors,
+        width=2,
+    )
+
 
     # Get the current axes
     ax = plt.gca()
@@ -63,8 +73,8 @@ def plot_graph_with_colors(
         cmap=cmap, norm=plt.Normalize(vmin=0, vmax=max_colored_value)
     )
     colorbar = plt.colorbar(sm, ax=ax, shrink=0.9)
-    colorbar.set_ticks(np.arange(0, max_colored_value + 1, 1))
-    colorbar.set_ticklabels(np.arange(0, max_colored_value + 1, 1))
+    colorbar.set_ticks(np.arange(min_colored_value, max_colored_value + 1, 1))
+    colorbar.set_ticklabels(np.arange(min_colored_value, max_colored_value + 1, 1))
 
     plt.savefig(f"{const.FIGURES_PATH}/{title}.png")
     plt.close()
@@ -141,31 +151,6 @@ def plot_roc_curve(
     plt.close()
 
 
-def main():
-    """
-    Visualize graphs with the associated predictions.
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--network", 
-        type=str, 
-        help="name of the network that should be used"
-    )
-    args = parser.parse_args()
-    n_graphs = 2
-    model_name = (
-        utils.latest_model_name() if const.MODEL_NAME is None else const.MODEL_NAME
-    )
-    network = args.network
-
-    model = load_model_by_type(model_name)
-    processed_val_data = utils.load_processed_data(validation=True)[:n_graphs]
-    raw_val_data = utils.load_raw_data(validation=True)[:n_graphs]
-
-    print("Visualize example predictions:")
-    for i, data in tqdm(enumerate(raw_val_data)):
-        visualize_graph_predictions(data, model, processed_val_data[i], network, i)
-
 
 def load_model_by_type(model_name: str):
     """
@@ -185,11 +170,27 @@ def visualize_graph_predictions(data, model, processed_data, network, index):
     initial_status = data.y.numpy()
     status = data.x
     edge_index = data.edge_index
+    edge_attr = data.edge_attr
 
-    g = nx.Graph()
+    print(f"initial status: {initial_status}")
+    print(f"status: {status}")
+
+    g = nx.DiGraph()
     g.add_nodes_from(range(len(initial_status)))
     nx.set_node_attributes(g, dict(enumerate(initial_status)), "source")
     g.add_edges_from(edge_index.t().tolist())
+
+    # Ensure edge_attr is a list or numpy array
+    edge_attr = edge_attr.tolist() if isinstance(edge_attr, torch.Tensor) else edge_attr
+
+    # Create a dictionary mapping edges to their attributes
+    edge_attr_dict = {
+        (u, v): attr for (u, v), attr in zip(g.edges, edge_attr)
+    }
+
+    # Set edge attributes
+    nx.set_edge_attributes(g, edge_attr_dict, "weight")
+
 
     pred = model(processed_data)
     pred, predictions_cmap, n_colors = process_predictions(pred)
@@ -197,22 +198,18 @@ def visualize_graph_predictions(data, model, processed_data, network, index):
     # the graph is to big to plot all nodes. therefore, we only plot a subsection
     
     min_subset_size = 30
-    # select the first node that is one in the initial status
-    source_node = np.where(initial_status == 1)[0][0]
-    # do a depth first search to find min_subset_size nodes that are connected to the source node
-    subset_indices = list(nx.dfs_preorder_nodes(g, source_node))
-    # if the subset is smaller than min_subset_size, add random nodes to the subset
-    if len(subset_indices) < min_subset_size:
-        # add random nodes to the subset
-        subset_indices = np.concatenate(
-            [subset_indices, np.random.choice(g.nodes(), min_subset_size, replace=False)]
-        )
-        subset_indices = np.unique(subset_indices)
-    # else, if the subset is larger than min_subset_size, truncate the subset
-    elif len(subset_indices) > min_subset_size:
-        subset_indices = subset_indices[:min_subset_size]
 
-    # create a new graph with only the nodes and corresponding edges in the subset
+    # If the graph has fewer nodes than min_subset_size, plot the entire graph
+    if len(g.nodes()) <= min_subset_size:
+        subset_indices = list(g.nodes())
+    else:
+        # Select the first node that is one in the initial status
+        source_node = np.where(initial_status == 1)[0][0]
+        # Do a depth-first search to find min_subset_size nodes connected to the source node
+        subset_indices = list(nx.dfs_preorder_nodes(g, source_node))
+        # If the subset is larger than min_subset_size, truncate the subset
+        if len(subset_indices) > min_subset_size:
+            subset_indices = subset_indices[:min_subset_size]
 
     # Create a new graph with only the nodes and corresponding edges in the subset
     g = g.subgraph(subset_indices).copy()
@@ -231,39 +228,29 @@ def visualize_graph_predictions(data, model, processed_data, network, index):
     initial_status = initial_status[new_order]
     pred = pred[new_order]
 
-    # Debug: Verify consistency
-    print(f"Subset indices (original): {subset_indices}")
-    print(f"Nodes in subgraph (new): {list(g.nodes)}")
-    print(f"Mapping (old to new): {mapping}")
-    print(f"Initial status (reordered): {initial_status}")
-    print(f"Status (reordered): {status}")
-
-
     sir_cmap = ListedColormap(["blue", "red", "gray"])
+
 
     # initial infection graph
     plot_graph_with_colors(
         g,
         np.fromiter(initial_status, dtype=int),
-        2,
         f"{network}_initial_{index}",
-        cmap=sir_cmap,
+        cmap=None,
     )
 
     # current infection graph
     plot_graph_with_colors(
         g,
         np.fromiter(status, dtype=int),
-        2,
         f"{network}_current_{index}",
-        cmap=sir_cmap,
+        cmap=None,
     )
 
     # predicted graph
     plot_graph_with_colors(
         g,
         np.fromiter(pred, dtype=float),
-        n_colors,
         f"{network}_prediction_{index}",
         cmap=predictions_cmap,
     )
@@ -287,6 +274,41 @@ def process_predictions(pred):
             "predictions", ["red", "blue"]
         )
     return pred, predictions_cmap, n_colors
+
+
+
+
+def main():
+    """
+    Visualize graphs with the associated predictions.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--network", 
+        type=str, 
+        help="name of the network that should be used"
+    )
+    args = parser.parse_args()
+    n_graphs = 5
+    model_name = (
+        utils.latest_model_name() if const.MODEL_NAME is None else const.MODEL_NAME
+    )
+    network = args.network
+
+
+    # remove old figures
+    for file in glob.glob(f"{const.FIGURES_PATH}/*"):
+        os.remove(file)
+    Path(const.FIGURES_PATH).mkdir(parents=True, exist_ok=True)
+    
+
+    model = load_model_by_type(model_name)
+    processed_val_data = utils.load_processed_data(validation=True)[:n_graphs]
+    raw_val_data = utils.load_raw_data(validation=True)[:n_graphs]
+
+    print("Visualize example predictions:")
+    for i, data in tqdm(enumerate(raw_val_data)):
+        visualize_graph_predictions(data, model, processed_val_data[i], network, i)
 
 
 if __name__ == "__main__":

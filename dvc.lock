@@ -1,28 +1,28 @@
 schema: '2.0'
 stages:
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation_grins --network trrust_mock
+    cmd: python -W ignore -m src.data_creation_racipe --network trrust_mock
     deps:
-    - path: src/data_creation.py
+    - path: src/data_creation_racipe.py
       hash: md5
-      md5: 720490380e71bc6f9ca5c2fd9b32e516
-      size: 7157
+      md5: b6004ef542616c1fe18b46734215bc28
+      size: 12546
     params:
       params.yaml:
         network: trrust_mock
     outs:
     - path: data/training/raw
       hash: md5
-      md5: a906e129b3b00a1ace38ae5669be6aec.dir
-      size: 144866
-      nfiles: 9
+      md5: 04339bd833777c0622b237c6cc255a64.dir
+      size: 141426
+      nfiles: 29
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation_grins --validation --network trrust_mock
+    cmd: python -W ignore -m src.data_creation_racipe --validation --network trrust_mock
     deps:
-    - path: src/data_creation.py
+    - path: src/data_creation_racipe.py
       hash: md5
-      md5: 720490380e71bc6f9ca5c2fd9b32e516
-      size: 7157
+      md5: b6004ef542616c1fe18b46734215bc28
+      size: 12546
     params:
       params.yaml:
         data_creation:
@@ -45,17 +45,17 @@ stages:
     outs:
     - path: data/validation/raw
       hash: md5
-      md5: c841beca60852664090be94d2cbb8243.dir
-      size: 145055
-      nfiles: 9
+      md5: c3b3374435ccf754c1e91cab8d444e11.dir
+      size: 92938
+      nfiles: 14
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:
     - path: data/validation/raw
       hash: md5
-      md5: c841beca60852664090be94d2cbb8243.dir
-      size: 145055
-      nfiles: 9
+      md5: c3b3374435ccf754c1e91cab8d444e11.dir
+      size: 92938
+      nfiles: 14
     - path: src/data_processing.py
       hash: md5
       md5: 021d79946cbf2d86234ea4048cc11358
@@ -83,17 +83,17 @@ stages:
     outs:
     - path: data/validation/processed
       hash: md5
-      md5: ca8a8b9645337c709a70291d954d6b68.dir
-      size: 2522
-      nfiles: 2
+      md5: 5e69ceb4f30b0ca4a2df9da9bb91f964.dir
+      size: 17727
+      nfiles: 7
   process-training-data:
     cmd: python -W ignore -m src.data_processing
     deps:
     - path: data/training/raw
       hash: md5
-      md5: a906e129b3b00a1ace38ae5669be6aec.dir
-      size: 144866
-      nfiles: 9
+      md5: 04339bd833777c0622b237c6cc255a64.dir
+      size: 141426
+      nfiles: 29
     - path: src/data_processing.py
       hash: md5
       md5: 021d79946cbf2d86234ea4048cc11358
@@ -121,16 +121,16 @@ stages:
     outs:
     - path: data/training/processed
       hash: md5
-      md5: ca8a8b9645337c709a70291d954d6b68.dir
-      size: 2522
-      nfiles: 2
+      md5: d2344478c2172828dd6314e5f7509270.dir
+      size: 64082
+      nfiles: 22
   training:
     cmd: python -W ignore -m src.training
     deps:
     - path: data/training/processed
       hash: md5
-      md5: 341cec3956aa915f67ab7b6ac1a43be0.dir
-      size: 3912336
+      md5: d2344478c2172828dd6314e5f7509270.dir
+      size: 64082
       nfiles: 22
     - path: src/training.py
       hash: md5
@@ -155,19 +155,19 @@ stages:
     outs:
     - path: models/latest.pth
       hash: md5
-      md5: 119e20653c77b0919d33110e94697f13
+      md5: 694a7e65ed09df0bd978b2be5e64e46f
       size: 1065737
   validation:
-    cmd: python -W ignore -m src.validation --network trrust
+    cmd: python -W ignore -m src.validation --network trrust_mock
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: 72eaab1decdca89249b319d49caa70ed.dir
-      size: 980081
+      md5: 5e69ceb4f30b0ca4a2df9da9bb91f964.dir
+      size: 17727
       nfiles: 7
     - path: models/latest.pth
       hash: md5
-      md5: 119e20653c77b0919d33110e94697f13
+      md5: 694a7e65ed09df0bd978b2be5e64e46f
       size: 1065737
     - path: src/validation.py
       hash: md5
@@ -175,79 +175,31 @@ stages:
       size: 19092
     - path: src/visualization.py
       hash: md5
-      md5: 1d3772670597f5366195702d860ed410
-      size: 9204
+      md5: 4429ede24f65dcacafae6c1d08184ae6
+      size: 9542
     params:
       params.yaml:
         model: GCNR
         model_name: GCNR_test_04_21
   visualization:
-    cmd: python -W ignore -m src.visualization --network trrust
+    cmd: python -W ignore -m src.visualization --network trrust_mock
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: 72eaab1decdca89249b319d49caa70ed.dir
-      size: 980081
+      md5: 5e69ceb4f30b0ca4a2df9da9bb91f964.dir
+      size: 17727
       nfiles: 7
     - path: models/latest.pth
       hash: md5
-      md5: 119e20653c77b0919d33110e94697f13
+      md5: 694a7e65ed09df0bd978b2be5e64e46f
       size: 1065737
     - path: src/visualization.py
       hash: md5
-      md5: 1d3772670597f5366195702d860ed410
-      size: 9204
+      md5: 4429ede24f65dcacafae6c1d08184ae6
+      size: 9542
     params:
       params.yaml:
         model: GCNR
         model_name: GCNR_test_04_21
         visualization:
           seed: 123
-  unsupervised:
-    cmd: python -W ignore -m src.unsupervised --network trrust
-    deps:
-    - path: data/validation/raw
-      hash: md5
-      md5: ef82851f1ee2eb8c4a267203c4e1b85d.dir
-      size: 856919
-      nfiles: 5
-    - path: src/unsupervised.py
-      hash: md5
-      md5: 0d59788e2f102b375628b765eee097b2
-      size: 927
-    - path: src/validation.py
-      hash: md5
-      md5: aec4279f6fbc3b1a3f31e67212c07535
-      size: 19092
-  generate-training-steady-states:
-    cmd: python -W ignore -m src.steady_state_generation --network trrust_mock
-    deps:
-    - path: src/steady_state_generation.py
-      hash: md5
-      md5: 497ee2e509687c0ea7243c346440f596
-      size: 2491
-    params:
-      params.yaml:
-        network: trrust_mock
-    outs:
-    - path: data/training/raw/steady_states
-      hash: md5
-      md5: b8afe267c90ff0b3f5c274c0af7b9e15.dir
-      size: 9072
-      nfiles: 1
-  generate-validation-steady-states:
-    cmd: python -W ignore -m src.steady_state_generation --network trrust_mock --validation
-    deps:
-    - path: src/steady_state_generation.py
-      hash: md5
-      md5: 497ee2e509687c0ea7243c346440f596
-      size: 2491
-    params:
-      params.yaml:
-        network: trrust_mock
-    outs:
-    - path: data/validation/raw/steady_states
-      hash: md5
-      md5: 622ff15f29ea1f85dca3fa6cf574bb0e.dir
-      size: 8679
-      nfiles: 1

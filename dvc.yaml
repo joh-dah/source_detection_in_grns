@@ -1,64 +1,27 @@
 stages:
-  generate-training-steady-states:
-    cmd: python -W ignore -m src.steady_state_generation --network ${network}
-    deps:
-    - src/steady_state_generation.py
-    params:
-    - network
-    outs:
-    - data/training/raw/steady_states
-
-  generate-validation-steady-states:
-    cmd: python -W ignore -m src.steady_state_generation --network ${network} --validation
-    deps:
-    - src/steady_state_generation.py
-    params:
-    - network
-    outs:
-    - data/validation/raw/steady_states
-
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation_grins --network ${network}
+    cmd: python -W ignore -m src.data_creation_racipe --network ${network}
     deps:
-    - src/data_creation.py
-    - data/training/raw/steady_states
+    - src/data_creation_racipe.py
     params:
     - network
     outs:
-    - data/training/raw/perturbations
+    - data/training/raw
   
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation_grins --validation --network ${network}
+    cmd: python -W ignore -m src.data_creation_racipe --validation --network ${network}
     deps:
-    - src/data_creation.py
-    - data/validation/raw/steady_states
+    - src/data_creation_racipe.py
     params:
     - data_creation
     outs:
-    - data/validation/raw/perturbations    
-    
-  #   cmd: python -W ignore -m src.data_creation --network ${network}
-  #   deps:
-  #   - src/data_creation.py
-  #   params:
-  #   - network
-  #   outs:
-  #   - data/training/raw
-  
-  # generate-validation-data:
-  #   cmd: python -W ignore -m src.data_creation --validation --network ${network}
-  #   deps:
-  #   - src/data_creation.py
-  #   params:
-  #   - data_creation
-  #   outs:
-  #   - data/validation/raw
+    - data/validation/raw  
 
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:
     - src/data_processing.py
-    - data/validation/raw/perturbations
+    - data/validation/raw
     params:
     - model
     - data_creation
@@ -69,7 +32,7 @@ stages:
     cmd: python -W ignore -m src.data_processing
     deps:
     - src/data_processing.py
-    - data/training/raw/perturbations
+    - data/training/raw
     params:
       - model
       - data_creation
@@ -110,9 +73,9 @@ stages:
       - model_name
       - visualization
 
-  unsupervised:
-    cmd: python -W ignore -m src.unsupervised --network ${network}
-    deps:
-    - src/validation.py
-    - src/unsupervised.py
-    - data/validation/raw/perturbations
+  # unsupervised:
+  #   cmd: python -W ignore -m src.unsupervised --network ${network}
+  #   deps:
+  #   - src/validation.py
+  #   - src/unsupervised.py
+  #   - data/validation/raw/perturbations

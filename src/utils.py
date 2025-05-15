@@ -8,6 +8,8 @@ import src.data_processing as dp
 import glob
 import torch_geometric.datasets as datasets
 import torch_geometric.transforms as T
+import networkx as nx
+import pandas as pd
 
 
 def latest_model_name():
@@ -108,6 +110,7 @@ def load_processed_data(validation: bool = False):
     )
 
     return data
+
 
 
 def load_raw_data(validation: bool = False):
