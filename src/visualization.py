@@ -23,7 +23,7 @@ def plot_graph_with_colors(
     node_values: np.ndarray,
     title: str,
     cmap: Union[Colormap, str] = "viridis",
-    layout: callable = nx.kamada_kawai_layout,
+    layout: callable = nx.spring_layout,
 ):
     """
     Plots a graph with nodes colored according to node_values and labeled using node names.
