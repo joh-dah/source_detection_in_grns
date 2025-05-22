@@ -15,7 +15,7 @@ data_creation:
     root_seed_validation: 11650217406899810833644412201113384194
     small_input: false
     training_size: 20
-    validation_size: 5
+    validation_size: 20
 network: trrust_mock
 model: GCNR
 model_name: GCNR_test_04_21
@@ -24,10 +24,10 @@ training:
     alpha: 0.5
     batch_size: 30
     class_weighting: false
-    epochs: 5
+    epochs: 3   #fix of by one epoch
     graph_weighting: false
     hidden_size: 512
-    layers: 5
+    layers: 2
     learning_rate: 1.0e-06
     subsample: true
     useLogLoss: false

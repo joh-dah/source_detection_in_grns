@@ -23,7 +23,7 @@ def plot_graph_with_colors(
     node_values: np.ndarray,
     title: str,
     cmap: Union[Colormap, str] = "viridis",
-    layout: callable = nx.spring_layout,
+    layout: callable = nx.circular_layout,
 ):
     """
     Plots a graph with nodes colored according to node_values and labeled using node names.
@@ -50,7 +50,7 @@ def plot_graph_with_colors(
         g,
         pos=pos,
         node_color=node_values,
-        node_size=300,
+        node_size=500,
         cmap=cmap,
         vmin=min_val,
         vmax=max_val,
@@ -67,13 +67,13 @@ def plot_graph_with_colors(
         g,
         pos=pos,
         edge_color=edge_colors,
-        width=2,
+        width=3,
     )
 
     # Draw node labels (use actual node names from graph)
     nx.draw_networkx_labels(
         g, 
-        pos={node: (x, y - 0.05) for node, (x, y) in pos.items()}, 
+        pos={node: (x, y - 0.08) for node, (x, y) in pos.items()}, 
         font_size=10, 
         font_color="black"
     )
@@ -82,8 +82,6 @@ def plot_graph_with_colors(
     ax = plt.gca()
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min_val, vmax=max_val))
     cbar = plt.colorbar(sm, ax=ax, shrink=0.9)
-    cbar.set_ticks(np.arange(min_val, max_val + 1, 1))
-    cbar.set_ticklabels(np.arange(min_val, max_val + 1, 1))
 
     plt.axis("off")
     plt.tight_layout()
@@ -214,7 +212,7 @@ def build_graph(data):
     if isinstance(edge_attr, torch.Tensor):
         edge_attr = edge_attr.tolist()
 
-    edge_attr_dict = {(u, v): attr for (u, v), attr in zip(g.edges, edge_attr)}
+    edge_attr_dict = {(u, v): attr for (u, v), attr in zip(edge_index.t().tolist(), edge_attr)}
     nx.set_edge_attributes(g, edge_attr_dict, "weight")
 
     return g

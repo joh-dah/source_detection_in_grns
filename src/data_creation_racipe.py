@@ -11,62 +11,6 @@ from torch_geometric.data import Data
 import torch
 
 
-# def calculate_perturbated_steady_state(steady_state: pd.DataFrame) -> tuple[pd.DataFrame, list]:
-#     """
-#     Adds a perturbation at one random node to each row of the steady state.
-#     :param steady_state: steady state to perturb
-#     :return: perturbed steady state and list of perturbed nodes
-#     """
-#     # Create a copy of the DataFrame to avoid modifying the input in place
-#     steady_state = steady_state.copy()
-#     perturbed_nodes = []
-#     for index, row in steady_state.iterrows():
-#         # Validate that the last 5 columns are as expected
-#         expected_non_node_columns = ["Time", "SteadyStateFlag", "InitCondNum", "ParamNum", "State"]
-#         if list(steady_state.columns[-5:]) != expected_non_node_columns:
-#             raise ValueError(f"Unexpected structure in steady_state DataFrame. Expected last 5 columns to be {expected_non_node_columns}, but got {list(steady_state.columns[-5:])}")
-
-#         node_to_perturb = np.random.choice(steady_state.columns[:-5])
-#         perturbed_nodes.append(node_to_perturb)
-#         perturbation = steady_state[node_to_perturb].max()/2
-#         if row[node_to_perturb] < perturbation:
-#             new_value = row[node_to_perturb] + perturbation
-#         else:
-#             new_value = row[node_to_perturb] + perturbation * np.random.choice([-1, 1])
-
-#         print(f"Old value: {row[node_to_perturb]}, New value: {new_value}")
-#         steady_state.at[index, node_to_perturb] = np.float32(new_value)
-#     return steady_state, perturbed_nodes
-
-
-def calculate_perturbated_steady_state(steady_state: pd.DataFrame) -> tuple[pd.DataFrame, list]:
-    """
-    Adds a perturbation at one random node to each row of the steady state.
-    :param steady_state: steady state to perturb
-    :return: perturbed steady state and list of perturbed nodes
-    """
-    # Create a copy of the DataFrame to avoid modifying the input in place
-    steady_state = steady_state.copy()
-    perturbed_nodes = []
-    for index, row in steady_state.iterrows():
-        # Validate that the last 5 columns are as expected
-        expected_non_node_columns = ["Time", "SteadyStateFlag", "InitCondNum", "ParamNum", "State"]
-        if list(steady_state.columns[-5:]) != expected_non_node_columns:
-            raise ValueError(f"Unexpected structure in steady_state DataFrame. Expected last 5 columns to be {expected_non_node_columns}, but got {list(steady_state.columns[-5:])}")
-
-        node_to_perturb = np.random.choice(steady_state.columns[:-5])
-        perturbed_nodes.append(node_to_perturb)
-        if row[node_to_perturb] < steady_state[node_to_perturb].max()/2:
-            new_value = steady_state[node_to_perturb].max() * 4
-        else:
-            new_value = np.random.choice([0, steady_state[node_to_perturb].max() * 4])
-
-        print(f"Old value: {row[node_to_perturb]}, New value: {new_value}")
-        steady_state.at[index, node_to_perturb] = np.float32(new_value)
-    return steady_state, perturbed_nodes
-
-
-
 def get_steady_state_df(dest_dir, network_name) -> pd.DataFrame:
     """
     Reads the steady state from the racipe output file.
@@ -100,22 +44,21 @@ def get_time_series_df(dest_dir, network_name) -> pd.DataFrame:
 
 
 def create_init_conds_file(
-    initial_perturbated_state_df: pd.DataFrame,
+    desired_initial_state_df: pd.DataFrame,
     racipe_dir: Path,
     network_name: str,
+    genes
 ):
     """
     Creates the init_conds file for racipe.
-    :param initial_perturbated_state_df: steady state to perturb
+    :param initial_perturbed_state_df: steady state to perturb
     :param dest_dir: directory where the racipe output is saved
     :param network_name: name of the network
     """
     # remove the columns Time, ParamNum, Replicate, and State
-    initial_perturbated_state_df = initial_perturbated_state_df.drop(
-        columns=["Time", "SteadyStateFlag", "ParamNum", "InitCondNum", "State"]
-    )
+    desired_initial_state_df = desired_initial_state_df[genes]
     # Add column InitCondNum with sequential values starting from 1
-    initial_perturbated_state_df["InitCondNum"] = range(1, len(initial_perturbated_state_df) + 1)
+    desired_initial_state_df["InitCondNum"] = range(1, len(desired_initial_state_df) + 1)
     # File path
     init_conds_file = racipe_dir / "001" / f"{network_name}_init_conds_001.parquet"
     # Check if file exists
@@ -123,7 +66,7 @@ def create_init_conds_file(
         print(f"Init conds file {init_conds_file} does not exist")
         return None
     # Overwrite the init_conds file
-    initial_perturbated_state_df.to_parquet(
+    desired_initial_state_df.to_parquet(
         init_conds_file,
         index=False,
     )
@@ -146,6 +89,8 @@ def run_racipe_steady_state(topo_file, dest_dir, sample_count):
         topo_file,
         dest_dir,
         batch_size=4000,
+        normalize=False,
+        discretize=False,
     )
 
 
@@ -161,7 +106,7 @@ def calculate_perturbation_delay(steady_state_df: pd.DataFrame) -> float:
     return avg_time / 2  # TODO: make this more sophisticated
 
 
-def create_adjusted_param_file(racipe_dir, network_name, steady_state_df):
+def create_adjusted_param_file(racipe_dir, network_name, steady_state_df, gene_list):
     """
     Create a new parameter file. For a steady state x that was generated with parameters y, 
     row x in the parameter file should contain the parameters y. To do so a new dataframe is created.
@@ -178,16 +123,23 @@ def create_adjusted_param_file(racipe_dir, network_name, steady_state_df):
     param_df = pd.read_parquet(param_file)
     # create a new dataframe with the same columns as the parameter file
     new_param_df = pd.DataFrame(columns=param_df.columns)
+    perturbed_nodes = []
     # for every steady state copy the row of the parameter file
     for index, row in steady_state_df.iterrows():
         # get the row of the parameter file
         param_row = param_df[param_df["ParamNum"] == row["ParamNum"]]
         param_row["ParamNum"] = index + 1  # set the new ParamNum
-        # append the row to the new dataframe
+        # Add perturbation
+        perturbed_gene = np.random.choice(gene_list)
+        perturbed_nodes.append(perturbed_gene)
+        param_row[f"Prod_{perturbed_gene}"] = 0
+        param_row[f"Deg_{perturbed_gene}"] = 1
+        perturbed_nodes
         new_param_df = pd.concat([new_param_df, param_row], ignore_index=True)
     # save the new parameter file
     new_param_file = racipe_dir / "001" / f'{network_name}_params_001.parquet'
     new_param_df.to_parquet(new_param_file, index=False)
+    return perturbed_nodes
 
 
 def get_edge_index_from_topo(filepath, node_to_idx):
@@ -221,6 +173,44 @@ def get_edge_index_from_topo(filepath, node_to_idx):
     return edge_index, edge_attr
 
 
+def get_perturbed_states(topofile, dest_dir, timepoint, combinations, network_name, genes):
+    """
+    Simulate the perturbation of the network using racipe.
+    :param topofile: path to the topo file
+    :param dest_dir: directory where the racipe output is saved
+    :param timepoint: time point for the perturbation
+    :param combinations: combinations of nodes to perturb
+    """
+    if timepoint is None:
+        # simulate steady state
+        rr.run_all_replicates(
+            topofile,
+            dest_dir,
+            predefined_combinations=combinations,
+            normalize=False,
+            discretize=False,
+            batch_size=4000,
+        )
+        df = get_steady_state_df(dest_dir, network_name)
+
+    else:
+        # simulate time series
+        rr.run_all_replicates(
+            topofile,
+            dest_dir,
+            tsteps=jnp.array([timepoint]),
+            predefined_combinations=combinations,
+            normalize=False,
+            discretize=False,
+            batch_size=4000,
+        )
+        df = get_time_series_df(dest_dir, network_name)
+
+    perturbed_states = [[x for x in df[genes].values[i]] for i in range(len(df))]
+
+    return perturbed_states
+
+
 def create_data_set(
     dest_dir: Path,
     topo_file: str,
@@ -231,36 +221,93 @@ def create_data_set(
     Path(dest_dir).mkdir(parents=True, exist_ok=True)
     racipe_dir = dest_dir / network_name
 
+    metadata_columns = ["Time", "SteadyStateFlag", "ParamNum", "InitCondNum", "State"]
     print(f"Creating data set for {network_name} in {dest_dir}")
     run_racipe_steady_state(topo_file, dest_dir, desired_dataset_size)
     steady_state_df = get_steady_state_df(dest_dir, network_name)
 
-    initial_state = [[int(x) for x in steady_state_df["State"].values[i].strip("'")] for i in range(desired_dataset_size)]
-    node_to_idx = {node: i for i, node in enumerate(steady_state_df.columns[0:-5])} # TODO: make this better understandable
+    # get difference of steady_state_df.columns and metadata_columns
+    genes = steady_state_df.columns.difference(metadata_columns).tolist()
+    print(f"Genes: {genes}")
+
+    initial_states = [[x for x in steady_state_df[genes].values[i]] for i in range(desired_dataset_size)]
+    node_to_idx = {gene: id for id, gene in enumerate(genes)}
     perturbation_delay = calculate_perturbation_delay(steady_state_df)
-    create_adjusted_param_file(racipe_dir, network_name, steady_state_df)
-    perturbated_steady_state_df, perturbed_nodes = calculate_perturbated_steady_state(steady_state_df)
-    create_init_conds_file(perturbated_steady_state_df, racipe_dir, network_name)
+    perturbed_nodes = create_adjusted_param_file(racipe_dir, network_name, steady_state_df, genes)
+    create_init_conds_file(steady_state_df, racipe_dir, network_name, genes)
     combinations_to_generate = jnp.array([[i, i] for i in range(len(perturbed_nodes))])
 
     rr.run_all_replicates(
         topo_file,
         dest_dir,
         tsteps=jnp.array([perturbation_delay]),
-        predefined_combinations=combinations_to_generate
+        predefined_combinations=combinations_to_generate,
+        normalize=False,
+        discretize=False,
+        batch_size=4000,
     )
 
     edge_index, edge_attr = get_edge_index_from_topo(topo_file, node_to_idx)
-    delayed_perturbated_state_df = get_time_series_df(dest_dir, network_name)
+    delayed_perturbed_states = get_perturbed_states(
+        topo_file,
+        dest_dir,
+        None,
+        combinations_to_generate,
+        network_name,
+        genes
+    )
+    # print([
+    #     abs(delayed_perturbed_states[i][j] - initial_states[i][j])
+    #       for j in range(len(delayed_perturbed_states[0]))
+    #       for i in range(len(delayed_perturbed_states))])
+
+    # import matplotlib.pyplot as plt
+
+    # # Parameters
+    # delays = list(range(13, 101, 5))
+    # total_differences = []
+
+    # # Loop over delays
+    # for delay in delays:
+    #     delayed_perturbed_states = get_perturbed_states(
+    #         topo_file,
+    #         dest_dir,
+    #         delay,
+    #         combinations_to_generate,
+    #         network_name
+    #     )
+
+    #     difference = sum(
+    #         abs(delayed_perturbed_states[i][j] - initial_states[i][j])
+    #         for j in range(len(delayed_perturbed_states[0]))
+    #         for i in range(len(delayed_perturbed_states))
+    #     )
+        
+    #     total_differences.append(difference)
+
+    # # Plot
+    # plt.figure(figsize=(8, 5))
+    # plt.plot(delays, total_differences, marker='o')
+    # plt.xlabel("Perturbation Delay")
+    # plt.ylabel("Total Absolute Difference")
+    # plt.title("Effect of Perturbation Delay on Total State Difference")
+    # plt.grid(True)
+    # plt.tight_layout()
+    # plt.savefig(f"perturbation_delay_vs_difference_{pd.Timestamp.now()}.png")
+    # plt.close()
+
+
+
+    #
 
     for i in range(desired_dataset_size):
-        delayed_state = [int(x) for x in delayed_perturbated_state_df["State"].values[i].strip("'")]
 
-        print(f"Initial state: {initial_state[i]}")
-        print(f"Delayed state: {delayed_state}")
+        # print(f"Initial state: {initial_states[i]}")
+        # print(f"Delayed state: {delayed_perturbed_states[i]}")
+        # print(f"Input:  {[delayed_perturbed_states[i][j] - initial_states[i][j] for j in range(len(delayed_perturbed_states[0]))]}")
 
         X = torch.tensor(
-            [delayed_state[j] - initial_state[i][j] for j in range(len(delayed_state))],
+            [delayed_perturbed_states[i][j] - initial_states[i][j] for j in range(len(delayed_perturbed_states[0]))],
             dtype=torch.float
         )
 
