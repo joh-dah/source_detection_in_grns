@@ -112,6 +112,20 @@ def load_processed_data(validation: bool = False):
     return data
 
 
+def create_topo_file_from_graph(network_name, G: nx.DiGraph, dir):
+    """
+    Create a topo file as expected by racipe from a nx Graph
+    and store it in the const.TOPO_PATH directory.
+    :param G: nx Graph
+    """
+    new_file_path = Path(dir) / f"{network_name}.topo" 
+    # save graph to a trrust.topo file with the header Source Target Type
+    with open(new_file_path, "w") as f:
+        f.write("Source Target Type\n")
+        for u, v, d in G.edges(data='weight'):
+            f.write(f"{u} {v} {d}\n")
+
+
 
 def load_raw_data(validation: bool = False):
     """

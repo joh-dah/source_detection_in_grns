@@ -5,24 +5,24 @@ stages:
     deps:
     - path: src/data_creation_racipe.py
       hash: md5
-      md5: dec4fa1a4e8cb60fc4f7bac00352645d
-      size: 12667
+      md5: 4d3defbdd0d267cda573a03dab3d74e3
+      size: 12719
     params:
       params.yaml:
         network: trrust_mock
     outs:
     - path: data/training/raw
       hash: md5
-      md5: cd50794f54995e2ade6cd83188d1fae8.dir
-      size: 146498
-      nfiles: 28
+      md5: ebef78ed684674531f4623c15d7faa9e.dir
+      size: 60280
+      nfiles: 20
   generate-validation-data:
     cmd: python -W ignore -m src.data_creation_racipe --validation --network trrust_mock
     deps:
     - path: src/data_creation_racipe.py
       hash: md5
-      md5: dec4fa1a4e8cb60fc4f7bac00352645d
-      size: 12667
+      md5: 4d3defbdd0d267cda573a03dab3d74e3
+      size: 12719
     params:
       params.yaml:
         data_creation:
@@ -45,9 +45,9 @@ stages:
     outs:
     - path: data/validation/raw
       hash: md5
-      md5: 0510753ea9e1322484cbdb8e9be1c174.dir
-      size: 146514
-      nfiles: 28
+      md5: 3d9555baf39f44a40b289610b9d1b70f.dir
+      size: 60280
+      nfiles: 20
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:
