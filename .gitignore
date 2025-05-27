@@ -17,3 +17,5 @@ src/__pycache__/
 /slurm_unsup
 /slurm_val
 /report_vis/*.csv
+*.pyc
+*.egg-info/

@@ -15,4 +15,4 @@ torch_geometric
 torcheval
 tqdm
 tensorboard
-grins
+-e ./external/GRiNS
