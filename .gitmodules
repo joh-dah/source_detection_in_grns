@@ -1,0 +1,3 @@
+[submodule "external/GRiNS"]
+	path = external/GRiNS
+	url = https://github.com/joh-dah/GRiNS.git
