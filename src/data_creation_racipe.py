@@ -7,6 +7,8 @@ import numpy as np
 import src.constants as const
 import src.utils as utils
 import grins.racipe_run as rr
+import grins.gen_params as gen_params
+import grins.gen_diffrax_ode as gen_ode
 import pandas as pd
 import jax.numpy as jnp
 from torch_geometric.data import Data
@@ -43,17 +45,19 @@ def update_init_conds_file(
     :param dest_dir: directory where the racipe output is saved
     :param network_name: name of the network
     """
-    # Drop columns that are not in considered_nodes
-    desired_initial_state_df = desired_initial_state_df[considered_nodes]
+    # Drop columns that are not in considered_nodes and make a copy
+    desired_initial_state_df = desired_initial_state_df.loc[:, considered_nodes].copy()
+    
     # Add column InitCondNum with sequential values starting from 1
     desired_initial_state_df["InitCondNum"] = range(1, len(desired_initial_state_df) + 1)
-    print(f"Shape of init conds: {desired_initial_state_df.shape}")
-    # store file
+
+    # Store file
     init_conds_file = racipe_dir / "001" / f"{network_name}_init_conds_001.parquet"
     desired_initial_state_df.to_parquet(
         init_conds_file,
         index=False,
     )
+
 
 
 def generate_relevant_param_names(nodes, edges):
@@ -63,9 +67,9 @@ def generate_relevant_param_names(nodes, edges):
     for source, target, weight in edges: #TODO
         if weight == 3:  # inactive
             continue  # skip inactive edges
-        if weight == 1: 
+        elif weight == 1: 
             param_names += [f"ActFld_{source}_{target}",f"Thr_{source}_{target}", f"Hill_{source}_{target}"]
-        if weight == 2:
+        elif weight == 2:
             param_names += [f"InhFld_{source}_{target}", f"Thr_{source}_{target}", f"Hill_{source}_{target}"]
     return param_names
 
@@ -73,8 +77,7 @@ def generate_relevant_param_names(nodes, edges):
 def update_param_files(
     subnetwork_dir: str,
     subnetwork_name: str,
-    considered_nodes: list,
-    considered_edges: list
+    sub_params: list,
 ):
     """
     Read the params file and update it to the new graphs name.
@@ -89,7 +92,6 @@ def update_param_files(
         return None
     # read the parameter file
     og_param_df = pd.read_parquet(param_file)
-    sub_params = generate_relevant_param_names(considered_nodes, considered_edges)
     sub_params += ["ParamNum"]  # always keep ParamNum
     new_param_df = og_param_df[sub_params]
     # store file
@@ -137,11 +139,23 @@ def simulate_loss_of_function(G, gene_to_perturb):
     # set the edge weight to 3 (inactive)
     for edge in edges:
         G[edge[0]][edge[1]]['weight'] = 3  # assuming 'attr' is the key for the mode of activation
-
-    # print all edge weights to check if the perturbation was successful
-    for u, v, d in G.edges(data=True):
-        print(f"Edge {u} -> {v} has weight {d['weight']}")
     return G
+
+
+def update_ode_file(subnetwork_dir: str, subnetwork_name: str):
+    """
+    Update the ode file to reflect the new subgraph and perturbation.
+    """
+    topo_file = Path(subnetwork_dir) / f"{subnetwork_name}.topo"
+    topo_df = gen_params.parse_topos(topo_file)
+    # Create the ODE file
+    param_names = gen_ode.gen_diffrax_odesys(
+        topo_df,
+        topo_name=subnetwork_name,
+        save_dir=subnetwork_dir,
+    )
+    return param_names
+
 
 
 
@@ -155,16 +169,16 @@ def update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_
     """
     subnetwork_dir = Path(raw_data_dir) / subnetwork_name
     utils.create_topo_file_from_graph(subnetwork_name, perturbed_subgraph, subnetwork_dir)
+    param_names = update_ode_file(subnetwork_dir, subnetwork_name)
+    update_param_files(subnetwork_dir, subnetwork_name, param_names)
     nodes_in_subgraph = list(perturbed_subgraph.nodes())
-    edges_in_subgraph = list(perturbed_subgraph.edges(data='weight'))
     update_init_conds_file(og_steady_state, nodes_in_subgraph, subnetwork_dir, subnetwork_name)
-    update_param_files(subnetwork_dir, subnetwork_name, nodes_in_subgraph, edges_in_subgraph)
 
 
 def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_data_dir):
 
     #store what parameters where used for the steady state (init_cond: param_num)
-    params_per_steady_state = {row_id+1: row["ParamNum"] for row_id, row in og_steady_state_df.iterrows()}
+    params_per_steady_state = [[row_id+1, row["ParamNum"]] for row_id, row in og_steady_state_df.iterrows()]
 
     # Step 1 & 2: get subgraph induced by all reachable nodes
     reachable_nodes = nx.descendants(G, gene_to_perturb) | {gene_to_perturb}
@@ -177,8 +191,8 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
     update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_subgraph, og_steady_state_df)
 
     rr.run_all_replicates(
-        subnetwork_name,
-        raw_data_dir,
+        topo_file=subnetwork_name,
+        save_dir=raw_data_dir,
         batch_size=4000,
         predefined_combinations=params_per_steady_state, #TODO check if this is right
         normalize=False,
@@ -279,7 +293,7 @@ def create_data_set(
         for row_id, row in difference_to_og_steady_state.iterrows():
             
             X = torch.tensor(
-                [row],  #TODO somehow make sure that the order of the genes is the same as in the original steady state
+                row,  #TODO somehow make sure that the order of the genes is the same as in the original steady state
                 dtype=torch.float
             )
 
@@ -287,7 +301,8 @@ def create_data_set(
                 [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()],
                 dtype=torch.float
             )
-            
+            #TODO save storage since the graph structure won't change. 
+            # somehow store edge_index, edge_attr and node_mapping only once
             data = Data(
                 x=X,
                 y=y,
