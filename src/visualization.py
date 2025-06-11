@@ -227,7 +227,7 @@ def get_model_predictions(model, processed_data):
     return pred, predictions_cmap
 
 
-def extract_relevant_subgraph(g, initial_status, real_node_names, min_subset_size=30):
+def extract_relevant_subgraph(g, initial_status, real_node_names, min_subset_size=500):
     """
     Returns a relabeled subgraph with real node names and the node order.
     """

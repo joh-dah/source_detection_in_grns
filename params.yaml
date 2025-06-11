@@ -14,23 +14,24 @@ data_creation:
     root_seed_training: 11650217406899810833644412201113384193
     root_seed_validation: 11650217406899810833644412201113384194
     small_input: false
-    training_size: 20
-    validation_size: 20
-network: trrust_mock
-model: GCNR
+    training_size: 100
+    validation_size: 10
+network: p53_subgraph
+model: GCNSI
 model_name: GCNR_test_04_21
 on_cluster: false
 training:
     alpha: 0.5
-    batch_size: 30
+    batch_size: 64
     class_weighting: false
-    epochs: 3   #fix of by one epoch
+    epochs: 200  #fix of by one epoch
     graph_weighting: false
-    hidden_size: 512
+    hidden_size: 128
     layers: 2
-    learning_rate: 1.0e-06
+    dropout: 0.3
+    learning_rate: 1.0e-3
     subsample: true
     useLogLoss: false
-    weight_decay: 1.0e-08
+    weight_decay: 5.0e-4
 visualization:
     seed: 123

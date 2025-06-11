@@ -64,9 +64,9 @@ def generate_relevant_param_names(nodes, edges):
     param_names = []
     for node in nodes:
         param_names += [f"Prod_{node}", f"Deg_{node}"]
-    for source, target, weight in edges: #TODO
-        if weight == 3:  # inactive
-            continue  # skip inactive edges
+    for source, target, weight in edges:
+        if weight == 3:
+            continue
         elif weight == 1: 
             param_names += [f"ActFld_{source}_{target}",f"Thr_{source}_{target}", f"Hill_{source}_{target}"]
         elif weight == 2:
@@ -142,24 +142,25 @@ def simulate_loss_of_function(G, gene_to_perturb):
     return G
 
 
-def update_ode_file(subnetwork_dir: str, subnetwork_name: str):
+def update_ode_file(subnetwork_dir: str, subnetwork_name: str, perturbed_gene: str = None):
     """
     Update the ode file to reflect the new subgraph and perturbation.
     """
     topo_file = Path(subnetwork_dir) / f"{subnetwork_name}.topo"
     topo_df = gen_params.parse_topos(topo_file)
     # Create the ODE file
-    param_names = gen_ode.gen_diffrax_odesys(
+    nodes, param_names = gen_ode.gen_diffrax_odesys(
         topo_df,
         topo_name=subnetwork_name,
         save_dir=subnetwork_dir,
+        perturbed_gene=perturbed_gene,
     )
-    return param_names
+    return nodes, param_names
 
 
 
 
-def update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_subgraph, og_steady_state):
+def update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_subgraph, og_steady_state, perturbed_gene):
     """
     Update the files to the subgraph scope. This is done by removing all nodes and edges that are not in the subgraph.
     A new directory will be created that can be used by racipe to simulate the perturbed steady state.
@@ -169,9 +170,8 @@ def update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_
     """
     subnetwork_dir = Path(raw_data_dir) / subnetwork_name
     utils.create_topo_file_from_graph(subnetwork_name, perturbed_subgraph, subnetwork_dir)
-    param_names = update_ode_file(subnetwork_dir, subnetwork_name)
+    nodes_in_subgraph, param_names = update_ode_file(subnetwork_dir, subnetwork_name, perturbed_gene)
     update_param_files(subnetwork_dir, subnetwork_name, param_names)
-    nodes_in_subgraph = list(perturbed_subgraph.nodes())
     update_init_conds_file(og_steady_state, nodes_in_subgraph, subnetwork_dir, subnetwork_name)
 
 
@@ -188,7 +188,7 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
     perturbed_subgraph = simulate_loss_of_function(subnetwork, gene_to_perturb)
 
     # Update your files based on perturbed subgraph
-    update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_subgraph, og_steady_state_df)
+    update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_subgraph, og_steady_state_df, gene_to_perturb)
 
     rr.run_all_replicates(
         topo_file=subnetwork_name,
@@ -258,6 +258,8 @@ def create_data_set(
     datapoint_id = 0
 
     for gene_to_perturb in tqdm(genes_with_outgoing_edges, desc="Creating data set", total=len(genes_with_outgoing_edges)):
+        if gene_to_perturb == "AATF":
+            print(f"Skipping {gene_to_perturb} since it is not a good candidate for perturbation")
 
         subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
         #TODO: make deterministic with seed
@@ -288,10 +290,13 @@ def create_data_set(
         perturbed_steady_state_df = perturb_graph(G, gene_to_perturb, steady_state_df, subnetwork_name, raw_data_dir)
         perturbed_steady_state_df = perturbed_steady_state_df[gene_to_idx.keys()]
         difference_to_og_steady_state = perturbed_steady_state_df - og_steady_state_df
-        #TODO: maybe normalize?
 
         for row_id, row in difference_to_og_steady_state.iterrows():
             
+            # # normalize:
+            # max_abs_value = row.abs().max().item()
+            # row = row / max_abs_value if max_abs_value != 0 else row
+
             X = torch.tensor(
                 row,  #TODO somehow make sure that the order of the genes is the same as in the original steady state
                 dtype=torch.float

@@ -64,33 +64,61 @@ class SDDataset(Dataset):
         return data
 
 
-def paper_input(current_status: torch.tensor, edge_index: torch.tensor) -> torch.tensor:
-    """
-    Prepares the input features for the GCNSI model according to the paper:
-    https://dl.acm.org/doi/abs/10.1145/3357384.3357994
-    :param current_status: the current infection status
-    :param edge_index: edge_index of a graph
-    :return: prepared input features
-    """
+# def paper_input(current_status: torch.tensor, edge_index: torch.tensor) -> torch.tensor:
+#     """
+#     Prepares the input features for the GCNSI model according to the paper:
+#     https://dl.acm.org/doi/abs/10.1145/3357384.3357994
+#     :param current_status: the current infection status
+#     :param edge_index: edge_index of a graph
+#     :return: prepared input features
+#     """
+#     Y = np.array(current_status)
+#     g = to_networkx(Data(edge_index=edge_index), to_undirected=False).to_undirected()
+#     S = nx.normalized_laplacian_matrix(g)
+#     V3 = Y.copy()
+#     Y = [-1 if x == 0 else 1 for x in Y]
+#     V4 = [-1 if x == -1 else 0 for x in Y]
+#     I = np.identity(len(Y))
+#     a = const.ALPHA
+#     d1 = Y
+#     temp = (1 - a) * np.linalg.inv(I - a * S)
+#     d2 = np.squeeze(np.asarray(temp.dot(Y)))
+#     d3 = np.squeeze(np.asarray(temp.dot(V3)))
+#     d4 = np.squeeze(np.asarray(temp.dot(V4)))
+#     X = torch.from_numpy(np.column_stack((d1, d2, d3, d4))).float()
+#     return X
+
+
+def paper_input(current_status: torch.tensor, edge_index: torch.tensor) -> torch.tensor: #TODO: this is chatGPTs take on how to handle directed,cyclic graphs. check if valid
     Y = np.array(current_status)
-    g = to_networkx(Data(edge_index=edge_index), to_undirected=False).to_undirected()
-    S = nx.normalized_laplacian_matrix(g)
+    g = to_networkx(Data(edge_index=edge_index), to_undirected=False)
+
+    A = nx.to_numpy_array(g)
+    D_out = np.diag(A.sum(axis=1))
+    D_inv = np.linalg.pinv(D_out)
+
+
+    # Transition matrix for diffusion
+    P = D_inv @ A
+
     V3 = Y.copy()
     Y = [-1 if x == 0 else 1 for x in Y]
     V4 = [-1 if x == -1 else 0 for x in Y]
     I = np.identity(len(Y))
+
     a = const.ALPHA
     d1 = Y
-    temp = (1 - a) * np.linalg.inv(I - a * S)
+    temp = (1 - a) * np.linalg.inv(I - a * P)
     d2 = np.squeeze(np.asarray(temp.dot(Y)))
     d3 = np.squeeze(np.asarray(temp.dot(V3)))
     d4 = np.squeeze(np.asarray(temp.dot(V4)))
+
     X = torch.from_numpy(np.column_stack((d1, d2, d3, d4))).float()
     return X
 
 
 def create_distance_labels(
-    graph: nx.Graph, initial_values: torch.tensor
+    graph: nx.DiGraph, initial_values: torch.tensor
 ) -> torch.tensor:
     """
     Creates the labels for the GCNR model. Each label is the distance of the node to the nearest source.
@@ -143,7 +171,7 @@ def process_gcnr_data(data: Data) -> Data:
     :return: processed data with expanded features and labels
     """
     data.x = paper_input(data.x, data.edge_index)
-    data.y = create_distance_labels(to_networkx(data, to_undirected=True), data.y)
+    data.y = create_distance_labels(to_networkx(data, to_undirected=False), data.y)
     return data
 
 
@@ -154,7 +182,7 @@ def process_simplified_gcnr_data(data: Data) -> Data:
     :return: processed data with expanded features and labels
     """
     data.x = data.x.unsqueeze(1).float()
-    data.y = create_distance_labels(to_networkx(data, to_undirected=True), data.y)
+    data.y = create_distance_labels(to_networkx(data, to_undirected=False), data.y)
     return data
 
 
