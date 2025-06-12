@@ -258,9 +258,6 @@ def create_data_set(
     datapoint_id = 0
 
     for gene_to_perturb in tqdm(genes_with_outgoing_edges, desc="Creating data set", total=len(genes_with_outgoing_edges)):
-        if gene_to_perturb == "AATF":
-            print(f"Skipping {gene_to_perturb} since it is not a good candidate for perturbation")
-
         subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
         #TODO: make deterministic with seed
         print(f"Generating {num_params} params and {num_init_conds} init conds for {gene_to_perturb}")
@@ -291,16 +288,20 @@ def create_data_set(
         perturbed_steady_state_df = perturbed_steady_state_df[gene_to_idx.keys()]
         difference_to_og_steady_state = perturbed_steady_state_df - og_steady_state_df
 
-        for row_id, row in difference_to_og_steady_state.iterrows():
-            
-            # # normalize:
-            # max_abs_value = row.abs().max().item()
-            # row = row / max_abs_value if max_abs_value != 0 else row
+        for row_id, diff_row in difference_to_og_steady_state.iterrows():#
+            og_row = og_steady_state_df.iloc[row_id]
 
-            X = torch.tensor(
-                row,  #TODO somehow make sure that the order of the genes is the same as in the original steady state
-                dtype=torch.float
-            )
+            if const.NORMALIZE_DATA:
+                # normalize the rows
+                max_abs_value = og_row.abs().max()
+                if max_abs_value != 0:
+                    og_row = og_row / max_abs_value
+                    diff_row = diff_row / max_abs_value
+
+            X = torch.stack([
+                torch.tensor(og_row, dtype=torch.float),
+                torch.tensor(diff_row, dtype=torch.float)
+            ], dim=0).T
 
             y = torch.tensor(
                 [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()],

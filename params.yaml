@@ -1,21 +1,12 @@
 GCNR_layer_type: GCN
 data_creation:
-    beta:
-    - 0.005
-    - 0.01
-    n_nodes:
-    - 10
-    - 100
-    propagations_per_real_world_graph: 20
-    relative_infected:
-    - 0.1
-    - 0.5
     n_sources: 1
     root_seed_training: 11650217406899810833644412201113384193
     root_seed_validation: 11650217406899810833644412201113384194
-    small_input: false
+    small_input: true
     training_size: 100
     validation_size: 10
+    normalize_data: true
 network: p53_subgraph
 model: GCNSI
 model_name: GCNR_test_04_21

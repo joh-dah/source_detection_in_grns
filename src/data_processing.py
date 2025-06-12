@@ -90,7 +90,7 @@ class SDDataset(Dataset):
 
 
 def paper_input(current_status: torch.tensor, edge_index: torch.tensor) -> torch.tensor: #TODO: this is chatGPTs take on how to handle directed,cyclic graphs. check if valid
-    Y = np.array(current_status)
+    Y = np.array(current_status[:, 1])  # second feature column -> diff expression
     g = to_networkx(Data(edge_index=edge_index), to_undirected=False)
 
     A = nx.to_numpy_array(g)
@@ -157,11 +157,10 @@ def process_simplified_gcnsi_data(data: Data) -> Data:
     :param data: input data to be processed.
     :return: processed data with expanded features and labels
     """
-    # expand features to 2D tensor
-    data.x = data.x.unsqueeze(1).float()
-    # expand labels to 2D tensor
+    data.x = data.x.float()  # Assume x is already shape [N, 2]
     data.y = data.y.unsqueeze(1).float()
     return data
+
 
 
 def process_gcnr_data(data: Data) -> Data:
@@ -181,9 +180,10 @@ def process_simplified_gcnr_data(data: Data) -> Data:
     :param data: input data to be processed.
     :return: processed data with expanded features and labels
     """
-    data.x = data.x.unsqueeze(1).float()
-    data.y = create_distance_labels(to_networkx(data, to_undirected=False), data.y)
+    data.x = data.x.float()
+    data.y = data.y.unsqueeze(1).float()
     return data
+
 
 
 def main():

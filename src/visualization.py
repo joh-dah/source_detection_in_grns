@@ -23,6 +23,7 @@ def plot_graph_with_colors(
     node_values: np.ndarray,
     title: str,
     cmap: Union[Colormap, str] = "viridis",
+    max_abs_value: float = None,
     layout: callable = nx.circular_layout,
 ):
     """
@@ -36,8 +37,11 @@ def plot_graph_with_colors(
     """
     pos = layout(g)
 
-    min_val = node_values.min()
-    max_val = node_values.max()
+    if max_abs_value:
+        min_val, max_val = -max_abs_value, max_abs_value
+    else:
+        min_val = node_values.min()
+        max_val = node_values.max()
 
     plt.figure(figsize=(8, 8))
 
@@ -177,7 +181,7 @@ def visualize_graph_predictions(data, model, processed_data, network, index):
     Visualizes initial, current, and predicted node statuses of a (sub)graph.
     """
     g = build_graph(data)
-    predictions, predictions_cmap = get_model_predictions(model, processed_data)
+    predictions = get_model_predictions(model, processed_data)
 
     real_node_names = {v: k for k, v in data.node_mapping.items()}
 
@@ -187,9 +191,9 @@ def visualize_graph_predictions(data, model, processed_data, network, index):
     plot_graph_states(
         subgraph,
         relabeled_data["initial_status"],
+        relabeled_data["diff_status"],
         relabeled_data["current_status"],
         relabeled_data["predictions"],
-        predictions_cmap,
         network,
         index
     )
@@ -223,8 +227,8 @@ def get_model_predictions(model, processed_data):
     Gets and processes model predictions.
     """
     pred = model(processed_data)
-    pred, predictions_cmap, _ = process_predictions(pred)
-    return pred, predictions_cmap
+    pred = process_predictions(pred)
+    return pred
 
 
 def extract_relevant_subgraph(g, initial_status, real_node_names, min_subset_size=500):
@@ -257,25 +261,37 @@ def reorder_node_data(data, new_order, predictions):
     """
     Reorders node status and prediction arrays according to new graph node order.
     """
-    initial_status = data.y.numpy()[new_order]
-    current_status = data.x[new_order]
+    binary_perturbation_marker = data.y.numpy()[new_order]
+    initial_status = data.x[new_order, 0]
+    diff_status = data.x[new_order, 1]  # Assuming second column is diff status
+    current_status = initial_status + diff_status
     predictions = predictions[new_order]
 
     return {
+        "binary_perturbation_marker": binary_perturbation_marker,
         "initial_status": initial_status,
+        "diff_status": diff_status,
         "current_status": current_status,
         "predictions": predictions
     }
 
 
-def plot_graph_states(g, initial_status, current_status, predictions, pred_cmap, network, index):
+def plot_graph_states(g, initial_status, diff_status, current_status, predictions, network, index):
     """
     Plots the initial, current, and predicted states of a graph.
     """
+    if const.MODEL == "GCNSI":
+        predictions_cmap = LinearSegmentedColormap.from_list(
+            "predictions", ["blue", "red"]
+        )
+    elif const.MODEL == "GCNR":
+        predictions_cmap = LinearSegmentedColormap.from_list(
+            "predictions", ["red", "blue"]
+        )
     # Plot initial infection graph
     plot_graph_with_colors(
         g,
-        np.fromiter(initial_status, dtype=int),
+        np.fromiter(initial_status,  dtype=float),
         f"{network}_initial_{index}",
         cmap=None,
     )
@@ -283,9 +299,20 @@ def plot_graph_states(g, initial_status, current_status, predictions, pred_cmap,
     # Plot current infection graph
     plot_graph_with_colors(
         g,
-        np.fromiter(current_status, dtype=int),
+        np.fromiter(current_status, dtype=float),
         f"{network}_current_{index}",
         cmap=None,
+    )
+
+        # Plot current infection graph
+    plot_graph_with_colors(
+        g,
+        np.fromiter(diff_status, dtype=float),
+        f"{network}_diff_{index}",
+        max_abs_value=max(np.abs(diff_status)),
+        cmap=LinearSegmentedColormap.from_list(
+        "predictions", ["red", "white", "blue"]
+    ),
     )
 
     # Plot predicted infection graph
@@ -293,7 +320,7 @@ def plot_graph_states(g, initial_status, current_status, predictions, pred_cmap,
         g,
         np.fromiter(predictions, dtype=float),
         f"{network}_prediction_{index}",
-        cmap=pred_cmap,
+        cmap=predictions_cmap,
     )
 
 
@@ -305,16 +332,7 @@ def process_predictions(pred):
     if const.MODEL == "GCNSI":
         pred = torch.sigmoid(pred)
         pred = torch.round(pred)
-        n_colors = 1
-        predictions_cmap = LinearSegmentedColormap.from_list(
-            "predictions", ["blue", "red"]
-        )
-    elif const.MODEL == "GCNR":
-        n_colors = 1
-        predictions_cmap = LinearSegmentedColormap.from_list(
-            "predictions", ["red", "blue"]
-        )
-    return pred, predictions_cmap, n_colors
+    return pred
 
 
 
