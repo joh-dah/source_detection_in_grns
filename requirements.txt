@@ -4,7 +4,8 @@
 #
 #    pip-compile requirements.in
 #
--e file:///home/johanna/Documents/Uni/Master/WiSe_2425/Masterarbeit/source_detection_in_grns/external/GRiNS
+-e ./external/GRiNS
+
     # via -r requirements.in
 absl-py==2.2.2
     # via tensorboard
