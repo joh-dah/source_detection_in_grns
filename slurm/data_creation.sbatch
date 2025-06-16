@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard
-#SBATCH --partition=CPU
+#SBATCH --partition=cpu
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=/sc/home/johanna.dahlkemper/source_detection_in_grns/
 #SBATCH --mail-type=ALL
