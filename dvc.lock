@@ -1,28 +1,28 @@
 schema: '2.0'
 stages:
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation_racipe --network p53_subgraph
+    cmd: python -W ignore -m src.data_creation_racipe --network tiny
     deps:
     - path: src/data_creation_racipe.py
       hash: md5
-      md5: 156c1347b1a16fa47c0e99e2e309855b
-      size: 13372
+      md5: 40646bfe79b2d0550ba8714ef21835d9
+      size: 13528
     params:
       params.yaml:
-        network: p53_subgraph
+        network: tiny
     outs:
     - path: data/training/raw
       hash: md5
-      md5: 3526283727cb4c52d9c07e1883030166.dir
-      size: 488336
-      nfiles: 108
+      md5: 815caa698bc9b0b25f4856ae36edde51.dir
+      size: 109640
+      nfiles: 40
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation_racipe --validation --network p53_subgraph
+    cmd: python -W ignore -m src.data_creation_racipe --validation --network tiny
     deps:
     - path: src/data_creation_racipe.py
       hash: md5
-      md5: 156c1347b1a16fa47c0e99e2e309855b
-      size: 13372
+      md5: 40646bfe79b2d0550ba8714ef21835d9
+      size: 13528
     params:
       params.yaml:
         data_creation:
@@ -30,27 +30,27 @@ stages:
           root_seed_training: 11650217406899810833644412201113384193
           root_seed_validation: 11650217406899810833644412201113384194
           small_input: true
-          training_size: 100
+          training_size: 40
           validation_size: 10
           normalize_data: true
     outs:
     - path: data/validation/raw
       hash: md5
-      md5: 61111c38df6fa4bb9750827b53901456.dir
-      size: 80674
-      nfiles: 18
+      md5: 3b2657658894b3d5b9cc936fccbef765.dir
+      size: 32892
+      nfiles: 12
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:
     - path: data/validation/raw
       hash: md5
-      md5: 61111c38df6fa4bb9750827b53901456.dir
-      size: 80674
-      nfiles: 18
+      md5: 3b2657658894b3d5b9cc936fccbef765.dir
+      size: 32892
+      nfiles: 12
     - path: src/data_processing.py
       hash: md5
-      md5: 55066646dba411c6543a876052168b25
-      size: 7443
+      md5: 36018bf5ceef594b9df0662ea3f0a69e
+      size: 7629
     params:
       params.yaml:
         data_creation:
@@ -58,28 +58,28 @@ stages:
           root_seed_training: 11650217406899810833644412201113384193
           root_seed_validation: 11650217406899810833644412201113384194
           small_input: true
-          training_size: 100
+          training_size: 40
           validation_size: 10
           normalize_data: true
         model: GCNSI
     outs:
     - path: data/validation/processed
       hash: md5
-      md5: 35bb9b6fd78dc6a777532787948c188c.dir
-      size: 83196
-      nfiles: 20
+      md5: c37768ce09df1eb332078b2a1df479a2.dir
+      size: 33786
+      nfiles: 14
   process-training-data:
     cmd: python -W ignore -m src.data_processing
     deps:
     - path: data/training/raw
       hash: md5
-      md5: 3526283727cb4c52d9c07e1883030166.dir
-      size: 488336
-      nfiles: 108
+      md5: 815caa698bc9b0b25f4856ae36edde51.dir
+      size: 109640
+      nfiles: 40
     - path: src/data_processing.py
       hash: md5
-      md5: 55066646dba411c6543a876052168b25
-      size: 7443
+      md5: 36018bf5ceef594b9df0662ea3f0a69e
+      size: 7629
     params:
       params.yaml:
         data_creation:
@@ -87,24 +87,24 @@ stages:
           root_seed_training: 11650217406899810833644412201113384193
           root_seed_validation: 11650217406899810833644412201113384194
           small_input: true
-          training_size: 100
+          training_size: 40
           validation_size: 10
           normalize_data: true
         model: GCNSI
     outs:
     - path: data/training/processed
       hash: md5
-      md5: e9401211df6f88a8192344a76fbe1a7d.dir
-      size: 490858
-      nfiles: 110
+      md5: 0e5f87eefe4f1977e15e1de7c09757a7.dir
+      size: 108462
+      nfiles: 42
   training:
     cmd: python -W ignore -m src.training
     deps:
     - path: data/training/processed
       hash: md5
-      md5: e9401211df6f88a8192344a76fbe1a7d.dir
-      size: 490858
-      nfiles: 110
+      md5: 0e5f87eefe4f1977e15e1de7c09757a7.dir
+      size: 108462
+      nfiles: 42
     - path: src/training.py
       hash: md5
       md5: da1ad9410111af38f0a30532afef97f9
@@ -129,19 +129,19 @@ stages:
     outs:
     - path: models/latest.pth
       hash: md5
-      md5: e5317f1f08fe2df59763fcfaac795b3b
+      md5: 045d04c549433cd60b2bb2a03e2bf295
       size: 73845
   validation:
-    cmd: python -W ignore -m src.validation --network p53_subgraph
+    cmd: python -W ignore -m src.validation --network tiny
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: 35bb9b6fd78dc6a777532787948c188c.dir
-      size: 83196
-      nfiles: 20
+      md5: c37768ce09df1eb332078b2a1df479a2.dir
+      size: 33786
+      nfiles: 14
     - path: models/latest.pth
       hash: md5
-      md5: e5317f1f08fe2df59763fcfaac795b3b
+      md5: 045d04c549433cd60b2bb2a03e2bf295
       size: 73845
     - path: src/validation.py
       hash: md5
@@ -156,16 +156,16 @@ stages:
         model: GCNSI
         model_name: GCNR_test_04_21
   visualization:
-    cmd: python -W ignore -m src.visualization --network p53_subgraph
+    cmd: python -W ignore -m src.visualization --network tiny
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: 35bb9b6fd78dc6a777532787948c188c.dir
-      size: 83196
-      nfiles: 20
+      md5: c37768ce09df1eb332078b2a1df479a2.dir
+      size: 33786
+      nfiles: 14
     - path: models/latest.pth
       hash: md5
-      md5: e5317f1f08fe2df59763fcfaac795b3b
+      md5: 045d04c549433cd60b2bb2a03e2bf295
       size: 73845
     - path: src/visualization.py
       hash: md5

@@ -11,7 +11,7 @@ from torch_geometric.data import Data, Dataset
 from torch_geometric.utils.convert import to_networkx
 import torch
 import multiprocessing as mp
-from tqdm import tqdm
+from tqdm import tqdm # Make sure const.N_CORES is defined
 
 
 def process_single(args):
@@ -21,47 +21,51 @@ def process_single(args):
     # process data
     if pre_transform is not None:
         data = pre_transform(data)
-    # save data object
+    # save data object with numeric index
     torch.save(data, os.path.join(processed_dir, f"{idx}.pt"))
 
 
 class SDDataset(Dataset):
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
-        self.size = len(list((root / "raw").glob("*.pt")))
+        self.root = Path(root)
+        self._raw_dir = self.root / "raw"
+        self._processed_dir = self.root / "processed"
+        self.transform = transform
+        self.pre_transform = pre_transform
+        self.pre_filter = pre_filter
+
+        # Load and sort raw file paths
+        self.raw_files = sorted(self._raw_dir.glob("*.pt"))
+        self.size = len(self.raw_files)
+
         super().__init__(root, transform, pre_transform, pre_filter)
 
     @property
     def raw_file_names(self):
-        return [f"{i}.pt" for i in range(self.size)]
+        return [f.name for f in self.raw_files]
 
     @property
     def processed_file_names(self):
         return [f"{i}.pt" for i in range(self.size)]
 
     def process(self):
-        # run in parallel using pool
         if self.pre_transform is not None:
             params = [
-                (self.pre_transform, self.raw_paths[i], i, self.processed_dir)
+                (self.pre_transform, str(self.raw_files[i]), i, str(self._processed_dir))
                 for i in range(self.size)
             ]
-            # for param in tqdm(params):
-            #     process_single(param)
-            with mp.Pool(const.N_CORES) as pool:
-                print(f"Processing data set using multiprocessing ({pool})")
-                list(
-                    tqdm(
-                        pool.imap_unordered(process_single, params),
-                        total=self.size,
-                    )
-                )
+            with mp.get_context("spawn").Pool(const.N_CORES) as pool:
+                print(f"Processing data set using multiprocessing ({const.N_CORES} cores)...")
+                list(tqdm(pool.imap_unordered(process_single, params), total=self.size))
 
     def len(self):
-        return len(self.processed_file_names)
+        return self.size
 
     def get(self, idx):
-        data = torch.load(os.path.join(self.processed_dir, f"{idx}.pt"), weights_only=False)
+        path = self._processed_dir / f"{idx}.pt"
+        data = torch.load(path, weights_only=False)
         return data
+
 
 
 # def paper_input(current_status: torch.tensor, edge_index: torch.tensor) -> torch.tensor:

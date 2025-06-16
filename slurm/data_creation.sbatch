@@ -1,20 +1,20 @@
 #!/bin/bash
-#SBATCH --job-name="data_creation_1"
-#SBATCH --mem=400G
-#SBATCH -n 1000
-#SBATCH --exclude=ic922-[01-02]
-#SBATCH --cpus-per-task=1
-#SBATCH --account=renard
-#SBATCH --partition=magic
+#SBATCH --job-name="data_creation_test"
+#SBATCH --mem=64G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --account=sci-renard
+#SBATCH --partition=CPU
 #SBATCH --time=1-00:00:00
-#SBATCH --chdir=/hpi/fs00/home/conrad.halle/source_detection
+#SBATCH --chdir=/sc/home/johanna.dahlkemper/source_detection_in_grns/
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=conrad.halle@student.hpi.de
+#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
 #SBATCH --verbose
-#SBATCH --output=/hpi/fs00/home/conrad.halle/source_detection/slurm_data_creation/slurm_%j_%N_%x_%A_%a.out
-#SBATCH --error=/hpi/fs00/home/conrad.halle/source_detection/slurm_data_creation/slurm_%j_%N_%x_%A_%a.err
+#SBATCH --output=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/slurm_%j_%N_%x_%A_%a.out
+#SBATCH --error=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/slurm_%j_%N_%x_%A_%a.err
 
-source venv/bin/activate
-python update_params.py --idx 1
+conda activate grn_env
+dvc repro generate-training-data
+dvc repro generate-validation-data
 dvc repro process-training-data
 dvc repro process-validation-data

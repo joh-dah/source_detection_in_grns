@@ -15,6 +15,7 @@ from torch_geometric.data import Data
 import torch
 from tqdm import tqdm
 import networkx as nx
+import multiprocessing as mp
 
 
 def get_steady_state_df(dest_dir, network_name) -> pd.DataFrame:
@@ -234,6 +235,84 @@ def nx_to_pyg_edges(G, gene_to_idx):
     return edge_index, edge_attr
 
 
+def process_gene(
+    gene_to_perturb,
+    G,
+    gene_to_idx,
+    edge_index,
+    edge_attr,
+    raw_data_dir,
+    topo_file,
+    og_network_name,
+    perturbations_per_gene,
+):
+    subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
+    num_init_conds = int(np.cbrt(perturbations_per_gene))
+    num_params = perturbations_per_gene // num_init_conds
+    #TODO: make deterministic?
+    rr.gen_topo_param_files(
+        topo_file,
+        topo_name=subnetwork_name,
+        save_dir=raw_data_dir,
+        num_replicates=1,
+        num_params=num_params,
+        num_init_conds=num_init_conds,
+        sampling_method="Sobol",
+    )
+
+    rr.run_all_replicates(
+        topo_file,
+        topo_name=subnetwork_name,
+        save_dir=raw_data_dir,
+        batch_size=4000,
+        normalize=False,
+        discretize=False,
+    )
+
+    steady_state_df = get_steady_state_df(raw_data_dir, subnetwork_name)
+    og_steady_state_df = steady_state_df[gene_to_idx.keys()].copy()
+    perturbed_steady_state_df = perturb_graph(G, gene_to_perturb, steady_state_df, subnetwork_name, raw_data_dir)
+    perturbed_steady_state_df = perturbed_steady_state_df[gene_to_idx.keys()]
+    difference_to_og_steady_state = perturbed_steady_state_df - og_steady_state_df
+
+    local_datapoints = []
+    for row_id, diff_row in difference_to_og_steady_state.iterrows():
+        og_row = og_steady_state_df.iloc[row_id]
+
+        if const.NORMALIZE_DATA:
+            max_abs_value = og_row.abs().max()
+            if max_abs_value != 0:
+                og_row = og_row / max_abs_value
+                diff_row = diff_row / max_abs_value
+
+        X = torch.stack([
+            torch.tensor(og_row, dtype=torch.float),
+            torch.tensor(diff_row, dtype=torch.float)
+        ], dim=0).T
+
+        y = torch.tensor(
+            [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()],
+            dtype=torch.float
+        )
+                    #TODO save storage since the graph structure won't change. 
+            # somehow store edge_index, edge_attr and node_mapping only once
+        data = Data(
+            x=X,
+            y=y,
+            edge_index=edge_index,
+            edge_attr=edge_attr,
+            node_mapping=gene_to_idx
+        )
+        local_datapoints.append(data)
+
+    # Save the data files
+    for i, data in enumerate(local_datapoints):
+        idx = f"{gene_to_perturb}_{i}"
+        torch.save(data, raw_data_dir / f"{idx}.pt")
+
+    shutil.rmtree(raw_data_dir / subnetwork_name, ignore_errors=True)
+
+
 def create_data_set(
     raw_data_dir: Path,
     topo_file: str,
@@ -247,81 +326,29 @@ def create_data_set(
     G, gene_to_idx = get_graph_data_from_topo(topo_file)
     edge_index, edge_attr = nx_to_pyg_edges(G, gene_to_idx)
 
-    # get all genes that have outgoing edges
     genes_with_outgoing_edges = [gene for gene in G.nodes() if G.out_degree(gene) > 0]
-
     perturbations_per_gene = math.ceil(desired_dataset_size / len(genes_with_outgoing_edges))
     #### TODO: find a good way to calculate this. there are some hints in the racipe documentation on how to choose the number of init_conds add params
     # also document well how the params and dataset size is calculated
-    num_init_conds = int(np.cbrt(perturbations_per_gene))
-    num_params = perturbations_per_gene // num_init_conds
-    datapoint_id = 0
 
-    for gene_to_perturb in tqdm(genes_with_outgoing_edges, desc="Creating data set", total=len(genes_with_outgoing_edges)):
-        subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
-        #TODO: make deterministic with seed
-        print(f"Generating {num_params} params and {num_init_conds} init conds for {gene_to_perturb}")
-        # generate steady state for the original graph
-        rr.gen_topo_param_files(
+    args = [
+        (
+            gene,
+            G,
+            gene_to_idx,
+            edge_index,
+            edge_attr,
+            raw_data_dir,
             topo_file,
-            topo_name=subnetwork_name,
-            save_dir=raw_data_dir,
-            num_replicates = 1,
-            num_params=num_params,
-            num_init_conds=num_init_conds,
-            sampling_method="Sobol",
+            og_network_name,
+            perturbations_per_gene,
         )
-        print(f"Running racipe to generate initial steady state")
-        rr.run_all_replicates(
-            topo_file,
-            topo_name=subnetwork_name,
-            save_dir=raw_data_dir,
-            batch_size=4000,
-            normalize=False,
-            discretize=False,
-        )
-        #### done
+        for gene in genes_with_outgoing_edges
+    ]
 
-        steady_state_df = get_steady_state_df(raw_data_dir, subnetwork_name)
-        og_steady_state_df = steady_state_df[gene_to_idx.keys()].copy()
-        perturbed_steady_state_df = perturb_graph(G, gene_to_perturb, steady_state_df, subnetwork_name, raw_data_dir)
-        perturbed_steady_state_df = perturbed_steady_state_df[gene_to_idx.keys()]
-        difference_to_og_steady_state = perturbed_steady_state_df - og_steady_state_df
-
-        for row_id, diff_row in difference_to_og_steady_state.iterrows():#
-            og_row = og_steady_state_df.iloc[row_id]
-
-            if const.NORMALIZE_DATA:
-                # normalize the rows
-                max_abs_value = og_row.abs().max()
-                if max_abs_value != 0:
-                    og_row = og_row / max_abs_value
-                    diff_row = diff_row / max_abs_value
-
-            X = torch.stack([
-                torch.tensor(og_row, dtype=torch.float),
-                torch.tensor(diff_row, dtype=torch.float)
-            ], dim=0).T
-
-            y = torch.tensor(
-                [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()],
-                dtype=torch.float
-            )
-            #TODO save storage since the graph structure won't change. 
-            # somehow store edge_index, edge_attr and node_mapping only once
-            data = Data(
-                x=X,
-                y=y,
-                edge_index=edge_index,
-                edge_attr=edge_attr,
-                node_mapping=gene_to_idx
-            )
-            torch.save(data, raw_data_dir / f"{datapoint_id}.pt")
-            datapoint_id += 1
-
-        #remove the files that were created by racipe
-        shutil.rmtree(raw_data_dir / subnetwork_name, ignore_errors=True)
-
+    ctx = mp.get_context("spawn")  # use "spawn" instead of default "fork"
+    with ctx.Pool(processes=const.N_CORES) as pool:
+        list(tqdm(pool.starmap(process_gene, args), total=len(args), desc="Processing genes"))
 
 
 def main():
