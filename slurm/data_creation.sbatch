@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name="data_creation_test"
-#SBATCH --mem=64G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=8
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
 #SBATCH --time=1-00:00:00

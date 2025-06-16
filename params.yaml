@@ -4,8 +4,8 @@ data_creation:
     root_seed_training: 11650217406899810833644412201113384193
     root_seed_validation: 11650217406899810833644412201113384194
     small_input: true
-    training_size: 10000
-    validation_size: 1000
+    training_size: 1000
+    validation_size: 100
     normalize_data: true
 network: tiny
 model: GCNSI
