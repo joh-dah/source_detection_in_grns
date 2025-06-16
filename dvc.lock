@@ -13,9 +13,9 @@ stages:
     outs:
     - path: data/training/raw
       hash: md5
-      md5: 815caa698bc9b0b25f4856ae36edde51.dir
-      size: 109640
-      nfiles: 40
+      md5: d9fba657ebb026af5acb627d7f00f3f0.dir
+      size: 2712424
+      nfiles: 984
   generate-validation-data:
     cmd: python -W ignore -m src.data_creation_racipe --validation --network tiny
     deps:
@@ -30,23 +30,23 @@ stages:
           root_seed_training: 11650217406899810833644412201113384193
           root_seed_validation: 11650217406899810833644412201113384194
           small_input: true
-          training_size: 40
-          validation_size: 10
+          training_size: 1000
+          validation_size: 100
           normalize_data: true
     outs:
     - path: data/validation/raw
       hash: md5
-      md5: 3b2657658894b3d5b9cc936fccbef765.dir
-      size: 32892
-      nfiles: 12
+      md5: 5cb4acb93e2d49d89f881e694bdc1ed8.dir
+      size: 263696
+      nfiles: 96
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:
     - path: data/validation/raw
       hash: md5
-      md5: 3b2657658894b3d5b9cc936fccbef765.dir
-      size: 32892
-      nfiles: 12
+      md5: 5cb4acb93e2d49d89f881e694bdc1ed8.dir
+      size: 263696
+      nfiles: 96
     - path: src/data_processing.py
       hash: md5
       md5: 36018bf5ceef594b9df0662ea3f0a69e
@@ -58,24 +58,24 @@ stages:
           root_seed_training: 11650217406899810833644412201113384193
           root_seed_validation: 11650217406899810833644412201113384194
           small_input: true
-          training_size: 40
-          validation_size: 10
+          training_size: 1000
+          validation_size: 100
           normalize_data: true
         model: GCNSI
     outs:
     - path: data/validation/processed
       hash: md5
-      md5: c37768ce09df1eb332078b2a1df479a2.dir
-      size: 33786
-      nfiles: 14
+      md5: 83a3c2d2b53b910033153d5d5c95d9c1.dir
+      size: 257814
+      nfiles: 98
   process-training-data:
     cmd: python -W ignore -m src.data_processing
     deps:
     - path: data/training/raw
       hash: md5
-      md5: 815caa698bc9b0b25f4856ae36edde51.dir
-      size: 109640
-      nfiles: 40
+      md5: d9fba657ebb026af5acb627d7f00f3f0.dir
+      size: 2712424
+      nfiles: 984
     - path: src/data_processing.py
       hash: md5
       md5: 36018bf5ceef594b9df0662ea3f0a69e
@@ -87,16 +87,16 @@ stages:
           root_seed_training: 11650217406899810833644412201113384193
           root_seed_validation: 11650217406899810833644412201113384194
           small_input: true
-          training_size: 40
-          validation_size: 10
+          training_size: 1000
+          validation_size: 100
           normalize_data: true
         model: GCNSI
     outs:
     - path: data/training/processed
       hash: md5
-      md5: 0e5f87eefe4f1977e15e1de7c09757a7.dir
-      size: 108462
-      nfiles: 42
+      md5: 99d88608edca4d8016e452dd5e1cc871.dir
+      size: 2691526
+      nfiles: 986
   training:
     cmd: python -W ignore -m src.training
     deps:
