@@ -235,6 +235,11 @@ def nx_to_pyg_edges(G, gene_to_idx):
     return edge_index, edge_attr
 
 
+def simulate_topological_inaccuracies(X, y, edge_index, edge_attr, gene_to_idx, gene_to_perturb):
+    """
+    Simulate topological inaccuracies by perturbing the graph structure.
+    Randomly remove edges and nodes"""
+
 def process_gene(
     gene_to_perturb,
     G,
@@ -321,7 +326,7 @@ def create_data_set(
 ):
     shutil.rmtree(raw_data_dir, ignore_errors=True)
     Path(raw_data_dir).mkdir(parents=True, exist_ok=True)
-    print(f"Creating data set for {og_network_name} in {raw_data_dir}")
+    print(f"Creating data set with {desired_dataset_size} samples for {og_network_name} in {raw_data_dir}")
 
     G, gene_to_idx = get_graph_data_from_topo(topo_file)
     edge_index, edge_attr = nx_to_pyg_edges(G, gene_to_idx)
@@ -372,11 +377,8 @@ def main():
     dest_dir = Path(const.DATA_PATH) / train_or_val / "raw"
     topo_file = f"{const.TOPO_PATH}/{args.network}.topo"
     sample_count = const.VALIDATION_SIZE if args.validation else const.TRAINING_SIZE
-    print(f"Creating {train_or_val} data set for {args.network} with {sample_count} samples.")
 
     shutil.rmtree(dest_dir, ignore_errors=True)
-
-    print(f"{args.network} {train_or_val} Data:")
 
     create_data_set(
         dest_dir,

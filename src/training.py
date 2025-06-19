@@ -106,6 +106,8 @@ def train(model: torch.nn.Module, model_name: str, dataset: SDDataset, criterion
 
         for data_list in loader:
             optimizer.zero_grad()
+            if not is_data_parallel:
+                data_list = data_list.to(device)  #
             out = model(data_list)
             y = extract_labels(data_list, is_data_parallel, out.device)
 
