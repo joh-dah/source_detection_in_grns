@@ -1,0 +1,4 @@
+Running stage 'generate-training-data':
+> python -W ignore -m src.data_creation_racipe --network dorothea_tp53_myc
+dorothea_tp53_myc training Data:
+Creating data set for dorothea_tp53_myc in data/training/raw

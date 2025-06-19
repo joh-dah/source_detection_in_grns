@@ -1,0 +1,3 @@
+WARNING: Process '/sc/home/johanna.dahlkemper/miniconda3/envs/grn-env/bin/dvc repro generate-training-data' with (Pid 1369169), in RWLock-file 'data/training/raw' had been killed. Auto removed it from the lock file.
+WARNING: Process '/sc/home/johanna.dahlkemper/miniconda3/envs/grn-env/bin/dvc repro generate-training-data' with (Pid 1369169), in RWLock-file 'data/training/raw' had been killed. Auto removed it from the lock file.
+slurmstepd-cx01: error: *** JOB 722564 ON cx01 CANCELLED AT 2025-06-19T13:39:05 ***

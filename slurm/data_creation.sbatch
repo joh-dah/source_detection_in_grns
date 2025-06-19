@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name="data_creation_test"
+#SBATCH --job-name="data_creation_tiny"
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
 #SBATCH --time=1-00:00:00
@@ -13,9 +13,8 @@
 #SBATCH --output=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/slurm_%j_%N_%x_%A_%a.out
 #SBATCH --error=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/slurm_%j_%N_%x_%A_%a.err
 
-source ~/.bashrc
+eval "$(conda shell.bash hook)"
 conda activate grn-env
-dvc repro generate-training-data
-dvc repro generate-validation-data
-dvc repro process-training-data
-dvc repro process-validation-data
+
+dvc repro  generate-training-data
+dvc repro  generate-validation-data

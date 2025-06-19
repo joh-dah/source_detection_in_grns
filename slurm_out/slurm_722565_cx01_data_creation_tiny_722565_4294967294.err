@@ -1,0 +1,3 @@
+WARNING: Process '/sc/home/johanna.dahlkemper/miniconda3/envs/grn-env/bin/dvc repro generate-validation-data' with (Pid 3786342), in RWLock-file 'data/validation/raw' had been killed. Auto removed it from the lock file.
+WARNING: Process '/sc/home/johanna.dahlkemper/miniconda3/envs/grn-env/bin/dvc repro generate-validation-data' with (Pid 3786342), in RWLock-file 'data/validation/raw' had been killed. Auto removed it from the lock file.
+Processing genes:   0%|          | 0/4 [00:00<?, ?it/s]Processing genes: 100%|██████████| 4/4 [00:00<00:00, 104206.31it/s]

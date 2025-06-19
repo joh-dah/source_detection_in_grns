@@ -30,15 +30,15 @@ stages:
           root_seed_training: 11650217406899810833644412201113384193
           root_seed_validation: 11650217406899810833644412201113384194
           small_input: true
-          training_size: 1000
-          validation_size: 100
+          training_size: 10000
+          validation_size: 1000
           normalize_data: true
     outs:
     - path: data/validation/raw
       hash: md5
-      md5: 5cb4acb93e2d49d89f881e694bdc1ed8.dir
-      size: 263696
-      nfiles: 96
+      md5: e03b7a9c83b32fda637966f32c1948ed.dir
+      size: 2712424
+      nfiles: 984
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:

@@ -1,0 +1,68 @@
+Stage 'generate-training-data' didn't change, skipping
+Data and pipelines are up to date.
+Running stage 'generate-validation-data':
+> python -W ignore -m src.data_creation_racipe --validation --network tiny
+tiny validation Data:
+Creating data set for tiny in data/validation/raw
+Parameter and Intial Condition files generated for tiny_B
+Loading ODE system from: data/validation/raw/tiny_B
+Number of combinations to simulate: 246
+Running steady state simulations for replicate: 001
+Time taken for replicate 001: 4.8875744342803955
+Simulation completed for replicate: 001
+
+Loading ODE system from: data/validation/raw/tiny_B
+Number of combinations to simulate: 246
+Running steady state simulations for replicate: 001
+Time taken for replicate 001: 4.9244019985198975
+Simulation completed for replicate: 001
+
+Parameter and Intial Condition files generated for tiny_C
+Loading ODE system from: data/validation/raw/tiny_C
+Number of combinations to simulate: 246
+Running steady state simulations for replicate: 001
+Time taken for replicate 001: 6.225189685821533
+Simulation completed for replicate: 001
+
+Loading ODE system from: data/validation/raw/tiny_C
+Number of combinations to simulate: 246
+Running steady state simulations for replicate: 001
+Time taken for replicate 001: 3.6018283367156982
+Simulation completed for replicate: 001
+
+Parameter and Intial Condition files generated for tiny_A
+Loading ODE system from: data/validation/raw/tiny_A
+Number of combinations to simulate: 246
+Running steady state simulations for replicate: 001
+Time taken for replicate 001: 6.120581388473511
+Simulation completed for replicate: 001
+
+Loading ODE system from: data/validation/raw/tiny_A
+Number of combinations to simulate: 246
+Running steady state simulations for replicate: 001
+Time taken for replicate 001: 5.158745050430298
+Simulation completed for replicate: 001
+
+Parameter and Intial Condition files generated for tiny_D
+Loading ODE system from: data/validation/raw/tiny_D
+Number of combinations to simulate: 246
+Running steady state simulations for replicate: 001
+Time taken for replicate 001: 6.361149311065674
+Simulation completed for replicate: 001
+
+Loading ODE system from: data/validation/raw/tiny_D
+Number of combinations to simulate: 246
+Running steady state simulations for replicate: 001
+Time taken for replicate 001: 3.5986180305480957
+Simulation completed for replicate: 001
+
+Updating lock file 'dvc.lock'
+
+To track the changes with git, run:
+
+	git add dvc.lock
+
+To enable auto staging, run:
+
+	dvc config core.autostage true
+Use `dvc push` to send your updates to remote storage.
