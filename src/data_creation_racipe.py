@@ -372,6 +372,7 @@ def main():
     dest_dir = Path(const.DATA_PATH) / train_or_val / "raw"
     topo_file = f"{const.TOPO_PATH}/{args.network}.topo"
     sample_count = const.VALIDATION_SIZE if args.validation else const.TRAINING_SIZE
+    print(f"Creating {train_or_val} data set for {args.network} with {sample_count} samples.")
 
     shutil.rmtree(dest_dir, ignore_errors=True)
 
