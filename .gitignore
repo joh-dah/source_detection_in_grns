@@ -16,6 +16,7 @@ src/__pycache__/
 /slurm_training
 /slurm_unsup
 /slurm_val
+/slurm_out
 /report_vis/*.csv
 *.pyc
 *.egg-info/
