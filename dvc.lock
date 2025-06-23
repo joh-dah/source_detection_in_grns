@@ -132,17 +132,17 @@ stages:
       md5: 28305f8b4a357fb916a75cfa2211e140
       size: 73973
   validation:
-    cmd: python -W ignore -m src.validation --network tiny
+    cmd: python -W ignore -m src.validation --network tp53
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: c37768ce09df1eb332078b2a1df479a2.dir
-      size: 33786
-      nfiles: 14
+      md5: 626a318ffa19cb3369ed9cd93f480351.dir
+      size: 4628238
+      nfiles: 1010
     - path: models/latest.pth
       hash: md5
-      md5: 045d04c549433cd60b2bb2a03e2bf295
-      size: 73845
+      md5: 28305f8b4a357fb916a75cfa2211e140
+      size: 73973
     - path: src/validation.py
       hash: md5
       md5: aec4279f6fbc3b1a3f31e67212c07535
@@ -154,19 +154,19 @@ stages:
     params:
       params.yaml:
         model: GCNSI
-        model_name: GCNR_test_04_21
+        model_name: GCNR_test_06_16
   visualization:
-    cmd: python -W ignore -m src.visualization --network tiny
+    cmd: python -W ignore -m src.visualization --network tp53
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: c37768ce09df1eb332078b2a1df479a2.dir
-      size: 33786
-      nfiles: 14
+      md5: 626a318ffa19cb3369ed9cd93f480351.dir
+      size: 4628238
+      nfiles: 1010
     - path: models/latest.pth
       hash: md5
-      md5: 045d04c549433cd60b2bb2a03e2bf295
-      size: 73845
+      md5: 28305f8b4a357fb916a75cfa2211e140
+      size: 73973
     - path: src/visualization.py
       hash: md5
       md5: 568ecc9174bf1ed35a3dad50a5c898e3
@@ -174,6 +174,6 @@ stages:
     params:
       params.yaml:
         model: GCNSI
-        model_name: GCNR_test_04_21
+        model_name: GCNR_test_06_16
         visualization:
           seed: 123

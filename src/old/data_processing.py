@@ -67,6 +67,60 @@ class SDDataset(Dataset):
         return data
 
 
+
+# def paper_input(current_status: torch.tensor, edge_index: torch.tensor) -> torch.tensor:
+#     """
+#     Prepares the input features for the GCNSI model according to the paper:
+#     https://dl.acm.org/doi/abs/10.1145/3357384.3357994
+#     :param current_status: the current infection status
+#     :param edge_index: edge_index of a graph
+#     :return: prepared input features
+#     """
+#     Y = np.array(current_status)
+#     g = to_networkx(Data(edge_index=edge_index), to_undirected=False).to_undirected()
+#     S = nx.normalized_laplacian_matrix(g)
+#     V3 = Y.copy()
+#     Y = [-1 if x == 0 else 1 for x in Y]
+#     V4 = [-1 if x == -1 else 0 for x in Y]
+#     I = np.identity(len(Y))
+#     a = const.ALPHA
+#     d1 = Y
+#     temp = (1 - a) * np.linalg.inv(I - a * S)
+#     d2 = np.squeeze(np.asarray(temp.dot(Y)))
+#     d3 = np.squeeze(np.asarray(temp.dot(V3)))
+#     d4 = np.squeeze(np.asarray(temp.dot(V4)))
+#     X = torch.from_numpy(np.column_stack((d1, d2, d3, d4))).float()
+#     return X
+
+
+def paper_input(current_status: torch.tensor, edge_index: torch.tensor) -> torch.tensor: #TODO: this is chatGPTs take on how to handle directed,cyclic graphs. check if valid
+    Y = np.array(current_status[:, 1])  # second feature column -> diff expression
+    g = to_networkx(Data(edge_index=edge_index), to_undirected=False)
+
+    A = nx.to_numpy_array(g)
+    D_out = np.diag(A.sum(axis=1))
+    D_inv = np.linalg.pinv(D_out)
+
+
+    # Transition matrix for diffusion
+    P = D_inv @ A
+
+    V3 = Y.copy()
+    Y = [-1 if x == 0 else 1 for x in Y]
+    V4 = [-1 if x == -1 else 0 for x in Y]
+    I = np.identity(len(Y))
+
+    a = const.ALPHA
+    d1 = Y
+    temp = (1 - a) * np.linalg.inv(I - a * P)
+    d2 = np.squeeze(np.asarray(temp.dot(Y)))
+    d3 = np.squeeze(np.asarray(temp.dot(V3)))
+    d4 = np.squeeze(np.asarray(temp.dot(V4)))
+
+    X = torch.from_numpy(np.column_stack((d1, d2, d3, d4))).float()
+    return X
+
+
 def create_distance_labels(
     graph: nx.DiGraph, initial_values: torch.tensor
 ) -> torch.tensor:
@@ -89,49 +143,51 @@ def create_distance_labels(
     return torch.tensor(np.expand_dims(min_distances, axis=1)).float()
 
 
-def normalize_datapoint(x: torch.Tensor) -> torch.Tensor:
+def process_gcnsi_data(data: Data) -> Data:
     """
-    Normalizes the features of a data point.
-    :param data: input data to be normalized.
-    :return: normalized data
-    """
-    if const.NORMALIZE_DATA:
-        original_expr = x[:, 0]
-        delta_expr = x[:, 1]
-
-        min_val = original_expr.min()
-        max_val = original_expr.max()
-        range_val = (max_val - min_val + 1e-8)
-    
-        # Min-Max auf Original
-        norm_orig = (original_expr - min_val) / range_val
-        # Δ in gleiche Skala bringen
-        norm_delta = delta_expr / range_val
-
-        x = torch.stack([norm_orig, norm_delta], dim=1)
-    return x
-
-
-def process_data(data: Data) -> Data:
-    """
-    Features and Labels for the model.
+    Features and Labels for the GCNSI model.
     :param data: input data to be processed.
     :return: processed data with expanded features and labels
     """
-    data.x = normalize_datapoint(data.x)
-    if const.MODEL == "GCNR":
-        # For GCNR, we create distance labels based on the graph structure
-        data.y = create_distance_labels(to_networkx(data, to_undirected=False), data.y)
-    elif const.MODEL == "GCNSI":
-        # For GCNSI, we assume y is already in the correct format
-        data.y = data.y.unsqueeze(1).float()
-    elif const.MODEL == "GAT":
-        # For GAT we treat every node as class and therefore switch to classification
-        # get the index of the source node
-        source_node = torch.where(data.y == 1)[0]
-        assert source_node.numel() == 1, f"Expected exactly one source node, got {source_node.numel()}"
-        data.y = source_node.item() # Convert to single label for GAT
+    data.x = paper_input(data.x, data.edge_index)
+    # expand labels to 2D tensor
+    data.y = data.y.unsqueeze(1).float()
     return data
+
+
+def process_simplified_gcnsi_data(data: Data) -> Data:
+    """
+    Simplified features and Labels for the GCNSI model.
+    :param data: input data to be processed.
+    :return: processed data with expanded features and labels
+    """
+    data.x = data.x.float()  # Assume x is already shape [N, 2]
+    data.y = data.y.unsqueeze(1).float()
+    return data
+
+
+
+def process_gcnr_data(data: Data) -> Data:
+    """
+    Features and Labels for the GCNR model.
+    :param data: input data to be processed.
+    :return: processed data with expanded features and labels
+    """
+    data.x = paper_input(data.x, data.edge_index)
+    data.y = create_distance_labels(to_networkx(data, to_undirected=False), data.y)
+    return data
+
+
+def process_simplified_gcnr_data(data: Data) -> Data:
+    """
+    Features and Labels for the GCNR model.
+    :param data: input data to be processed.
+    :return: processed data with expanded features and labels
+    """
+    data.x = data.x.float()
+    data.y = data.y.unsqueeze(1).float()
+    return data
+
 
 
 def main():
@@ -158,11 +214,21 @@ def main():
     shutil.rmtree(path / "processed", ignore_errors=True)
 
     print("Creating new processed data...")
+    if const.MODEL == "GCNSI":
+        if const.SMALL_INPUT:
+            pre_transform_function = process_simplified_gcnsi_data
+        else:
+            pre_transform_function = process_gcnsi_data
+    elif const.MODEL == "GCNR":
+        if const.SMALL_INPUT:
+            pre_transform_function = process_simplified_gcnr_data
+        else:
+            pre_transform_function = process_gcnr_data
 
     # triggers the process function of the dataset
     SDDataset(
         path,
-        pre_transform=process_data,
+        pre_transform=pre_transform_function,
     )
 
 

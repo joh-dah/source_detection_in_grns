@@ -1,17 +1,17 @@
 stages:
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation_racipe --network ${network}
+    cmd: python -W ignore -m src.data_creation --network ${network}
     deps:
-    - src/data_creation_racipe.py
+    - src/data_creation.py
     params:
     - network
     outs:
     - data/training/raw
   
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation_racipe --validation --network ${network}
+    cmd: python -W ignore -m src.data_creation --validation --network ${network}
     deps:
-    - src/data_creation_racipe.py
+    - src/data_creation.py
     params:
     - data_creation
     outs:

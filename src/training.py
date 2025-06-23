@@ -2,6 +2,7 @@ import datetime
 from typing import Tuple
 from architectures.GCNR import GCNR
 from architectures.GCNSI import GCNSI
+from architectures.GAT import GAT
 import torch
 from tqdm import tqdm
 import src.constants as const
@@ -107,20 +108,31 @@ def train(model: torch.nn.Module, model_name: str, dataset: SDDataset, criterion
         for data_list in loader:
             optimizer.zero_grad()
             if not is_data_parallel:
-                data_list = data_list.to(device)  #
+                data_list = data_list.to(device)
+
             out = model(data_list)
             y = extract_labels(data_list, is_data_parallel, out.device)
 
-            if const.SUBSAMPLE:
-                y, out = subsampleClasses(y, out)
+            # === Handle GAT differently ===
+            if const.MODEL == "GAT":
+                # Expecting logits [batch_size, num_classes] and targets [batch_size]
+                loss = criterion(out, y.long())  # BCE/CE wants long dtype
+            else:
+                # Optional subsampling for node-level prediction
+                if const.SUBSAMPLE:
+                    y, out = subsampleClasses(y, out)
 
-            w = torch.ones(y.shape[0])
-            if const.CLASS_WEIGHTING:
-                w = node_weights(y).to(out.device)
-            if const.GRAPH_WEIGHTING:
-                w *= graph_weights(data_list).to(out.device)
+                w = torch.ones(y.shape[0]).to(out.device)
+                if const.CLASS_WEIGHTING:
+                    w = node_weights(y).to(out.device)
+                if const.GRAPH_WEIGHTING:
+                    w *= graph_weights(data_list).to(out.device)
 
-            loss = criterion(out, y, w) if (const.GRAPH_WEIGHTING or const.CLASS_WEIGHTING) else criterion(out, y)
+                if const.CLASS_WEIGHTING or const.GRAPH_WEIGHTING:
+                    loss = criterion(out, y, w)
+                else:
+                    loss = criterion(out, y)
+
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
             optimizer.step()
@@ -160,6 +172,9 @@ def main():
     elif const.MODEL == "GCNSI":
         model = GCNSI()
         criterion = torch.nn.BCEWithLogitsLoss()
+    elif const.MODEL == "GAT":
+        model = GAT()
+        criterion = torch.nn.CrossEntropyLoss()
 
     train_data = utils.load_processed_data(validation=False)
     train(model, model_name, train_data, criterion)
