@@ -91,14 +91,6 @@ def load_processed_data(validation: bool = False):
     """
     print("Load processed data...")
 
-    if const.MODEL == "GCNSI" and const.SMALL_INPUT:
-        pre_transform = dp.process_simplified_gcnsi_data
-    elif const.MODEL == "GCNR" and const.SMALL_INPUT:
-        pre_transform = dp.process_simplified_gcnr_data
-    elif const.MODEL == "GCNSI":
-        pre_transform = dp.process_gcnsi_data
-    elif const.MODEL == "GCNR":
-        pre_transform = dp.process_gcnr_data
 
     train_or_val = "validation" if validation else "training"
     # TODO why dont we need to add "processed" here but not raw?
@@ -106,7 +98,7 @@ def load_processed_data(validation: bool = False):
 
     data = dp.SDDataset(
         path,
-        pre_transform=pre_transform,
+        pre_transform=dp.process_data,
     )
 
     return data

@@ -17,7 +17,6 @@ from torcheval.metrics.functional import binary_f1_score
 import src.data_processing as dp
 from architectures.GCNR import GCNR
 from architectures.GCNSI import GCNSI
-from architectures.GAT import GAT
 import src.constants as const
 from src import visualization as vis
 from src import utils
@@ -307,6 +306,65 @@ def supervised_metrics(
     return metrics
 
 
+def min_matching_distance_netsleuth(
+    result: rpasdt_models.SourceDetectionSimulationResult,
+) -> float:
+    """
+    Calculate the average minimum matching distance for the NETSLEUTH results.
+    :param result: NETSLEUTH results
+    :return: average minimum matching distance
+    """
+    min_matching_dists = []
+    for mm_r in result.raw_results["NETSLEUTH"]:
+        data = from_networkx(mm_r.G)
+        min_matching_dists.append(
+            min_matching_distance(
+                data.edge_index, mm_r.real_sources, mm_r.detected_sources
+            )
+        )
+    return np.mean(min_matching_dists)
+
+
+def create_simulation_config() -> rpasdt_models.SourceDetectionSimulationConfig:
+    """
+    Create a rpasdt simulation config with the NETSLEUTH source detector.
+    """
+    return rpasdt_models.SourceDetectionSimulationConfig(
+        source_detectors={
+            "NETSLEUTH": rpasdt_models.SourceDetectorSimulationConfig(
+                alg=SourceDetectionAlgorithm.NET_SLEUTH,
+                config=rpasdt_models.CommunitiesBasedSourceDetectionConfig(),
+            )
+        }
+    )
+
+
+def unsupervised_metrics(val_data: list) -> dict:
+    """
+    Performs unsupervised evaluation metrics for models.
+    :param val_data: the validation data
+    :return: dictionary containing the evaluation metrics
+    """
+    print("Evaluating unsupervised methods ...")
+    simulation_config = create_simulation_config()
+
+    result = perform_source_detection_simulation(simulation_config, val_data)
+    avg_mm_distance = min_matching_distance_netsleuth(result)
+
+    metrics = {
+        "avg min matching distance": avg_mm_distance,
+        "True positive rate": result.aggregated_results["NETSLEUTH"].TPR,
+        "False positive rate": result.aggregated_results["NETSLEUTH"].FPR,
+        "avg F1 score": result.aggregated_results["NETSLEUTH"].F1,
+    }
+
+    for key, value in metrics.items():
+        metrics[key] = round(value, 3)
+        print(f"unsupervised - {key}: {metrics[key]}")
+
+    return metrics
+
+
 def data_stats(raw_data_set: list) -> dict:
     """
     Calculates various graph-related statistics and infection-related statistics for the provided raw data set.
@@ -360,8 +418,6 @@ def predictions(model: torch.nn.Module, data_set: dp.SDDataset) -> list:
             predictions.append(torch.sigmoid(model(data).detach()))
         elif const.MODEL == "GCNR":
             predictions.append(model(data).detach())
-        elif const.MODEL == "GAT":
-            print(f"predictions: {model(data).detach().shape}")
     return predictions
 
 
@@ -409,8 +465,6 @@ def main():
         model = GCNR()
     elif const.MODEL == "GCNSI":
         model = GCNSI()
-    elif const.MODEL == "GAT":
-        model = GAT()
 
     model = utils.load_model(model, os.path.join(const.MODEL_PATH, f"{model_name}.pth"))
     processed_val_data = utils.load_processed_data(validation=True)

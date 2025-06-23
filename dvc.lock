@@ -1,21 +1,21 @@
 schema: '2.0'
 stages:
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation_racipe --network tp53
+    cmd: python -W ignore -m src.data_creation --network tp53
     deps:
-    - path: src/data_creation_racipe.py
+    - path: src/data_creation.py
       hash: md5
-      md5: a80fca52c4b90110857a347f0f487845
-      size: 13732
+      md5: 74940aa9249c69267d3569ed3653c035
+      size: 13517
     params:
       params.yaml:
         network: tp53
     outs:
     - path: data/training/raw
       hash: md5
-      md5: 2c3b080da9bfcff895456347d6ea46fe.dir
-      size: 46379130
-      nfiles: 9990
+      md5: d114ed9e5c9142023b0860ab69cf0a1c.dir
+      size: 499416
+      nfiles: 108
   generate-validation-data:
     cmd: python -W ignore -m src.data_creation_racipe --validation --network tp53
     deps:
@@ -73,46 +73,43 @@ stages:
     deps:
     - path: data/training/raw
       hash: md5
-      md5: 2c3b080da9bfcff895456347d6ea46fe.dir
-      size: 46379130
-      nfiles: 9990
+      md5: d114ed9e5c9142023b0860ab69cf0a1c.dir
+      size: 499416
+      nfiles: 108
     - path: src/data_processing.py
       hash: md5
-      md5: 36018bf5ceef594b9df0662ea3f0a69e
-      size: 7629
+      md5: c4d2ae2aed0436e518205971a3c669c5
+      size: 5611
     params:
       params.yaml:
         data_creation:
           n_sources: 1
-          root_seed_training: 11650217406899810833644412201113384193
-          root_seed_validation: 11650217406899810833644412201113384194
-          small_input: true
-          training_size: 10000
-          validation_size: 1000
+          training_size: 100
+          validation_size: 10
           normalize_data: true
-        model: GCNSI
+        model: GAT
     outs:
     - path: data/training/processed
       hash: md5
-      md5: f59a6cc9b2943164b8b0c222ce99f3c1.dir
-      size: 46008312
-      nfiles: 9992
+      md5: 84acba36319456a5a6a60429d29f5a01.dir
+      size: 400350
+      nfiles: 110
   training:
     cmd: python -W ignore -m src.training
     deps:
     - path: data/training/processed
       hash: md5
-      md5: f59a6cc9b2943164b8b0c222ce99f3c1.dir
-      size: 46008312
-      nfiles: 9992
+      md5: 84acba36319456a5a6a60429d29f5a01.dir
+      size: 400350
+      nfiles: 110
     - path: src/training.py
       hash: md5
-      md5: 8dca7e2c9a8e8fbe1651512e13ebd34c
-      size: 6106
+      md5: 0d7f2a40fb52b1a099c1fc091c7815d0
+      size: 6680
     params:
       params.yaml:
-        model: GCNSI
-        model_name: GCNR_test_06_16
+        model: GAT
+        model_name: GAT_test
         training:
           alpha: 0.5
           batch_size: 64
@@ -129,8 +126,8 @@ stages:
     outs:
     - path: models/latest.pth
       hash: md5
-      md5: 28305f8b4a357fb916a75cfa2211e140
-      size: 73973
+      md5: 49e0c6e9676a6dfd1c15db6aac45c0e9
+      size: 358970
   validation:
     cmd: python -W ignore -m src.validation --network tp53
     deps:

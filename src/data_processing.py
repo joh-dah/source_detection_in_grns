@@ -119,6 +119,7 @@ def process_data(data: Data) -> Data:
     :return: processed data with expanded features and labels
     """
     data.x = normalize_datapoint(data.x)
+    data.edge_attr = data.edge_attr.unsqueeze(1).float()
     if const.MODEL == "GCNR":
         # For GCNR, we create distance labels based on the graph structure
         data.y = create_distance_labels(to_networkx(data, to_undirected=False), data.y)

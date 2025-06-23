@@ -22,7 +22,6 @@ N_CORES = 64
 dc = params["data_creation"]
 TRAINING_SIZE = dc["training_size"]
 VALIDATION_SIZE = dc["validation_size"]
-SMALL_INPUT = dc["small_input"]  # "true" or "false"
 N_SOURCES = dc["n_sources"]
 NORMALIZE_DATA = dc["normalize_data"]
 
@@ -41,12 +40,8 @@ SUBSAMPLE = training["subsample"]
 CLASS_WEIGHTING = training["class_weighting"]
 GRAPH_WEIGHTING = training["graph_weighting"]
 
-if SMALL_INPUT:
-    GCNSI_N_FEATURES = 2
-    GCNR_N_FEATURES = 2
-else:
-    GCNSI_N_FEATURES = 4
-    GCNR_N_FEATURES = 4
+GCNSI_N_FEATURES = 2
+GCNR_N_FEATURES = 2
 
 # Visualization
 SEED = params["visualization"]["seed"]
