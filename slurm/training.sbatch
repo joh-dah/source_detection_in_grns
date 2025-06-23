@@ -1,35 +1,20 @@
 #!/bin/bash
-#SBATCH --job-name="training_0_2"
-#SBATCH --gres=gpu:3
-#SBATCH --exclude=ac922-[01-02]
-#SBATCH --mem=100G
-#SBATCH --cpus-per-gpu=2
-#SBATCH --account=renard
-#SBATCH --partition=sorcery
+#SBATCH --job-name="training_gpu"
+#SBATCH --mem=32G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --gres=gpu:1
+#SBATCH --account=sci-renard
+#SBATCH --partition=gpu
 #SBATCH --time=1-00:00:00
-#SBATCH --chdir=/hpi/fs00/home/conrad.halle/source_detection
+#SBATCH --chdir=/sc/home/johanna.dahlkemper/source_detection_in_grns/
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=conrad.halle@student.hpi.de
+#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
 #SBATCH --verbose
-#SBATCH --output=/hpi/fs00/home/conrad.halle/source_detection/slurm_training/slurm_%j_%N_%x_%A_%a.out
-#SBATCH --error=/hpi/fs00/home/conrad.halle/source_detection/slurm_training/slurm_%j_%N_%x_%A_%a.err
+#SBATCH --output=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/slurm_%j_%N_%x_%A_%a.out
+#SBATCH --error=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/slurm_%j_%N_%x_%A_%a.err
 
-source venv/bin/activate
-echo "START TRAINING"
-
-python update_params.py --idx 0
-python -m src.training
-python -m src.validation --dataset=synthetic
-python -m src.validation --dataset=karate
-python -m src.validation --dataset=airports
-python -m src.validation --dataset=facebook
-python -m src.validation --dataset=wiki
-python -m src.validation --dataset=actor
-
-python -m src.training
-python -m src.validation --dataset=synthetic
-python -m src.validation --dataset=karate
-python -m src.validation --dataset=airports
-python -m src.validation --dataset=facebook
-python -m src.validation --dataset=wiki
-python -m src.validation --dataset=actor
+# initialize conda
+eval "$(conda shell.bash hook)"
+conda activate grn-env
+dvc repro training
