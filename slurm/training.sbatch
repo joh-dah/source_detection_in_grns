@@ -11,8 +11,8 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
 #SBATCH --verbose
-#SBATCH --output=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/slurm_%j_%N_%x_%A_%a.out
-#SBATCH --error=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/slurm_%j_%N_%x_%A_%a.err
+#SBATCH --output=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/training_%j.out
+#SBATCH --error=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/training_%j.err
 
 # initialize conda
 eval "$(conda shell.bash hook)"
