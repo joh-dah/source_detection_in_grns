@@ -16,3 +16,4 @@
 eval "$(conda shell.bash hook)"
 conda activate grn-env
 dvc repro validation
+dvc repro visualization
