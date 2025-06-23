@@ -1,7 +1,0 @@
-WARNING: Process '/sc/home/johanna.dahlkemper/miniconda3/envs/grn-env/bin/dvc repro process-training-data' with (Pid 494133), in RWLock-file 'data/training/raw' had been killed. Auto removed it from the lock file.
-WARNING: Process '/sc/home/johanna.dahlkemper/miniconda3/envs/grn-env/bin/dvc repro process-training-data' with (Pid 494133), in RWLock-file 'data/training/raw' had been killed. Auto removed it from the lock file.
-ERROR: failed to reproduce 'generate-training-data': failed to run: python -W ignore -m src.data_creation_racipe --network dorothea_tp53_myc, exited with -9
-ERROR: failed to reproduce 'generate-validation-data': failed to run: python -W ignore -m src.data_creation_racipe --validation --network dorothea_tp53_myc, exited with -9
-ERROR: failed to reproduce 'generate-training-data': failed to run: python -W ignore -m src.data_creation_racipe --network dorothea_tp53_myc, exited with -9
-ERROR: failed to reproduce 'generate-validation-data': failed to run: python -W ignore -m src.data_creation_racipe --validation --network dorothea_tp53_myc, exited with -9
-slurmstepd-cx43: error: Detected 61 oom_kill events in StepId=720128.batch. Some of the step tasks have been OOM Killed.

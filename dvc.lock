@@ -1,28 +1,28 @@
 schema: '2.0'
 stages:
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation_racipe --network tiny
+    cmd: python -W ignore -m src.data_creation_racipe --network tp53
     deps:
     - path: src/data_creation_racipe.py
       hash: md5
-      md5: 40646bfe79b2d0550ba8714ef21835d9
-      size: 13528
+      md5: a80fca52c4b90110857a347f0f487845
+      size: 13732
     params:
       params.yaml:
-        network: tiny
+        network: tp53
     outs:
     - path: data/training/raw
       hash: md5
-      md5: d9fba657ebb026af5acb627d7f00f3f0.dir
-      size: 2712424
-      nfiles: 984
+      md5: 2c3b080da9bfcff895456347d6ea46fe.dir
+      size: 46379130
+      nfiles: 9990
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation_racipe --validation --network tiny
+    cmd: python -W ignore -m src.data_creation_racipe --validation --network tp53
     deps:
     - path: src/data_creation_racipe.py
       hash: md5
-      md5: 40646bfe79b2d0550ba8714ef21835d9
-      size: 13528
+      md5: a80fca52c4b90110857a347f0f487845
+      size: 13732
     params:
       params.yaml:
         data_creation:
@@ -36,17 +36,17 @@ stages:
     outs:
     - path: data/validation/raw
       hash: md5
-      md5: e03b7a9c83b32fda637966f32c1948ed.dir
-      size: 2712424
-      nfiles: 984
+      md5: ffc5774f654d3b603dbdf465007f40ea.dir
+      size: 4669796
+      nfiles: 1008
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:
     - path: data/validation/raw
       hash: md5
-      md5: 5cb4acb93e2d49d89f881e694bdc1ed8.dir
-      size: 263696
-      nfiles: 96
+      md5: ffc5774f654d3b603dbdf465007f40ea.dir
+      size: 4669796
+      nfiles: 1008
     - path: src/data_processing.py
       hash: md5
       md5: 36018bf5ceef594b9df0662ea3f0a69e
@@ -58,24 +58,24 @@ stages:
           root_seed_training: 11650217406899810833644412201113384193
           root_seed_validation: 11650217406899810833644412201113384194
           small_input: true
-          training_size: 1000
-          validation_size: 100
+          training_size: 10000
+          validation_size: 1000
           normalize_data: true
         model: GCNSI
     outs:
     - path: data/validation/processed
       hash: md5
-      md5: 83a3c2d2b53b910033153d5d5c95d9c1.dir
-      size: 257814
-      nfiles: 98
+      md5: 626a318ffa19cb3369ed9cd93f480351.dir
+      size: 4628238
+      nfiles: 1010
   process-training-data:
     cmd: python -W ignore -m src.data_processing
     deps:
     - path: data/training/raw
       hash: md5
-      md5: d9fba657ebb026af5acb627d7f00f3f0.dir
-      size: 2712424
-      nfiles: 984
+      md5: 2c3b080da9bfcff895456347d6ea46fe.dir
+      size: 46379130
+      nfiles: 9990
     - path: src/data_processing.py
       hash: md5
       md5: 36018bf5ceef594b9df0662ea3f0a69e
@@ -87,32 +87,32 @@ stages:
           root_seed_training: 11650217406899810833644412201113384193
           root_seed_validation: 11650217406899810833644412201113384194
           small_input: true
-          training_size: 1000
-          validation_size: 100
+          training_size: 10000
+          validation_size: 1000
           normalize_data: true
         model: GCNSI
     outs:
     - path: data/training/processed
       hash: md5
-      md5: 99d88608edca4d8016e452dd5e1cc871.dir
-      size: 2691526
-      nfiles: 986
+      md5: f59a6cc9b2943164b8b0c222ce99f3c1.dir
+      size: 46008312
+      nfiles: 9992
   training:
     cmd: python -W ignore -m src.training
     deps:
     - path: data/training/processed
       hash: md5
-      md5: 0e5f87eefe4f1977e15e1de7c09757a7.dir
-      size: 108462
-      nfiles: 42
+      md5: f59a6cc9b2943164b8b0c222ce99f3c1.dir
+      size: 46008312
+      nfiles: 9992
     - path: src/training.py
       hash: md5
-      md5: da1ad9410111af38f0a30532afef97f9
-      size: 6017
+      md5: 8dca7e2c9a8e8fbe1651512e13ebd34c
+      size: 6106
     params:
       params.yaml:
         model: GCNSI
-        model_name: GCNR_test_04_21
+        model_name: GCNR_test_06_16
         training:
           alpha: 0.5
           batch_size: 64
@@ -129,8 +129,8 @@ stages:
     outs:
     - path: models/latest.pth
       hash: md5
-      md5: 045d04c549433cd60b2bb2a03e2bf295
-      size: 73845
+      md5: 28305f8b4a357fb916a75cfa2211e140
+      size: 73973
   validation:
     cmd: python -W ignore -m src.validation --network tiny
     deps:

@@ -1,2 +1,0 @@
-slurmstepd-cx03: error: *** JOB 720251 ON cx03 CANCELLED AT 2025-06-19T13:39:33 ***
-slurmstepd-cx03: error: Detected 28 oom_kill events in StepId=720251.batch. Some of the step tasks have been OOM Killed.
