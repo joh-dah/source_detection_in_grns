@@ -26,8 +26,6 @@ class GAT(nn.Module):
 
     def forward(self, data):
         x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
-        # print shape of x, edge_index, edge_attr, batch
-        print(f"x shape: {x.shape}, edge_index shape: {edge_index.shape}, edge_attr shape: {edge_attr.shape}, batch shape: {batch.shape}")
 
         for conv in self.layers:
             x = conv(x, edge_index, edge_attr)

@@ -176,6 +176,7 @@ def distance_metrics(pred_label_set: list, data_set: list, threshold: float) -> 
     :param data_set: list of data instances containing true labels
     :return: dictionary with the average minimum matching distance and average distance to the source
     """
+    min_matching_dists = []
     dist_to_source = []
 
     for i, pred_labels in enumerate(
@@ -187,8 +188,18 @@ def distance_metrics(pred_label_set: list, data_set: list, threshold: float) -> 
         dist_to_source.append(
             get_avg_dist_from_sources(true_sources, data_set[i].edge_index)
         )
+        if len(pred_sources) == 0:
+            min_matching_dists.append(
+                get_max_dist_from_sources(true_sources, data_set[i].edge_index)
+            )
+            continue
+        matching_dist = min_matching_distance(
+            data_set[i].edge_index, true_sources, pred_sources
+        )
+        min_matching_dists.append(matching_dist)
 
     return {
+        "avg min matching distance": np.mean(min_matching_dists),
         "avg dist to source": np.mean(dist_to_source),
     }
 
@@ -246,12 +257,13 @@ def prediction_metrics(pred_label_set: list, data_set: list) -> dict:
     for i, pred_labels in enumerate(
         tqdm(pred_label_set, desc="evaluate model", disable=const.ON_CLUSTER)
     ):
-        true_source = torch.where(data_set[i].y == 1)[0].tolist()
+        true_sources = torch.where(data_set[i].y == 1)[0].tolist()
         ranked_predictions = (utils.ranked_source_predictions(pred_labels)).tolist()
 
-        source_ranks.append(ranked_predictions.index(true_source))
-        predictions_for_source += pred_labels[true_source].tolist()
-        general_predictions += pred_labels.flatten().tolist()
+        for source in true_sources:
+            source_ranks.append(ranked_predictions.index(source))
+            predictions_for_source += pred_labels[true_sources].tolist()
+            general_predictions += pred_labels.flatten().tolist()
 
     return {
         "avg rank of source": np.mean(source_ranks),
@@ -280,10 +292,17 @@ def supervised_metrics(
     metrics = {}
 
     print("Evaluating Model ...")
+    roc_score, true_positives, false_positives, thresholds = compute_roc_curve(
+        pred_label_set, data_set
+    )
+    vis.plot_roc_curve(
+        true_positives, false_positives, thresholds, model_name, network
+    )
 
     metrics |= prediction_metrics(pred_label_set, data_set)
     metrics |= distance_metrics(pred_label_set, data_set, threshold)
     metrics |= TP_FP_metrics(pred_label_set, data_set, threshold)
+    metrics |= {"roc score": roc_score}
 
     for key, value in metrics.items():
         metrics[key] = round(value, 3)
@@ -301,13 +320,13 @@ def data_stats(raw_data_set: list) -> dict:
     n_nodes = []
     n_sources = []
     centrality = []
-    n_nodes_affected = []
-    precent_affected = []
+    n_nodes_infected = []
+    precent_infected = []
     for data in tqdm(raw_data_set, desc="get data stats"):
         n_nodes.append(len(data.y))
         n_sources.append(len(torch.where(data.y == 1)[0].tolist()))
-        n_nodes_affected.append(len(torch.where(data.x[1] != 0)[0].tolist()))
-        precent_affected.append(n_nodes_affected[-1] / n_nodes[-1])
+        n_nodes_infected.append(len(torch.where(data.x == 1)[0].tolist()))
+        precent_infected.append(n_nodes_infected[-1] / n_nodes[-1])
         graph = nx.from_edgelist(data.edge_index.t().tolist())
         centrality.append(np.mean(list(nx.degree_centrality(graph).values())))
 
@@ -318,8 +337,8 @@ def data_stats(raw_data_set: list) -> dict:
         },
         "infection stats": {
             "avg number of sources": np.mean(n_sources),
-            "avg portion of affected nodes": np.mean(precent_affected),
-            "std portion of affected nodes": np.std(precent_affected),
+            "avg portion of infected nodes": np.mean(precent_infected),
+            "std portion of infected nodes": np.std(precent_infected),
         },
     }
 
@@ -341,12 +360,51 @@ def predictions(model: torch.nn.Module, data_set: dp.SDDataset) -> list:
     for data in tqdm(
         data_set, desc="make predictions with model", disable=const.ON_CLUSTER
     ):
-        pred = model(data).detach()[0]
-        print(f"Prediction for {data.name}: {pred}")
-        predictions.append(pred)
-
+        if const.MODEL == "GCNSI":
+            predictions.append(torch.sigmoid(model(data).detach()))
+        elif const.MODEL == "GCNR":
+            predictions.append(model(data).detach())
+        elif const.MODEL == "GAT":
+            # print("Using GAT model for predictions")
+            # pred = model(data).detach().cpu()
+            # print("Predictions:", pred)
+            # pred = pred[0]
+            # print("Predictions after indexing:", pred)
+            predictions.append(model(data).detach()[0])
+        else:
+            raise ValueError(f"Unknown model: {const.MODEL}")
     return predictions
 
+
+def optimize_threshold(model: torch.nn.Module, raw_data_set: dp.SDDataset, processed_data_set: dp.SDDataset) -> float | float:
+    """
+    Calculates the optimal threshold for the given model on the given data set. The optimal threshold is the one that
+    maximizes the F1 score. For performance reasons, only the first n samples of the data set are used.
+    :param model: the model to optimize the threshold for
+    :param data_set: the data set used for determining the optimal threshold
+    :return: the optimal threshold and the corresponding F1 score on the given data set
+    """
+    n_samples = min(100, len(processed_data_set))
+    indices = np.random.choice(len(processed_data_set), n_samples, replace=False)
+    processed_data_set = [processed_data_set[i] for i in indices]
+    raw_data_set = [raw_data_set[i] for i in indices]
+
+    y_hat = torch.cat(predictions(model, processed_data_set)).flatten()
+    y = torch.cat([data.y for data in raw_data_set]).flatten()
+
+    if const.MODEL == "GCNR":
+        y_hat = 0 - y_hat
+        y = torch.where(y == 0, 1, 0)
+
+    thresholds = y_hat.unique()
+    f1_scores = []
+    for threshold in thresholds:
+        preds = (y_hat > threshold).int()
+        f1 = f1_score(y.cpu().numpy(), preds.cpu().numpy())
+        f1_scores.append(f1)
+    if const.MODEL == "GCNR":
+        thresholds = -thresholds.numpy()
+    return thresholds[np.argmax(f1_scores)], np.max(f1_scores)
 
 
 def main():
@@ -365,14 +423,25 @@ def main():
     model_name = (
         utils.latest_model_name() if const.MODEL_NAME is None else const.MODEL_NAME
     )
-
-    # assert that model is gat
-    assert const.MODEL == "GAT", "This validation script only supports GAT models."
+    if const.MODEL == "GCNR":
+        model = GCNR()
+    elif const.MODEL == "GCNSI":
+        model = GCNSI()
+    elif const.MODEL == "GAT":
+        model = GAT()
+    else:
+        raise ValueError(f"Unknown model: {const.MODEL}")
 
     model = utils.load_model(model, os.path.join(const.MODEL_PATH, f"{model_name}.pth"))
-    raw_val_data = utils.load_raw_data(validation=True)
     processed_val_data = utils.load_processed_data(validation=True)
+    raw_val_data = utils.load_raw_data(validation=True)
     pred_labels = predictions(model, processed_val_data)
+
+    print("Deriving optimal threshold...")
+    threshold, f1 = optimize_threshold(
+        model, raw_val_data, processed_val_data
+    )
+    print(f"Optimal threshold based on training dataset: {threshold}, F1 score: {f1}")
 
     metrics_dict = {}
     metrics_dict["network"] = network

@@ -13,69 +13,37 @@ stages:
     outs:
     - path: data/training/raw
       hash: md5
-      md5: d114ed9e5c9142023b0860ab69cf0a1c.dir
-      size: 499416
-      nfiles: 108
+      md5: 89a093008851c3c4d903192118fbd11a.dir
+      size: 42402000
+      nfiles: 9990
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation_racipe --validation --network tp53
+    cmd: python -W ignore -m src.data_creation --validation --network tp53
     deps:
-    - path: src/data_creation_racipe.py
+    - path: src/data_creation.py
       hash: md5
-      md5: a80fca52c4b90110857a347f0f487845
-      size: 13732
+      md5: 74940aa9249c69267d3569ed3653c035
+      size: 13517
     params:
       params.yaml:
         data_creation:
           n_sources: 1
-          root_seed_training: 11650217406899810833644412201113384193
-          root_seed_validation: 11650217406899810833644412201113384194
-          small_input: true
           training_size: 10000
           validation_size: 1000
           normalize_data: true
     outs:
     - path: data/validation/raw
       hash: md5
-      md5: ffc5774f654d3b603dbdf465007f40ea.dir
-      size: 4669796
+      md5: e288a0136c70850abce051226b66c4fe.dir
+      size: 4270480
       nfiles: 1008
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --validation
     deps:
     - path: data/validation/raw
       hash: md5
-      md5: ffc5774f654d3b603dbdf465007f40ea.dir
-      size: 4669796
+      md5: e288a0136c70850abce051226b66c4fe.dir
+      size: 4270480
       nfiles: 1008
-    - path: src/data_processing.py
-      hash: md5
-      md5: 36018bf5ceef594b9df0662ea3f0a69e
-      size: 7629
-    params:
-      params.yaml:
-        data_creation:
-          n_sources: 1
-          root_seed_training: 11650217406899810833644412201113384193
-          root_seed_validation: 11650217406899810833644412201113384194
-          small_input: true
-          training_size: 10000
-          validation_size: 1000
-          normalize_data: true
-        model: GCNSI
-    outs:
-    - path: data/validation/processed
-      hash: md5
-      md5: 626a318ffa19cb3369ed9cd93f480351.dir
-      size: 4628238
-      nfiles: 1010
-  process-training-data:
-    cmd: python -W ignore -m src.data_processing
-    deps:
-    - path: data/training/raw
-      hash: md5
-      md5: d114ed9e5c9142023b0860ab69cf0a1c.dir
-      size: 499416
-      nfiles: 108
     - path: src/data_processing.py
       hash: md5
       md5: c4d2ae2aed0436e518205971a3c669c5
@@ -84,24 +52,50 @@ stages:
       params.yaml:
         data_creation:
           n_sources: 1
-          training_size: 100
-          validation_size: 10
+          training_size: 10000
+          validation_size: 1000
+          normalize_data: true
+        model: GAT
+    outs:
+    - path: data/validation/processed
+      hash: md5
+      md5: df6a8cf398135305cdf6b1892a6fb33a.dir
+      size: 3734006
+      nfiles: 1010
+  process-training-data:
+    cmd: python -W ignore -m src.data_processing
+    deps:
+    - path: data/training/raw
+      hash: md5
+      md5: 89a093008851c3c4d903192118fbd11a.dir
+      size: 42402000
+      nfiles: 9990
+    - path: src/data_processing.py
+      hash: md5
+      md5: c4d2ae2aed0436e518205971a3c669c5
+      size: 5611
+    params:
+      params.yaml:
+        data_creation:
+          n_sources: 1
+          training_size: 10000
+          validation_size: 1000
           normalize_data: true
         model: GAT
     outs:
     - path: data/training/processed
       hash: md5
-      md5: 84acba36319456a5a6a60429d29f5a01.dir
-      size: 400350
-      nfiles: 110
+      md5: 0e50c2aad0f7f903c441bf3686427124.dir
+      size: 37066208
+      nfiles: 9992
   training:
     cmd: python -W ignore -m src.training
     deps:
     - path: data/training/processed
       hash: md5
-      md5: 84acba36319456a5a6a60429d29f5a01.dir
-      size: 400350
-      nfiles: 110
+      md5: bc09fa2af527291cc35615962c3577ef.dir
+      size: 37066208
+      nfiles: 9992
     - path: src/training.py
       hash: md5
       md5: 0d7f2a40fb52b1a099c1fc091c7815d0
@@ -126,7 +120,7 @@ stages:
     outs:
     - path: models/latest.pth
       hash: md5
-      md5: 49e0c6e9676a6dfd1c15db6aac45c0e9
+      md5: 91eca6c82418adba279fff2d96d1e57c
       size: 358970
   validation:
     cmd: python -W ignore -m src.validation --network tp53
@@ -157,20 +151,20 @@ stages:
     deps:
     - path: data/validation/processed
       hash: md5
-      md5: 626a318ffa19cb3369ed9cd93f480351.dir
-      size: 4628238
+      md5: df6a8cf398135305cdf6b1892a6fb33a.dir
+      size: 3734006
       nfiles: 1010
     - path: models/latest.pth
       hash: md5
-      md5: 28305f8b4a357fb916a75cfa2211e140
-      size: 73973
+      md5: 91eca6c82418adba279fff2d96d1e57c
+      size: 358970
     - path: src/visualization.py
       hash: md5
-      md5: 568ecc9174bf1ed35a3dad50a5c898e3
-      size: 10938
+      md5: 6584a1d0b55b6f39748f149ecae5c278
+      size: 13017
     params:
       params.yaml:
-        model: GCNSI
-        model_name: GCNR_test_06_16
+        model: GAT
+        model_name: GAT_test
         visualization:
           seed: 123

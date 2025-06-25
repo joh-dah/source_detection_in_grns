@@ -15,8 +15,11 @@ from tqdm import tqdm
 from src import utils
 from architectures.GCNR import GCNR
 from architectures.GCNSI import GCNSI
-from src.data_processing import SDDataset, process_gcnr_data, process_gcnsi_data
+from architectures.GAT import GAT
+from src.data_processing import SDDataset, process_data
+import random
 
+N_GRAPHS = 5  # Number of graphs to visualize
 
 def plot_graph_with_colors(
     g: nx.Graph,
@@ -25,6 +28,8 @@ def plot_graph_with_colors(
     cmap: Union[Colormap, str] = "viridis",
     max_abs_value: float = None,
     layout: callable = nx.circular_layout,
+    source_node: int = None,
+    predicted_source: int = None,
 ):
     """
     Plots a graph with nodes colored according to node_values and labeled using node names.
@@ -45,10 +50,25 @@ def plot_graph_with_colors(
 
     plt.figure(figsize=(8, 8))
 
-    # Draw nodes with thickness depending on 'source' attribute
-    node_border_widths = [
-        5 if g.nodes[n].get("source") == 1 else 1 for n in g.nodes
-    ]
+    # Draw nodes with thickness and color depending on source_node and predicted_source
+    node_border_widths = []
+    node_border_colors = []
+    for n in g.nodes:
+        print(f"Node {n}, Source: {source_node}, Predicted: {predicted_source}")
+        is_real_source = n == source_node
+        is_pred_source = predicted_source is not None and n == predicted_source
+        if is_real_source and is_pred_source:
+            node_border_widths.append(7)
+            node_border_colors.append("purple")  # Both real and predicted
+        elif is_real_source:
+            node_border_widths.append(5)
+            node_border_colors.append("green")   # Real source
+        elif is_pred_source:
+            node_border_widths.append(5)
+            node_border_colors.append("orange")  # Predicted source
+        else:
+            node_border_widths.append(1)
+            node_border_colors.append("black")
 
     nodes = nx.draw_networkx_nodes(
         g,
@@ -59,8 +79,9 @@ def plot_graph_with_colors(
         vmin=min_val,
         vmax=max_val,
         linewidths=node_border_widths,
-        edgecolors="black",
+        edgecolors=node_border_colors,  # <- FIXED
     )
+
 
     # Set edge colors: green = activating (1), red = inhibiting (2)
     edge_colors = [
@@ -173,7 +194,27 @@ def load_model_by_type(model_name: str):
         model = GCNR()
     elif const.MODEL == "GCNSI":
         model = GCNSI()
+    elif const.MODEL == "GAT":
+        model = GAT()
+    else:
+        raise ValueError(f"Unknown model type: {const.MODEL}")
+    
     return utils.load_model(model, os.path.join(const.MODEL_PATH, f"{model_name}.pth"))
+
+
+def get_source_node(y: np.ndarray):
+    """
+    Returns the index of the source node in the graph.
+    """
+    if const.MODEL in ["GCNSI", "GAT"]:
+        # In GCNSI, the source node is the one with label 1
+        source_node = np.where(y == 1)[0]
+    elif const.MODEL == "GCNR":
+        # In GCNR, the source node is the one with label 0
+        source_node = np.where(y == 0)[0]
+    else:
+        raise ValueError(f"Unknown model type: {const.MODEL}")
+    return source_node[0]  # Return the first source node found
 
 
 def visualize_graph_predictions(data, model, processed_data, network, index):
@@ -184,12 +225,19 @@ def visualize_graph_predictions(data, model, processed_data, network, index):
     predictions = get_model_predictions(model, processed_data)
 
     real_node_names = {v: k for k, v in data.node_mapping.items()}
+    source_node = get_source_node(data.y)
+    if const.MODEL in ["GCNSI", "GAT"]:
+        predicted_source = predictions.detach().cpu().numpy().argmax()
+    elif const.MODEL == "GCNR":
+        predicted_source = np.argmin(predictions)
 
-    subgraph, node_order, _ = extract_relevant_subgraph(g, data.y.numpy(), real_node_names)
+    subgraph, node_order, _ = extract_relevant_subgraph(g, source_node, real_node_names)
     relabeled_data = reorder_node_data(data, node_order, predictions)
 
     plot_graph_states(
         subgraph,
+        source_node,
+        predicted_source,
         relabeled_data["initial_status"],
         relabeled_data["diff_status"],
         relabeled_data["current_status"],
@@ -197,7 +245,6 @@ def visualize_graph_predictions(data, model, processed_data, network, index):
         network,
         index
     )
-
 
 
 def build_graph(data):
@@ -231,14 +278,13 @@ def get_model_predictions(model, processed_data):
     return pred
 
 
-def extract_relevant_subgraph(g, initial_status, real_node_names, min_subset_size=500):
+def extract_relevant_subgraph(g, source_node, real_node_names, min_subset_size=500):
     """
     Returns a relabeled subgraph with real node names and the node order.
     """
     if len(g.nodes()) <= min_subset_size:
         subset_indices = list(g.nodes())
     else:
-        source_node = np.where(initial_status == 1)[0][0]
         subset_indices = list(nx.dfs_preorder_nodes(g, source_node))[:min_subset_size]
 
     subgraph = g.subgraph(subset_indices).copy()
@@ -261,14 +307,12 @@ def reorder_node_data(data, new_order, predictions):
     """
     Reorders node status and prediction arrays according to new graph node order.
     """
-    binary_perturbation_marker = data.y.numpy()[new_order]
     initial_status = data.x[new_order, 0]
     diff_status = data.x[new_order, 1]  # Assuming second column is diff status
     current_status = initial_status + diff_status
     predictions = predictions[new_order]
 
     return {
-        "binary_perturbation_marker": binary_perturbation_marker,
         "initial_status": initial_status,
         "diff_status": diff_status,
         "current_status": current_status,
@@ -276,11 +320,11 @@ def reorder_node_data(data, new_order, predictions):
     }
 
 
-def plot_graph_states(g, initial_status, diff_status, current_status, predictions, network, index):
+def plot_graph_states(g, source_node, predicted_source, initial_status, diff_status, current_status, predictions, network, index):
     """
     Plots the initial, current, and predicted states of a graph.
     """
-    if const.MODEL == "GCNSI":
+    if const.MODEL in ["GCNSI", "GAT"]:
         predictions_cmap = LinearSegmentedColormap.from_list(
             "predictions", ["blue", "red"]
         )
@@ -294,6 +338,8 @@ def plot_graph_states(g, initial_status, diff_status, current_status, prediction
         np.fromiter(initial_status,  dtype=float),
         f"{network}_initial_{index}",
         cmap=None,
+        source_node=source_node,
+        predicted_source=predicted_source,
     )
 
     # Plot current infection graph
@@ -302,25 +348,30 @@ def plot_graph_states(g, initial_status, diff_status, current_status, prediction
         np.fromiter(current_status, dtype=float),
         f"{network}_current_{index}",
         cmap=None,
+        source_node=source_node,
+        predicted_source=predicted_source,
     )
 
-        # Plot current infection graph
+    # Plot diff infection graph
     plot_graph_with_colors(
         g,
         np.fromiter(diff_status, dtype=float),
         f"{network}_diff_{index}",
         max_abs_value=max(np.abs(diff_status)),
         cmap=LinearSegmentedColormap.from_list(
-        "predictions", ["red", "white", "blue"]
-    ),
+            "predictions", ["red", "white", "blue"]
+        ),
+        source_node=source_node,
+        predicted_source=predicted_source,
     )
 
-    # Plot predicted infection graph
     plot_graph_with_colors(
         g,
         np.fromiter(predictions, dtype=float),
         f"{network}_prediction_{index}",
         cmap=predictions_cmap,
+        source_node=source_node,
+        predicted_source=predicted_source,
     )
 
 
@@ -329,12 +380,12 @@ def process_predictions(pred):
     Process predictions based on the model type and return the processed predictions,
     colormap, and number of colors.
     """
-    if const.MODEL == "GCNSI":
+    if const.MODEL in ["GCNSI"]:    #TODO maybe remove this
         pred = torch.sigmoid(pred)
         pred = torch.round(pred)
+    elif const.MODEL in ["GAT"]:
+        pred = pred[0]
     return pred
-
-
 
 
 def main():
@@ -348,7 +399,6 @@ def main():
         help="name of the network that should be used"
     )
     args = parser.parse_args()
-    n_graphs = 5
     model_name = (
         utils.latest_model_name() if const.MODEL_NAME is None else const.MODEL_NAME
     )
@@ -362,10 +412,12 @@ def main():
     
 
     model = load_model_by_type(model_name)
-    processed_val_data = utils.load_processed_data(validation=True)[:n_graphs]
-    raw_val_data = utils.load_raw_data(validation=True)[:n_graphs]
+    all_processed_val_data = utils.load_processed_data(validation=True)
+    all_raw_val_data = utils.load_raw_data(validation=True)
+    indices = random.sample(range(len(all_processed_val_data)), N_GRAPHS)
+    processed_val_data = [all_processed_val_data[i] for i in indices]
+    raw_val_data = [all_raw_val_data[i] for i in indices]
 
-    print("Visualize example predictions:")
     for i, data in tqdm(enumerate(raw_val_data)):
         visualize_graph_predictions(data, model, processed_val_data[i], network, i)
 
