@@ -40,6 +40,12 @@ SUBSAMPLE = training["subsample"]
 CLASS_WEIGHTING = training["class_weighting"]
 GRAPH_WEIGHTING = training["graph_weighting"]
 
+network_dict = {
+    "tiny": 4,
+    "tp53": 30,
+}
+
+N_NODES = network_dict[params["network"]]
 GCNSI_N_FEATURES = 2
 GCNR_N_FEATURES = 2
 

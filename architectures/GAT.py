@@ -1,9 +1,10 @@
 from torch_geometric.nn import global_mean_pool, TransformerConv
 import torch.nn as nn
 import torch.nn.functional as F
+import src.constants as const
 
 class GAT(nn.Module):
-    def __init__(self, in_channels=2, edge_dim=1, hidden_dim=64, num_classes=30, num_layers=2, heads=2):
+    def __init__(self, in_channels=2, edge_dim=1, hidden_dim=64, num_classes=const.N_NODES, num_layers=2, heads=2):
         super().__init__()
 
         self.layers = nn.ModuleList()
