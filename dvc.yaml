@@ -5,6 +5,7 @@ stages:
     - src/data_creation.py
     params:
     - network
+    - data_creation
     outs:
     - data/training/raw
   
@@ -13,6 +14,7 @@ stages:
     deps:
     - src/data_creation.py
     params:
+    - network
     - data_creation
     outs:
     - data/validation/raw  

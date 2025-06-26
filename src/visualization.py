@@ -50,9 +50,9 @@ def add_node_border_legend(ax):
     ]
     ax.legend(
         handles=legend_elements,
-        loc="lower right",  # You can customize this
+        loc="upper left",  # You can customize this
         frameon=False,
-        fontsize=10,
+        fontsize=6,
         title="Node Borders"
     )
 

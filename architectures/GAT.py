@@ -31,6 +31,7 @@ class GAT(nn.Module):
         for conv in self.layers:
             x = conv(x, edge_index, edge_attr)
             x = F.relu(x)
+            x = F.dropout(x, p=0.3, training=self.training)
 
         x = self.pool(x, batch)
         out = self.classifier(x)

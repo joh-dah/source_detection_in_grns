@@ -10,6 +10,7 @@ import torch_geometric.datasets as datasets
 import torch_geometric.transforms as T
 import networkx as nx
 import pandas as pd
+from datetime import datetime
 
 
 def latest_model_name():
@@ -75,8 +76,10 @@ def save_metrics(metrics: dict, model_name: str, network: str):
     :params model_name: name of the corresponding model
     """
     (Path(const.REPORT_PATH) / model_name).mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%m%d_%H%M")
+    filename = f"{network}_{timestamp}.json"
     with open(
-        os.path.join((Path(const.REPORT_PATH) / model_name), f"{network}.json"), "w"
+        os.path.join((Path(const.REPORT_PATH) / model_name), filename), "w"
     ) as file:
         json.dump(metrics, file, indent=4)
     # with open(os.path.join(const.REPORT_PATH, "latest.json"), "w") as file:
