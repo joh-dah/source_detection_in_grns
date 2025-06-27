@@ -1,3 +1,6 @@
 [submodule "external/GRiNS"]
 	path = external/GRiNS
 	url = https://github.com/joh-dah/GRiNS.git
+[submodule "external/PDGrapher"]
+	path = external/PDGrapher
+	url = https://github.com/joh-dah/PDGrapher.git
