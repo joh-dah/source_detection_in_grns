@@ -357,9 +357,9 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--validation",
-        action="store_true",
-        help="whether to create validation or training data",
+        "--data_split",
+        type=str,
+        help="whether to create the data set for training, validation or test",
     )
     parser.add_argument(
         "--network", 
@@ -368,10 +368,10 @@ def main():
     )
     args = parser.parse_args()
 
-    train_or_val = "validation" if args.validation else "training"
-    dest_dir = Path(const.DATA_PATH) / train_or_val / "raw"
+    data_split = args.data_split
+    dest_dir = Path(const.DATA_PATH) / data_split / "raw"
     topo_file = f"{const.TOPO_PATH}/{args.network}.topo"
-    sample_count = const.VALIDATION_SIZE if args.validation else const.TRAINING_SIZE
+    sample_count = const.DATASET_SIZE[data_split]
 
     shutil.rmtree(dest_dir, ignore_errors=True)
 

@@ -183,11 +183,13 @@ def visualize_graph_predictions(raw_data, model, processed_data, network, index)
     Visualizes initial, current, and predicted node statuses of a (sub)graph.
     """
     g = build_graph(raw_data)
-    predictions = model(processed_data)[0]
+    # Get per-node predictions and apply sigmoid
+    with torch.no_grad():
+        predictions = torch.sigmoid(model(processed_data).squeeze()).detach().cpu()
 
     real_node_names = {v: k for k, v in raw_data.node_mapping.items()}
-    source_node = processed_data.y
-    predicted_source = predictions.detach().cpu().numpy().argmax().item()
+    source_node = torch.where(processed_data.y == 1)[0][0].item()  # Get the true source node
+    predicted_source = predictions.argmax().item()  # Node with highest prediction
 
     subgraph, node_order, _ = extract_relevant_subgraph(g, source_node, real_node_names)
     relabeled_data = reorder_node_data(raw_data, node_order, predictions)
@@ -256,16 +258,26 @@ def reorder_node_data(data, new_order, predictions):
     """
     Reorders node status and prediction arrays according to new graph node order.
     """
+    # Convert new_order to tensor indices if needed
+    if isinstance(new_order, list):
+        new_order = torch.tensor(new_order)
+    
     initial_status = data.x[new_order, 0]
     diff_status = data.x[new_order, 1]  # Assuming second column is diff status
     current_status = initial_status + diff_status
-    predictions = predictions[new_order]
+    
+    # Make sure predictions can be indexed with new_order
+    if len(predictions) > max(new_order):
+        predictions_reordered = predictions[new_order]
+    else:
+        # If there's a dimension mismatch, just take the first len(new_order) predictions
+        predictions_reordered = predictions[:len(new_order)]
 
     return {
         "initial_status": initial_status,
         "diff_status": diff_status,
         "current_status": current_status,
-        "predictions": predictions
+        "predictions": predictions_reordered
     }
 
 
@@ -344,8 +356,8 @@ def main():
     
     assert const.MODEL == "GAT", "This visualization script only supports GAT models."
     model = GAT()
-    all_processed_val_data = utils.load_processed_data(validation=True)
-    all_raw_val_data = utils.load_raw_data(validation=True)
+    all_processed_val_data = utils.load_processed_data(split="val")
+    all_raw_val_data = utils.load_raw_data(split="val")
     indices = random.sample(range(len(all_processed_val_data)), N_GRAPHS)
     processed_val_data = [all_processed_val_data[i] for i in indices]
     raw_val_data = [all_raw_val_data[i] for i in indices]

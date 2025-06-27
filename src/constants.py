@@ -20,10 +20,13 @@ N_CORES = 64
 
 # Data Creation
 dc = params["data_creation"]
-TRAINING_SIZE = dc["training_size"]
-VALIDATION_SIZE = dc["validation_size"]
 N_SOURCES = dc["n_sources"]
 NORMALIZE_DATA = dc["normalize_data"]
+DATASET_SIZE = {
+    "train": dc["training_size"],
+    "val": dc["validation_size"],
+    "test": dc["test_size"],
+}
 
 # Training
 training = params["training"]
@@ -31,6 +34,7 @@ EPOCHS = training["epochs"]
 LEARNING_RATE = training["learning_rate"]
 DROPOUT = training["dropout"]
 HIDDEN_SIZE = training["hidden_size"]
+HEADS = training["heads"]
 LAYERS = training["layers"]
 ALPHA = training["alpha"]
 WEIGHT_DECAY = training["weight_decay"]

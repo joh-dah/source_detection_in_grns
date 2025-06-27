@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import src.constants as const
 
 class GAT(nn.Module):
-    def __init__(self, in_channels=2, edge_dim=1, hidden_dim=64, num_classes=const.N_NODES, num_layers=2, heads=2):
+    def __init__(self, in_channels=2, edge_dim=1, hidden_dim=const.HIDDEN_SIZE, num_layers=const.LAYERS, heads=4):
         super().__init__()
 
         self.layers = nn.ModuleList()
@@ -22,7 +22,7 @@ class GAT(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(hidden_dim * heads, 128),
             nn.ReLU(),
-            nn.Linear(128, num_classes)
+            nn.Linear(128, 1)
         )
 
     def forward(self, data):
@@ -33,6 +33,5 @@ class GAT(nn.Module):
             x = F.relu(x)
             x = F.dropout(x, p=0.3, training=self.training)
 
-        x = self.pool(x, batch)
-        out = self.classifier(x)
-        return out
+        out = self.classifier(x) 
+        return out  

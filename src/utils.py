@@ -86,18 +86,15 @@ def save_metrics(metrics: dict, model_name: str, network: str):
     #     json.dump(metrics, file, indent=4)
 
 
-def load_processed_data(validation: bool = False):
+def load_processed_data(split: str = "train"):
     """
     Load processed data
-    :param validation: whether to load validation or training data (default: load training data)
+    :param split: split of the data to load, can be "train", "validation" or "test"
     :return: processed data
     """
     print("Load processed data...")
 
-
-    train_or_val = "validation" if validation else "training"
-    # TODO why dont we need to add "processed" here but not raw?
-    path = Path(const.DATA_PATH) / train_or_val
+    path = Path(const.DATA_PATH) / split
 
     data = dp.SDDataset(
         path,
@@ -122,16 +119,15 @@ def create_topo_file_from_graph(network_name, G: nx.DiGraph, dir):
 
 
 
-def load_raw_data(validation: bool = False):
+def load_raw_data(split: str = "train"):
     """
     Load raw data.
-    :param validation: whether to load validation or training data (default: training)
+    :param split: split of the data to load, can be "train", "validation" or "test"
     :return: list of raw Data objects
     """
     print("Load raw data...")
 
-    split_dir = "validation" if validation else "training"
-    path = Path(const.DATA_PATH) / split_dir / "raw"
+    path = Path(const.DATA_PATH) / split / "raw"
 
     if not path.exists():
         raise FileNotFoundError(f"Path does not exist: {path}")

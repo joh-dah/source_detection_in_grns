@@ -23,20 +23,36 @@ from src import visualization as vis
 from src import utils
 
 
+"""
+IMPORTANT CHANGES FOR PER-NODE PREDICTIONS:
+
+This validation script has been updated to handle models that make per-node predictions
+instead of single graph-level predictions. Key changes:
+
+1. predictions() function now returns per-node probability scores for each graph
+2. Added node-level classification metrics (AUC-ROC, precision, recall, F1)
+3. Graph-level metrics work by finding the node with highest prediction
+4. Assumes exactly one source per graph (simplified logic)
+
+The script now provides both:
+- Graph-level metrics: How well does the model identify the correct source node?
+- Node-level metrics: How well does the model classify each node as source/non-source?
+"""
+
+
 def distance_metrics(true_sources, pred_sources, data_set: list) -> dict:
     """
     Get the average min matching distance and the average distance to the source in general.
-    :param pred_label_set: list of predicted labels for each data instance in the data set
+    :param true_sources: list of true source node indices
+    :param pred_sources: list of predicted source node indices
     :param data_set: list of data instances containing true labels
     :return: dictionary with the average minimum matching distance and average distance to the source
     """
     dists_to_source = []
 
     for i, true_source in enumerate(
-        tqdm(true_sources, desc="evaluate model", disable=const.ON_CLUSTER)
+        tqdm(true_sources, desc="calculate distances", disable=const.ON_CLUSTER)
     ):
-        # get the distance from true_source to pred_source
-        # both true_source and pred_source are indices of the nodes in the graph
         pred_source = pred_sources[i]
         if true_source == pred_source:
             dists_to_source.append(0)
@@ -73,13 +89,15 @@ def TP_FP_metrics(true_sources: list, pred_sources: list) -> dict:
             false_positive += 1
 
     total_instances = len(true_sources)
-    true_positive_rate = true_positive / total_instances if total_instances > 0 else 0
-    false_positive_rate = false_positive / total_instances if total_instances > 0 else 0
+    true_positive_rate = true_positive / total_instances
+    false_positive_rate = false_positive / total_instances
+    
+    f1 = f1_score(true_sources, pred_sources, average='weighted')
 
     return {
         "true positive rate": true_positive_rate,
         "false positive rate": false_positive_rate,
-        "f1 score": f1_score(true_sources, pred_sources, average='weighted')
+        "f1 score": f1,
     }
 
 
@@ -88,8 +106,8 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
     """
     Get the average rank of the source, the average prediction for the source
     and additional metrics that help to evaluate the prediction.
-    :param pred_label_set: predicted labels for each data instance in the data set
-    :param data_set: a data set containing true labels
+    :param pred_label_set: predicted labels for each data instance in the data set (per-node probabilities)
+    :param true_sources: list of true source node indices
     :return: dictionary with prediction metrics
     """
     source_ranks = []
@@ -118,27 +136,34 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
 def supervised_metrics(
     pred_label_set: list,
     raw_data_set: list,
+    processed_data_set: list,
     true_sources: list,
     pred_sources: list,
 ) -> dict:
     """
     Performs supervised evaluation metrics for models that predict whether each node is a source or not.
     :param pred_label_set: list of predicted labels for each data instance in the data set
-    :param data_set: the data set containing true labels
-    :param model_name: name of the model being evaluated
-    :param threshold: threshold for the predicted labels
+    :param raw_data_set: the raw data set containing true labels
+    :param processed_data_set: the processed data set with PyTorch Geometric format
+    :param true_sources: list of true source node indices
+    :param pred_sources: list of predicted source node indices
     :return: dictionary containing the evaluation metrics
     """
     metrics = {}
 
     print("Evaluating Model ...")
 
+    # Graph-level metrics (source detection)
     metrics |= prediction_metrics(pred_label_set, true_sources)
     metrics |= distance_metrics(true_sources, pred_sources, raw_data_set)
     metrics |= TP_FP_metrics(true_sources, pred_sources)
+    
+    # Node-level metrics (binary classification)
+    metrics |= node_classification_metrics(pred_label_set, processed_data_set)
 
     for key, value in metrics.items():
-        metrics[key] = round(value, 3)
+        if isinstance(value, (int, float)):
+            metrics[key] = round(value, 3)
         print(f"{key}: {metrics[key]}")
 
     return metrics
@@ -187,17 +212,94 @@ def predictions(model: torch.nn.Module, data_set: dp.SDDataset) -> list:
     Generate predictions using the specified model for the given data set.
     :param model: the model used for making predictions
     :param data_set: the data set to make predictions on
-    :return: predictions generated by the model
+    :return: predictions generated by the model (per-node predictions)
     """
     predictions = []
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    model.eval()
+    
     for data in tqdm(
         data_set, desc="make predictions with model", disable=const.ON_CLUSTER
     ):
-        pred = model(data).detach()[0]
-        print(f"Prediction: {pred}")
-        predictions.append(pred)
+        data = data.to(device)
+        with torch.no_grad():
+            pred = model(data).detach().squeeze()  # shape: [N] for N nodes
+            # Apply sigmoid to get probabilities for each node being a source
+            pred_probs = torch.sigmoid(pred)
+        predictions.append(pred_probs.cpu())
 
     return predictions
+
+
+def extract_true_sources(processed_data) -> list:
+    """
+    Extract true source nodes from the processed data (exactly one source per graph).
+    :param processed_data: list of PyTorch Geometric data instances
+    :return: list of source node indices (one per graph)
+    """
+    true_sources = []
+    
+    for data in processed_data:
+        # Find the single source node (y == 1)
+        source_node = torch.where(data.y == 1)[0][0].item()
+        true_sources.append(source_node)
+    
+    return true_sources
+
+
+def node_classification_metrics(pred_label_set: list, processed_data: list) -> dict:
+    """
+    Calculate AUC-ROC and other binary classification metrics for per-node source detection.
+    :param pred_label_set: list of per-node prediction probabilities
+    :param processed_data: list of data instances with true labels
+    :return: dictionary with classification metrics
+    """
+    all_preds = []
+    all_labels = []
+    
+    for i, (pred_probs, data) in enumerate(zip(pred_label_set, processed_data)):
+        # Ensure pred_probs is flattened
+        if isinstance(pred_probs, torch.Tensor):
+            pred_list = pred_probs.flatten().tolist()
+        else:
+            pred_list = pred_probs
+        all_preds.extend(pred_list)
+        
+        # Ensure labels are flattened integers
+        if isinstance(data.y, torch.Tensor):
+            label_list = data.y.flatten().int().tolist()
+        else:
+            label_list = data.y
+        all_labels.extend(label_list)
+    
+    # Calculate AUC-ROC if we have both classes
+    unique_labels = set(all_labels)
+    if len(unique_labels) > 1:
+        auc_roc = roc_auc_score(all_labels, all_preds)
+        fpr, tpr, thresholds = roc_curve(all_labels, all_preds)
+    else:
+        auc_roc = 0.0
+        fpr, tpr, thresholds = None, None, None
+    
+    # Calculate binary predictions using 0.5 threshold
+    binary_preds = [1 if p > 0.5 else 0 for p in all_preds]
+    
+    # Calculate precision, recall, F1
+    from sklearn.metrics import precision_score, recall_score, f1_score
+    precision = precision_score(all_labels, binary_preds, average='binary', zero_division=0)
+    recall = recall_score(all_labels, binary_preds, average='binary', zero_division=0)
+    f1_binary = f1_score(all_labels, binary_preds, average='binary', zero_division=0)
+    
+    return {
+        "node_auc_roc": auc_roc,
+        "node_precision": precision,
+        "node_recall": recall,
+        "node_f1": f1_binary,
+        "total_nodes": len(all_labels),
+        "positive_nodes": sum(all_labels),
+        "predicted_positive": sum(binary_preds)
+    }
 
 
 def main():
@@ -222,18 +324,22 @@ def main():
     model = GAT()
 
     model = utils.load_model(model, os.path.join(const.MODEL_PATH, f"{model_name}.pth"))
-    raw_val_data = utils.load_raw_data(validation=True)
-    processed_val_data = utils.load_processed_data(validation=True)
-    pred_labels = predictions(model, processed_val_data)
-    true_sources = [data.y for data in processed_val_data]
+    raw_test_data = utils.load_raw_data(split="test")
+    processed_test_data = utils.load_processed_data(split="test")
+    pred_labels = predictions(model, processed_test_data)
+    
+    # Extract true sources (exactly one per graph)
+    true_sources = extract_true_sources(processed_test_data)
+    
+    # Get predicted sources (node with highest prediction probability)
     pred_sources = [pred.argmax().item() for pred in pred_labels]
 
     metrics_dict = {}
     metrics_dict["network"] = network
     metrics_dict["metrics"] = supervised_metrics(
-        pred_labels, raw_val_data, true_sources, pred_sources
+        pred_labels, raw_test_data, processed_test_data, true_sources, pred_sources
     )
-    metrics_dict["data stats"] = data_stats(raw_val_data)
+    metrics_dict["data stats"] = data_stats(raw_test_data)
     metrics_dict["parameters"] = yaml.full_load(open("params.yaml", "r"))
     utils.save_metrics(metrics_dict, model_name, network)
 

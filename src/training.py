@@ -62,18 +62,20 @@ def graph_weights(data_list: list[Data]) -> torch.Tensor:
     return torch.Tensor(weights)
 
 
-def configure_model_and_loader(model: torch.nn.Module, dataset: SDDataset) -> Tuple[torch.nn.Module, torch.utils.data.DataLoader, bool]:
+def configure_model_and_loader(model: torch.nn.Module, train_dataset: SDDataset, val_dataset: SDDataset) -> Tuple[torch.nn.Module, torch.utils.data.DataLoader, bool]:
     if torch.cuda.device_count() > 1:
         print(f"Using {torch.cuda.device_count()} GPUs with DataParallel")
         model = DataParallel(model).to(device)
-        loader = DataListLoader(dataset, batch_size=const.BATCH_SIZE, shuffle=True)
+        train_loader = DataListLoader(train_dataset, batch_size=const.BATCH_SIZE, shuffle=True)
+        val_loader = DataListLoader(val_dataset, batch_size=const.BATCH_SIZE, shuffle=False)
         is_data_parallel = True
     else:
         print(f"Using {'GPU' if torch.cuda.is_available() else 'CPU'}")
         model = model.to(device)
-        loader = DataLoader(dataset, batch_size=const.BATCH_SIZE, shuffle=True)
+        train_loader = DataLoader(train_dataset, batch_size=const.BATCH_SIZE, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=const.BATCH_SIZE, shuffle=False)
         is_data_parallel = False
-    return model, loader, is_data_parallel
+    return model, train_loader, val_loader, is_data_parallel
 
 
 def extract_labels(data_list, is_data_parallel: bool, device: torch.device) -> torch.Tensor:
@@ -91,8 +93,42 @@ def save_model_checkpoint(model: torch.nn.Module, model_name: str, is_data_paral
         utils.save_model(model, model_name)
 
 
-def train(model: torch.nn.Module, model_name: str, dataset: SDDataset, criterion: torch.nn.Module):
-    model, loader, is_data_parallel = configure_model_and_loader(model, dataset)
+@torch.no_grad()
+def validate(model, val_loader, criterion, is_data_parallel):
+    model.eval()
+    total_loss = 0
+    correct = 0
+    total = 0
+
+    for data_list in val_loader:
+        if not is_data_parallel:
+            data_list = data_list.to(device)
+
+        out = model(data_list)  # shape: [N, 1]
+        y = extract_labels(data_list, is_data_parallel, out.device)  # shape: [N]
+
+        y = y.view(-1, 1).float()  # match shape + dtype
+
+        loss = criterion(out, y)
+
+        preds = (out.sigmoid() > 0.5).float()  # binary prediction
+        correct += (preds == y).sum().item()
+        total += y.size(0)
+
+        total_loss += loss.item()
+
+    avg_loss = total_loss / len(val_loader)
+    acc = correct / total if total > 0 else None
+    return avg_loss, acc
+
+
+
+def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val_dataset: SDDataset, criterion: torch.nn.Module):
+    model, train_loader, val_loader, is_data_parallel = configure_model_and_loader(model, train_dataset, val_dataset)
+
+    print(f"Training samples: {len(train_dataset)}")
+    print(f"Validation samples: {len(val_dataset)}")
+
 
     optimizer = torch.optim.Adam(model.parameters(), lr=const.LEARNING_RATE, weight_decay=const.WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2, eta_min=1e-6)
@@ -103,49 +139,49 @@ def train(model: torch.nn.Module, model_name: str, dataset: SDDataset, criterion
 
     for epoch in tqdm(range(1, const.EPOCHS + 1), disable=const.ON_CLUSTER):
         model.train()
-        agg_loss = 0
+        agg_train_loss = 0
 
-        for data_list in loader:
+        for data_list in train_loader:
             optimizer.zero_grad()
             if not is_data_parallel:
                 data_list = data_list.to(device)
 
             out = model(data_list)
             y = extract_labels(data_list, is_data_parallel, out.device)
+            y = y.view(-1, 1).float()  # match shape + dtype
 
-            # === Handle GAT differently ===
-            if const.MODEL == "GAT":
-                # Expecting logits [batch_size, num_classes] and targets [batch_size]
-                loss = criterion(out, y.long())  # BCE/CE wants long dtype
+            if const.SUBSAMPLE:
+                y, out = subsampleClasses(y, out)
+
+            w = torch.ones(y.shape[0]).to(out.device)
+            if const.CLASS_WEIGHTING:
+                w = node_weights(y).to(out.device)
+            if const.GRAPH_WEIGHTING:
+                w *= graph_weights(data_list).to(out.device)
+
+            if const.CLASS_WEIGHTING or const.GRAPH_WEIGHTING:
+                loss = criterion(out, y, w)
             else:
-                # Optional subsampling for node-level prediction
-                if const.SUBSAMPLE:
-                    y, out = subsampleClasses(y, out)
-
-                w = torch.ones(y.shape[0]).to(out.device)
-                if const.CLASS_WEIGHTING:
-                    w = node_weights(y).to(out.device)
-                if const.GRAPH_WEIGHTING:
-                    w *= graph_weights(data_list).to(out.device)
-
-                if const.CLASS_WEIGHTING or const.GRAPH_WEIGHTING:
-                    loss = criterion(out, y, w)
-                else:
-                    loss = criterion(out, y)
+                loss = criterion(out, y)
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
             optimizer.step()
             scheduler.step()
-            agg_loss += loss.item()
+            agg_train_loss += loss.item()
 
-        writer.add_scalar("Loss/train", agg_loss, epoch)
+        writer.add_scalar("Loss/train", agg_train_loss, epoch)
         writer.add_scalar("LearningRate", scheduler.get_last_lr()[0], epoch)
-        print(f"Epoch {epoch}: Loss = {agg_loss:.4f}")
 
-        if agg_loss < best_loss:
+        val_loss, val_acc = validate(model, val_loader, criterion, is_data_parallel)
+        writer.add_scalar("Loss/val", val_loss, epoch)
+        if val_acc is not None:
+            writer.add_scalar("Accuracy/val", val_acc, epoch)
+        print(f"Epoch {epoch}: Train Loss = {agg_train_loss:.4f}, Val Loss = {val_loss:.4f}, Val Acc = {val_acc:.4f}")
+
+        if val_loss < best_loss:
             print("Saving new best model ...")
-            best_loss = agg_loss
+            best_loss = val_loss
             patience_counter = 0
             save_model_checkpoint(model, model_name, is_data_parallel)
         else:
@@ -174,10 +210,11 @@ def main():
         criterion = torch.nn.BCEWithLogitsLoss()
     elif const.MODEL == "GAT":
         model = GAT()
-        criterion = torch.nn.CrossEntropyLoss()
+        criterion = torch.nn.BCEWithLogitsLoss()
 
-    train_data = utils.load_processed_data(validation=False)
-    train(model, model_name, train_data, criterion)
+    train_data = utils.load_processed_data(split="train")
+    val_data = utils.load_processed_data(split="val")
+    train(model, model_name, train_data, val_data, criterion)
 
 
 if __name__ == "__main__":
