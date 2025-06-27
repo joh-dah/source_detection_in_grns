@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import src.constants as const
 
 class GAT(nn.Module):
-    def __init__(self, in_channels=2, edge_dim=1, hidden_dim=const.HIDDEN_SIZE, num_layers=const.LAYERS, heads=4):
+    def __init__(self, in_channels=2, edge_dim=1, hidden_dim=const.HIDDEN_SIZE, heads=const.HEADS):
         super().__init__()
 
         self.layers = nn.ModuleList()
@@ -12,7 +12,7 @@ class GAT(nn.Module):
         self.layers.append(
             TransformerConv(in_channels, hidden_dim, heads=heads, edge_dim=edge_dim, concat=True)
         )
-        for _ in range(num_layers - 1):
+        for _ in range(const.LAYERS - 1):
             self.layers.append(
                 TransformerConv(hidden_dim * heads, hidden_dim, heads=heads, edge_dim=edge_dim, concat=True)
             )

@@ -1,8 +1,9 @@
 GCNR_layer_type: GCN
 data_creation:
     n_sources: 1
-    training_size: 100000
-    validation_size: 10000
+    training_size: 10000
+    validation_size: 1000
+    test_size: 1000
     normalize_data: true
 network: tp53
 model: GAT
@@ -12,9 +13,10 @@ training:
     alpha: 0.5
     batch_size: 64
     class_weighting: false
-    epochs: 500  #fix of by one epoch
+    epochs: 200  #fix of by one epoch
     graph_weighting: false
     hidden_size: 128
+    heads: 4
     layers: 2
     dropout: 0.3
     learning_rate: 1.0e-4

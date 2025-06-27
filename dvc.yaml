@@ -1,51 +1,72 @@
 stages:
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation --network ${network}
+    cmd: python -W ignore -m src.data_creation --data_split=train --network ${network}
     deps:
     - src/data_creation.py
     params:
     - network
     - data_creation
     outs:
-    - data/training/raw
+    - data/trai/raw
   
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation --validation --network ${network}
+    cmd: python -W ignore -m src.data_creation --data_split=val --network ${network}
     deps:
     - src/data_creation.py
     params:
     - network
     - data_creation
     outs:
-    - data/validation/raw  
+    - data/val/raw  
 
-  process-validation-data:
-    cmd: python -W ignore -m src.data_processing --validation
+  generate-test-data:
+    cmd: python -W ignore -m src.data_creation --data_split test --network ${network}
     deps:
-    - src/data_processing.py
-    - data/validation/raw
+    - src/data_creation.py
     params:
-    - model
+    - network
     - data_creation
     outs:
-    - data/validation/processed
+    - data/test/raw
 
   process-training-data:
-    cmd: python -W ignore -m src.data_processing
+    cmd: python -W ignore -m src.data_processing --data_split train
     deps:
     - src/data_processing.py
-    - data/training/raw
+    - data/train/raw
     params:
       - model
       - data_creation
     outs:
-    - data/training/processed  
+    - data/train/processed  
+
+  process-validation-data:
+    cmd: python -W ignore -m src.data_processing --data_split=val
+    deps:
+    - src/data_processing.py
+    - data/val/raw
+    params:
+    - model
+    - data_creation
+    outs:
+    - data/val/processed
+
+  process-test-data:
+    cmd: python -W ignore -m src.data_processing --data_split test
+    deps:
+    - src/data_processing.py
+    - data/test/raw
+    params:
+    - model
+    - data_creation
+    outs:
+    - data/test/processed
 
   training:
     cmd: python -W ignore -m src.training
     deps:
     - src/training.py
-    - data/training/processed
+    - data/train/processed
     params:
     - training
     - model
@@ -57,7 +78,7 @@ stages:
       cmd: python -W ignore -m src.validation --network ${network}
       deps:
       - src/validation.py
-      - data/validation/processed
+      - data/val/processed
       - src/visualization.py
       - models/latest.pth
       params:
@@ -68,7 +89,7 @@ stages:
       cmd: python -W ignore -m src.visualization --network ${network}
       deps:
       - src/visualization.py
-      - data/validation/processed
+      - data/val/processed
       - models/latest.pth
       params:
       - model

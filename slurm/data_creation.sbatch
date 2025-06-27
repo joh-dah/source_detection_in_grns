@@ -18,5 +18,7 @@ conda activate grn-env
 
 dvc repro  generate-training-data
 dvc repro  generate-validation-data
+dvc repro  generate-test-data
 dvc repro  process-training-data
 dvc repro  process-validation-data
+dvc repro  process-test-data
