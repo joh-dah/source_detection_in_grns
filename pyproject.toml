@@ -15,8 +15,3 @@ dependencies = [
     "torch>=2.7.1",
     "torch-geometric>=2.6.1",
 ]
-
-[project.optional-dependencies]
-local = [
-    { path = "external/GRiNS", develop = true }
-]
