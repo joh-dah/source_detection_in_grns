@@ -6,14 +6,16 @@ The pipeline consists of several key steps, including the generation of training
 
 ## Setup
 
-### Setup Virtual Environment (Linux):
+### Setup UV (Linux):
 
 ```
-sudo apt install python3.10
-sudo apt install python3-virtualenv
+pipx install uv
+uv venv
+uv sync
 
-virtualenv -p python3.10 venv
-source venv/bin/activate
+pipx install uv
+uv pip install -e external/GRiNS
+uv pip install -e external/PDGrapher
 ```
 
 ### Setup Virtual Environment (Windows):
