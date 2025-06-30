@@ -13,7 +13,8 @@
 #SBATCH --output=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/validation_%j.out
 #SBATCH --error=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/validation_%j.err
 
-eval "$(conda shell.bash hook)"
-conda activate grn-env
+# Activate virtual environment
+source .venv/bin/activate
+
 dvc repro validation
 dvc repro visualization

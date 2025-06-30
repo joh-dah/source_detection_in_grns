@@ -30,8 +30,7 @@ DATA_JOB_ID=$(sbatch --parsable <<EOF
 #SBATCH --output=$SLURM_OUT_DIR/pipeline_data_%j.out
 #SBATCH --error=$SLURM_OUT_DIR/pipeline_data_%j.err
 
-eval "\$(conda shell.bash hook)"
-conda activate grn-env
+source .venv/bin/activate
 
 echo "=== STARTING DATA CREATION STAGE ==="
 echo "Job ID: \$SLURM_JOB_ID"
@@ -68,8 +67,7 @@ TRAINING_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
 #SBATCH --output=$SLURM_OUT_DIR/pipeline_training_%j.out
 #SBATCH --error=$SLURM_OUT_DIR/pipeline_training_%j.err
 
-eval "\$(conda shell.bash hook)"
-conda activate grn-env
+source .venv/bin/activate
 
 echo "=== STARTING TRAINING STAGE ==="
 echo "Job ID: \$SLURM_JOB_ID"
@@ -101,8 +99,7 @@ VALIDATION_JOB_ID=$(sbatch --parsable --dependency=afterok:$TRAINING_JOB_ID <<EO
 #SBATCH --output=$SLURM_OUT_DIR/pipeline_validation_%j.out
 #SBATCH --error=$SLURM_OUT_DIR/pipeline_validation_%j.err
 
-eval "\$(conda shell.bash hook)"
-conda activate grn-env
+source .venv/bin/activate
 
 echo "=== STARTING VALIDATION STAGE ==="
 echo "Job ID: \$SLURM_JOB_ID"

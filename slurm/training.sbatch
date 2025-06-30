@@ -14,8 +14,7 @@
 #SBATCH --output=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/training_%j.out
 #SBATCH --error=/sc/home/johanna.dahlkemper/source_detection_in_grns/slurm_out/training_%j.err
 
-# initialize conda
-eval "$(/sc/home/johanna.dahlkemper/miniconda3/bin/conda shell.bash hook)"
-conda activate grn-env
+# Activate virtual environment
+source .venv/bin/activate
 
 dvc repro training
