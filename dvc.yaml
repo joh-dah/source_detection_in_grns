@@ -7,7 +7,7 @@ stages:
     - network
     - data_creation
     outs:
-    - data/trai/raw
+    - data/train/raw
   
   generate-validation-data:
     cmd: python -W ignore -m src.data_creation --data_split=val --network ${network}

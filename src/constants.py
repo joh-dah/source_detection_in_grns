@@ -16,7 +16,10 @@ FIGURES_PATH = "figures"
 ROC_PATH = "roc"
 REPORT_PATH = "reports"
 ON_CLUSTER = params["on_cluster"]
-N_CORES = 64
+if ON_CLUSTER:
+    N_CORES = 64
+else:
+    N_CORES = 2
 
 # Data Creation
 dc = params["data_creation"]
