@@ -1034,6 +1034,40 @@ wheels = [
 ]
 
 [[package]]
+name = "lightning"
+version = "2.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fsspec", extra = ["http"] },
+    { name = "lightning-utilities" },
+    { name = "packaging" },
+    { name = "pytorch-lightning" },
+    { name = "pyyaml" },
+    { name = "torch" },
+    { name = "torchmetrics" },
+    { name = "tqdm" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/3c/6a930ac7c64fb896adbe560a9141570732d9ca890a11e6d158edd5aece76/lightning-2.5.2.tar.gz", hash = "sha256:9550df613cfb22358ebf77b4a8ad45f3767cd7d26ba2d52b7f036bd3cdd701c4", size = 633391, upload-time = "2025-06-20T15:58:22.065Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/71/a9/5d39280e55dc5df9e98be074029f6b48f86fe3db4929cb9ada6401234b47/lightning-2.5.2-py3-none-any.whl", hash = "sha256:7e7f23245e214c8ec14d5d8119d3856c25cfe96f9856296fd5df4e29c2ff88a7", size = 821145, upload-time = "2025-06-20T15:58:18.609Z" },
+]
+
+[[package]]
+name = "lightning-utilities"
+version = "0.14.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "setuptools" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0f/bb/63a6a8c9e7a96b6ba92647fa5b1595c2dbee29f8178705adb4704d82ecba/lightning_utilities-0.14.3.tar.gz", hash = "sha256:37e2f83f273890052955a44054382c211a303012ee577619efbaa5df9e65e9f5", size = 30346, upload-time = "2025-04-03T15:59:56.928Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/c1/31b3184cba7b257a4a3b5ca5b88b9204ccb7aa02fe3c992280899293ed54/lightning_utilities-0.14.3-py3-none-any.whl", hash = "sha256:4ab9066aa36cd7b93a05713808901909e96cc3f187ea6fd3052b2fd91313b468", size = 28894, upload-time = "2025-04-03T15:59:55.658Z" },
+]
+
+[[package]]
 name = "markdown"
 version = "3.8.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1723,6 +1757,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7c/0d/8787b021d52eb8764c0bb18ab95f720cf554902044c6a5cb1865daf45763/python-louvain-0.16.tar.gz", hash = "sha256:b7ba2df5002fd28d3ee789a49532baad11fe648e4f2117cf0798e7520a1da56b", size = 204641, upload-time = "2022-01-29T15:53:03.532Z" }
 
 [[package]]
+name = "pytorch-lightning"
+version = "2.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fsspec", extra = ["http"] },
+    { name = "lightning-utilities" },
+    { name = "packaging" },
+    { name = "pyyaml" },
+    { name = "torch" },
+    { name = "torchmetrics" },
+    { name = "tqdm" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/01/3e/728fbdc671d07727ad447f9401d98a43570573965beb3cb2060f9a330b4f/pytorch_lightning-2.5.2.tar.gz", hash = "sha256:f817087d611be8d43b777dd4e543d72703e235510936677a13e6c29f7fd790e3", size = 636859, upload-time = "2025-06-20T15:58:27.062Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e2/42/47c186c8f9e956e559c89e6c764d5d5d0d0af517c04ca0ad39bd0a357d3a/pytorch_lightning-2.5.2-py3-none-any.whl", hash = "sha256:17cfdf89bd98074e389101f097cdf34c486a1f5c6d3fdcefbaf4dea7f97ff0bf", size = 825366, upload-time = "2025-06-20T15:58:25.534Z" },
+]
+
+[[package]]
 name = "pytz"
 version = "2025.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1983,12 +2036,15 @@ dependencies = [
     { name = "cdlib" },
     { name = "dataclasses-json" },
     { name = "dvc" },
+    { name = "lightning" },
     { name = "ndlib" },
     { name = "numpy" },
     { name = "scikit-learn" },
     { name = "tensorboard" },
     { name = "torch" },
     { name = "torch-geometric" },
+    { name = "torch-scatter" },
+    { name = "torch-sparse" },
 ]
 
 [package.metadata]
@@ -1996,12 +2052,15 @@ requires-dist = [
     { name = "cdlib", specifier = ">=0.4.0" },
     { name = "dataclasses-json", specifier = ">=0.6.7" },
     { name = "dvc", specifier = ">=3.60.1" },
+    { name = "lightning", specifier = ">=2.5.2" },
     { name = "ndlib", specifier = ">=5.1.1" },
     { name = "numpy", specifier = ">=2.3.1" },
     { name = "scikit-learn", specifier = ">=1.7.0" },
     { name = "tensorboard", specifier = ">=2.19.0" },
     { name = "torch", specifier = ">=2.7.1" },
     { name = "torch-geometric", specifier = ">=2.6.1" },
+    { name = "torch-scatter", specifier = ">=2.1.2" },
+    { name = "torch-sparse", specifier = ">=0.6.18" },
 ]
 
 [[package]]
@@ -2161,6 +2220,36 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e8/81/e1b015494cb9e0bf4c47cc8426e49736120248733be0e22072a5628ae9ed/torch_geometric-2.6.1.tar.gz", hash = "sha256:1f18f9d0fc4d2239d526221e4f22606a4a3895b5d965a9856d27610a3df662c6", size = 771490, upload-time = "2024-09-26T08:11:30.25Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/03/9f/157e913626c1acfb3b19ce000b1a6e4e4fb177c0bc0ea0c67ca5bd714b5a/torch_geometric-2.6.1-py3-none-any.whl", hash = "sha256:8faeb353f9655f7dbec44c5e0b44c721773bdfb279994da96b9b8b12fd30f427", size = 1135632, upload-time = "2024-09-26T08:11:27.194Z" },
+]
+
+[[package]]
+name = "torch-scatter"
+version = "2.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/ab/2a44ecac0f891dd0d765fc59ac8d277c6283a31907626560e72685df2ed6/torch_scatter-2.1.2.tar.gz", hash = "sha256:69b3aa435f2424ac6a1bfb6ff702da6eb73b33ca0db38fb26989c74159258e47", size = 108045, upload-time = "2023-10-06T08:49:07.081Z" }
+
+[[package]]
+name = "torch-sparse"
+version = "0.6.18"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/e2/cddf10a8e32a0b214918943e6173672c8ec11000e69c36dad8e6b141cb60/torch_sparse-0.6.18.tar.gz", hash = "sha256:2f14c510a6e93f404c6ea357210615b3c15a71731f9dbd86f25434e34fb5a741", size = 209982, upload-time = "2023-10-06T08:51:55.326Z" }
+
+[[package]]
+name = "torchmetrics"
+version = "1.7.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lightning-utilities" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "torch" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/48/22/8b16c4ec34d93ee15024924cbbe84fbd235bb3e1df2cc8f48c865c1528e7/torchmetrics-1.7.3.tar.gz", hash = "sha256:08450a19cdb67ba1608aac0b213e5dc73033e11b60ad4719696ebcede591621e", size = 566545, upload-time = "2025-06-13T15:39:37.498Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6f/f2/bed7da46003c26ed44fc7fa3ecc98a84216f0d4758e5e6a3693754d490d9/torchmetrics-1.7.3-py3-none-any.whl", hash = "sha256:7b6fd43e92f0a1071c8bcb029637f252b0630699140a93ed8817ce7afe9db34e", size = 962639, upload-time = "2025-06-13T15:39:35.69Z" },
 ]
 
 [[package]]

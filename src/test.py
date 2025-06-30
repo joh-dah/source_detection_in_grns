@@ -8,14 +8,16 @@ torch.set_num_threads(5)
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
+pdgrapher_path = "external/pdgrapher"
+
 def main():
     dataset = Dataset(
-        forward_path="data/processed/torch_data/real_lognorm/data_forward_A549.pt",
-        backward_path="data/processed/torch_data/real_lognorm/data_backward_A549.pt",
-        splits_path="data/splits/genetic/A549/random/1fold/splits.pt"
+        forward_path="external/PDGrapher/data/processed/torch_data/real_lognorm/data_forward_A549.pt",
+        backward_path="external/PDGrapher/data/processed/torch_data/real_lognorm/data_backward_A549.pt",
+        splits_path="external/PDGrapher/data/splits/genetic/A549/random/1fold/splits.pt"
     )
 
-    edge_index = torch.load("data/processed/torch_data/real_lognorm/edge_index_A549.pt")
+    edge_index = torch.load("external/PDGrapher/data/processed/torch_data/real_lognorm/edge_index_A549.pt")
     model = PDGrapher(edge_index, model_kwargs={
         "n_layers_nn": 2, "n_layers_gnn": 2, "positional_features_dim": 64, "embedding_layer_dim": 8,
         "dim_gnn": 8, "num_vars": dataset.get_num_vars()
@@ -35,7 +37,7 @@ def main():
     model_performance = trainer.train(model, dataset, n_epochs = 2)
 
     print(model_performance)
-    with open(f"examples/PDGrapher/tuned_final.txt", "w") as f:
+    with open("external/PDGrapher/examples/PDGrapher/tuned_final.txt", "w") as f:
         f.write(str(model_performance))
 
 
