@@ -102,9 +102,9 @@ stages:
     deps:
     - path: data/train/processed
       hash: md5
-      md5: 4a180003fa7d029df0bbf9cfee96d50d.dir
-      size: 226032
-      nfiles: 98
+      md5: a897390560bd7a910ea6949bfd24cc2e.dir
+      size: 39552608
+      nfiles: 9992
     - path: src/training.py
       hash: md5
       md5: 94e83fa1fb8b14d08831de3afd94e302
@@ -112,7 +112,7 @@ stages:
     params:
       params.yaml:
         model: GAT
-        model_name: GAT_tiny
+        model_name: GAT_tp53
         training:
           alpha: 0.5
           batch_size: 64
@@ -130,19 +130,19 @@ stages:
     outs:
     - path: models/latest.pth
       hash: md5
-      md5: 57e94b5e983bceacdf6f4aa325632db8
+      md5: cdb3bbf76a5ac52ee06bf3d63ee6c154
       size: 4500538
   validation:
-    cmd: python -W ignore -m src.validation --network tiny
+    cmd: python -W ignore -m src.validation --network tp53
     deps:
     - path: data/val/processed
       hash: md5
-      md5: c74993649eacb24706450f52641e0591.dir
-      size: 29136
-      nfiles: 14
+      md5: 5d4c394c3101d1b9796be0bb8624ab7f.dir
+      size: 3983888
+      nfiles: 1010
     - path: models/latest.pth
       hash: md5
-      md5: 57e94b5e983bceacdf6f4aa325632db8
+      md5: cdb3bbf76a5ac52ee06bf3d63ee6c154
       size: 4500538
     - path: src/validation.py
       hash: md5
@@ -155,18 +155,18 @@ stages:
     params:
       params.yaml:
         model: GAT
-        model_name: GAT_tiny
+        model_name: GAT_tp53
   visualization:
-    cmd: python -W ignore -m src.visualization --network tiny
+    cmd: python -W ignore -m src.visualization --network tp53
     deps:
     - path: data/val/processed
       hash: md5
-      md5: c74993649eacb24706450f52641e0591.dir
-      size: 29136
-      nfiles: 14
+      md5: 5d4c394c3101d1b9796be0bb8624ab7f.dir
+      size: 3983888
+      nfiles: 1010
     - path: models/latest.pth
       hash: md5
-      md5: 57e94b5e983bceacdf6f4aa325632db8
+      md5: cdb3bbf76a5ac52ee06bf3d63ee6c154
       size: 4500538
     - path: src/visualization.py
       hash: md5
@@ -175,7 +175,7 @@ stages:
     params:
       params.yaml:
         model: GAT
-        model_name: GAT_tiny
+        model_name: GAT_tp53
         visualization:
           seed: 123
   generate-test-data:

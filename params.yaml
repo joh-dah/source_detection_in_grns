@@ -1,11 +1,11 @@
 GCNR_layer_type: GCN
 data_creation:
     n_sources: 1
-    training_size: 10000
-    validation_size: 1000
-    test_size: 1000
+    training_size: 10
+    validation_size: 10
+    test_size: 10
     normalize_data: true
-network: tp53
+network: tiny
 model: GAT
 model_name: GAT_tp53
 on_cluster: true
@@ -13,7 +13,7 @@ training:
     alpha: 0.5
     batch_size: 64
     class_weighting: false
-    epochs: 200  #fix of by one epoch
+    epochs: 20  #fix of by one epoch
     graph_weighting: false
     hidden_size: 128
     heads: 4
