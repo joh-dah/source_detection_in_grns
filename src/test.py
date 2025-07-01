@@ -1,5 +1,6 @@
 import torch
 import torch.optim as optim
+import src.constants as const
 
 from pdgrapher import Dataset, PDGrapher, Trainer
 
@@ -25,8 +26,13 @@ def main():
     model.set_optimizers_and_schedulers([optim.Adam(model.response_prediction.parameters(), lr=0.0075),
         optim.Adam(model.perturbation_discovery.parameters(), lr=0.0033)])
 
+    if const.ON_CLUSTER:
+        fabric_kwargs = {"accelerator": "cuda"}
+    else:
+        fabric_kwargs = {"accelerator": "cpu"}
+
     trainer = Trainer(
-        fabric_kwargs={"accelerator": "cuda"},
+        fabric_kwargs=fabric_kwargs,
         devices = 1,
         log=True, logging_name="tuned",
         use_forward_data=True, use_backward_data=True, use_supervision=True,
