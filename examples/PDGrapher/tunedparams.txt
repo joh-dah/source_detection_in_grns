@@ -1,0 +1,2 @@
+Response Prediction Model parameters:	43379281
+Perturbation Discovery Model parameters:	86071825
