@@ -58,3 +58,6 @@ GCNR_N_FEATURES = 2
 
 # Visualization
 SEED = params["visualization"]["seed"]
+
+#pdgrapher constants
+N_FOLDS = 5
