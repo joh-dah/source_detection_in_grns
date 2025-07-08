@@ -221,14 +221,14 @@ def main():
     """   
     print(f"Creating new processed data...")
     # Remove old processed data
-    processed_dir = Path(const.DATA_PATH) / "processed"
+    processed_dir = Path(const.DATA_PATH) / Path(const.MODEL) / "processed"
     if processed_dir.exists():
         shutil.rmtree(processed_dir)
 
     processed_dir.mkdir(parents=True, exist_ok=True)
     
     # Create PDGrapher-style datasets (both forward and backward)
-    create_pdgrapher_style_datasets(const.DATA_PATH)
+    create_pdgrapher_style_datasets(Path(const.DATA_PATH) / Path(const.MODEL))
 
 
 def store_edge_index(root_path=None):
@@ -240,7 +240,7 @@ def store_edge_index(root_path=None):
         root_path: Path to the data directory
     """
     if root_path is None:
-        root_path = const.DATA_PATH
+        root_path = Path(const.DATA_PATH) / Path(const.MODEL)
     print("Storing edge index...")
     # Load edge index
     edge_index_file = Path(root_path) / "edge_index" / "raw_edge_index.pt"
@@ -288,7 +288,7 @@ class PDGrapherDataset:
     def __init__(self, root, data_type="backward"):
         self.root = Path(root)
         self.data_type = data_type
-        self.processed_dir = Path(const.DATA_PATH) / "processed"
+        self.processed_dir = Path(const.DATA_PATH) / Path(const.MODEL) / "processed"
         
         # Load the data list
         data_file = self.processed_dir / f"data_{data_type}.pt"

@@ -153,7 +153,7 @@ def main():
     args = parser.parse_args()
 
     data_split = args.data_split
-    path = Path(const.DATA_PATH) / data_split
+    path = Path(const.DATA_PATH) / Path(const.MODEL) / data_split
 
     print("Removing old processed data...")
     shutil.rmtree(path / "processed", ignore_errors=True)

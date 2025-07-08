@@ -1,7 +1,7 @@
 schema: '2.0'
 stages:
   generate-training-data:
-    cmd: python -W ignore -m src.data_creation --data_split=train --network tiny
+    cmd: python -W ignore -m src.data_creation --data_split=train --network tp53
     deps:
     - path: src/data_creation.py
       hash: md5
@@ -11,19 +11,19 @@ stages:
       params.yaml:
         data_creation:
           n_sources: 1
-          training_size: 10
-          validation_size: 10
-          test_size: 10
+          training_size: 10000
+          validation_size: 1000
+          test_size: 1000
           normalize_data: true
-        network: tiny
+        network: tp53
     outs:
     - path: data/train/raw
       hash: md5
-      md5: dd24d847e9cef8d806f84d51b1606c0e.dir
-      size: 32892
-      nfiles: 12
+      md5: f61c33c8c1dfb0949f9d2d2e1fc54ee6.dir
+      size: 46379130
+      nfiles: 9990
   generate-validation-data:
-    cmd: python -W ignore -m src.data_creation --data_split=val --network tiny
+    cmd: python -W ignore -m src.data_creation --data_split=val --network tp53
     deps:
     - path: src/data_creation.py
       hash: md5
@@ -33,25 +33,25 @@ stages:
       params.yaml:
         data_creation:
           n_sources: 1
-          training_size: 10
-          validation_size: 10
-          test_size: 10
+          training_size: 10000
+          validation_size: 1000
+          test_size: 1000
           normalize_data: true
-        network: tiny
+        network: tp53
     outs:
     - path: data/val/raw
       hash: md5
-      md5: 2e9a22f2e1850e0cf8eeeb02166dafb6.dir
-      size: 32892
-      nfiles: 12
+      md5: 8cec187ea99645852694c54b74c24b61.dir
+      size: 4270480
+      nfiles: 1008
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --data_split=val
     deps:
     - path: data/val/raw
       hash: md5
-      md5: 2e9a22f2e1850e0cf8eeeb02166dafb6.dir
-      size: 32892
-      nfiles: 12
+      md5: 8cec187ea99645852694c54b74c24b61.dir
+      size: 4270480
+      nfiles: 1008
     - path: src/data_processing.py
       hash: md5
       md5: 5f78f28d5cd73eabc401b60188e796e9
@@ -60,25 +60,25 @@ stages:
       params.yaml:
         data_creation:
           n_sources: 1
-          training_size: 10
-          validation_size: 10
-          test_size: 10
+          training_size: 10000
+          validation_size: 1000
+          test_size: 1000
           normalize_data: true
         model: GAT
     outs:
     - path: data/val/processed
       hash: md5
-      md5: a9d122bd5b7585cdb2cba0390cdacd5f.dir
-      size: 33786
-      nfiles: 14
+      md5: 5d4c394c3101d1b9796be0bb8624ab7f.dir
+      size: 3983888
+      nfiles: 1010
   process-training-data:
     cmd: python -W ignore -m src.data_processing --data_split train
     deps:
     - path: data/train/raw
       hash: md5
-      md5: dd24d847e9cef8d806f84d51b1606c0e.dir
-      size: 32892
-      nfiles: 12
+      md5: f61c33c8c1dfb0949f9d2d2e1fc54ee6.dir
+      size: 46379130
+      nfiles: 9990
     - path: src/data_processing.py
       hash: md5
       md5: 5f78f28d5cd73eabc401b60188e796e9
@@ -87,25 +87,25 @@ stages:
       params.yaml:
         data_creation:
           n_sources: 1
-          training_size: 10
-          validation_size: 10
-          test_size: 10
+          training_size: 10000
+          validation_size: 1000
+          test_size: 1000
           normalize_data: true
         model: GAT
     outs:
     - path: data/train/processed
       hash: md5
-      md5: dbda4bf323b60c77cfaf354c5fff360f.dir
-      size: 33786
-      nfiles: 14
+      md5: debf39f06d46994a14ad83157f575b14.dir
+      size: 44083886
+      nfiles: 9992
   training:
     cmd: python -W ignore -m src.training
     deps:
     - path: data/train/processed
       hash: md5
-      md5: dbda4bf323b60c77cfaf354c5fff360f.dir
-      size: 33786
-      nfiles: 14
+      md5: debf39f06d46994a14ad83157f575b14.dir
+      size: 44083886
+      nfiles: 9992
     - path: src/training.py
       hash: md5
       md5: 94e83fa1fb8b14d08831de3afd94e302
@@ -118,7 +118,7 @@ stages:
           alpha: 0.5
           batch_size: 64
           class_weighting: false
-          epochs: 20
+          epochs: 200
           graph_weighting: false
           hidden_size: 128
           heads: 4
@@ -131,19 +131,19 @@ stages:
     outs:
     - path: models/latest.pth
       hash: md5
-      md5: 7fd21a1c54c07bbe3f6cb38680f93d14
+      md5: 0dd544d20814673cdfec0cfffbf373be
       size: 4501125
   validation:
-    cmd: python -W ignore -m src.validation --network tiny
+    cmd: python -W ignore -m src.validation --network tp53
     deps:
     - path: data/val/processed
       hash: md5
-      md5: a9d122bd5b7585cdb2cba0390cdacd5f.dir
-      size: 33786
-      nfiles: 14
+      md5: 5d4c394c3101d1b9796be0bb8624ab7f.dir
+      size: 3983888
+      nfiles: 1010
     - path: models/latest.pth
       hash: md5
-      md5: 7fd21a1c54c07bbe3f6cb38680f93d14
+      md5: 0dd544d20814673cdfec0cfffbf373be
       size: 4501125
     - path: src/validation.py
       hash: md5
@@ -158,16 +158,16 @@ stages:
         model: GAT
         model_name: GAT_tp53
   visualization:
-    cmd: python -W ignore -m src.visualization --network tiny
+    cmd: python -W ignore -m src.visualization --network tp53
     deps:
     - path: data/val/processed
       hash: md5
-      md5: a9d122bd5b7585cdb2cba0390cdacd5f.dir
-      size: 33786
-      nfiles: 14
+      md5: 5d4c394c3101d1b9796be0bb8624ab7f.dir
+      size: 3983888
+      nfiles: 1010
     - path: models/latest.pth
       hash: md5
-      md5: 7fd21a1c54c07bbe3f6cb38680f93d14
+      md5: 0dd544d20814673cdfec0cfffbf373be
       size: 4501125
     - path: src/visualization.py
       hash: md5
@@ -180,7 +180,7 @@ stages:
         visualization:
           seed: 123
   generate-test-data:
-    cmd: python -W ignore -m src.data_creation --data_split test --network tiny
+    cmd: python -W ignore -m src.data_creation --data_split test --network tp53
     deps:
     - path: src/data_creation.py
       hash: md5
@@ -190,25 +190,25 @@ stages:
       params.yaml:
         data_creation:
           n_sources: 1
-          training_size: 10
-          validation_size: 10
-          test_size: 10
+          training_size: 10000
+          validation_size: 1000
+          test_size: 1000
           normalize_data: true
-        network: tiny
+        network: tp53
     outs:
     - path: data/test/raw
       hash: md5
-      md5: 475ab0fea3461692837d6b670d5494e1.dir
-      size: 32892
-      nfiles: 12
+      md5: 0aee33bea4ba6d6b8f5fa72ce758f024.dir
+      size: 4270480
+      nfiles: 1008
   process-test-data:
     cmd: python -W ignore -m src.data_processing --data_split test
     deps:
     - path: data/test/raw
       hash: md5
-      md5: 475ab0fea3461692837d6b670d5494e1.dir
-      size: 32892
-      nfiles: 12
+      md5: 0aee33bea4ba6d6b8f5fa72ce758f024.dir
+      size: 4270480
+      nfiles: 1008
     - path: src/data_processing.py
       hash: md5
       md5: 5f78f28d5cd73eabc401b60188e796e9
@@ -217,14 +217,14 @@ stages:
       params.yaml:
         data_creation:
           n_sources: 1
-          training_size: 10
-          validation_size: 10
-          test_size: 10
+          training_size: 10000
+          validation_size: 1000
+          test_size: 1000
           normalize_data: true
         model: GAT
     outs:
     - path: data/test/processed
       hash: md5
-      md5: 0c9a9113b9344f947dd508dcadf8de43.dir
-      size: 33786
-      nfiles: 14
+      md5: 73c6da2d53e9e8e52727094f69fdcd72.dir
+      size: 3983888
+      nfiles: 1010

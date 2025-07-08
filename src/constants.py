@@ -51,8 +51,9 @@ network_dict = {
     "tiny": 4,
     "tp53": 30,
 }
+NETWORK = params["network"]  # "tiny" or "tp53"
 
-N_NODES = network_dict[params["network"]]
+N_NODES = network_dict[NETWORK]
 GCNSI_N_FEATURES = 2
 GCNR_N_FEATURES = 2
 
@@ -60,4 +61,4 @@ GCNR_N_FEATURES = 2
 SEED = params["visualization"]["seed"]
 
 #pdgrapher constants
-N_FOLDS = 5
+N_FOLDS = 1

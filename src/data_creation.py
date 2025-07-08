@@ -369,7 +369,7 @@ def main():
     args = parser.parse_args()
 
     data_split = args.data_split
-    dest_dir = Path(const.DATA_PATH) / data_split / "raw"
+    dest_dir = Path(const.DATA_PATH) / Path(const.MODEL) / data_split / "raw"
     topo_file = f"{const.TOPO_PATH}/{args.network}.topo"
     sample_count = const.DATASET_SIZE[data_split]
 

@@ -61,11 +61,13 @@ def ranked_source_predictions(
     """
     if n_nodes is None:
         n_nodes = predictions.shape[0]
-    if const.MODEL in ["GAT", "GCNSI"]:
+    if const.MODEL in ["GAT", "GCNSI", "pdgrapher"]:
         top_nodes = torch.topk(predictions.flatten(), n_nodes).indices
     elif const.MODEL == "GCNR":
         top_nodes = torch.topk(predictions.flatten(), n_nodes, largest=False).indices
-    return top_nodes
+    else:
+        raise ValueError(f"Model {const.MODEL} not supported for ranked source predictions.")
+    return  top_nodes
 
 
 def save_metrics(metrics: dict, model_name: str, network: str):
@@ -94,7 +96,7 @@ def load_processed_data(split: str = "train"):
     """
     print("Load processed data...")
 
-    path = Path(const.DATA_PATH) / split
+    path = Path(const.DATA_PATH) / Path(const.MODEL) / split
 
     data = dp.SDDataset(
         path,
@@ -127,7 +129,7 @@ def load_raw_data(split: str = "train"):
     """
     print("Load raw data...")
 
-    path = Path(const.DATA_PATH) / split / "raw"
+    path = Path(const.DATA_PATH) / Path(const.MODEL) / split / "raw"
 
     if not path.exists():
         raise FileNotFoundError(f"Path does not exist: {path}")

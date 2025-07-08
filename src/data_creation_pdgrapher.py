@@ -319,7 +319,7 @@ def create_data_set(
     edge_index, edge_attr = nx_to_pyg_edges(G, gene_to_idx)
 
     # create a edge_index.pt file
-    edge_index_dir = Path(const.DATA_PATH) / "edge_index"
+    edge_index_dir = Path(const.DATA_PATH) / Path(const.MODEL) / "edge_index"
     edge_index_dir.mkdir(parents=True, exist_ok=True)
     edge_index_file = edge_index_dir / "raw_edge_index.pt"
     torch.save(edge_index, edge_index_file)
@@ -353,16 +353,10 @@ def main():
     """
     Creates a data set of graphs with modeled signal propagation for training and validation.
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--network", 
-        type=str, 
-        help="name of the network that should be used"
-    )
-    args = parser.parse_args()
+    network = const.NETWORK
 
-    dest_dir = Path(const.DATA_PATH) / "raw"
-    topo_file = f"{const.TOPO_PATH}/{args.network}.topo"
+    dest_dir = Path(const.DATA_PATH)/ Path(const.MODEL) / "raw"
+    topo_file = f"{const.TOPO_PATH}/{network}.topo"
     sample_count = sum(const.DATASET_SIZE.values())
 
     shutil.rmtree(dest_dir, ignore_errors=True)
@@ -370,7 +364,7 @@ def main():
     create_data_set(
         dest_dir,
         topo_file,
-        args.network,
+        network,
         sample_count,
     )
 

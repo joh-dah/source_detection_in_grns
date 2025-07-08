@@ -1,7 +1,7 @@
 # load data from external/PDGrapher/data/processed/torch_data/real_lognorm/data_forward_A549.pt
 import torch
 
-file_path = "data/processed/splits/random/5fold/splits.pt"
+file_path = "data/processed/splits/splits.pt"
 splits = torch.load(file_path, weights_only=False)
 print(f"Splits loaded successfully from {file_path}")
 
