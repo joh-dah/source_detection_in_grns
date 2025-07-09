@@ -1,13 +1,13 @@
 GCNR_layer_type: GCN
 data_creation:
     n_sources: 1
-    training_size: 100000
-    validation_size: 10000
-    test_size: 10000
+    training_size: 10000
+    validation_size: 1000
+    test_size: 1000
     normalize_data: true
 network: tp53
 model: pdgrapher
-model_name: pdgrapher_tp53_0708
+model_name: pdgrapher_after_fix
 on_cluster: true
 training:
     alpha: 0.5
@@ -20,7 +20,7 @@ training:
     layers: 2
     dropout: 0.3
     learning_rate: 1.0e-4
-    subsample: true
+    subsample: false
     useLogLoss: false
     weight_decay: 5.0e-4
 visualization:

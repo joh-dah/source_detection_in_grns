@@ -27,10 +27,6 @@ def main():
         splits_path=f"{data_processed_dir}/splits/splits.pt"
     )
 
-    # debug print the keys in splits
-    print(dataset.splits.keys())  
-
-
     edge_index = torch.load(f"{data_processed_dir}/edge_index.pt", weights_only=False)
     model = PDGrapher(edge_index, model_kwargs={
         "n_layers_nn": 2, "n_layers_gnn": 2, "positional_features_dim": 64, "embedding_layer_dim": 8,
@@ -50,7 +46,7 @@ def main():
 
     # Iterate over all of the folds and train on each one
     if const.N_FOLDS == 1:
-        model_performance = trainer.train(model, dataset, n_epochs = 2)
+        model_performance = trainer.train(model, dataset, n_epochs = 200)
     else:
         model_performanc = trainer.train_kfold(model, dataset, n_epochs = 1)
 

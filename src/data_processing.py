@@ -118,20 +118,17 @@ def process_data(data: Data) -> Data:
     :param data: input data to be processed.
     :return: processed data with expanded features and labels
     """
+    
     data.x = normalize_datapoint(data.x)
     data.edge_attr = data.edge_attr.unsqueeze(1).float()
+    
     if const.MODEL == "GCNR":
         # For GCNR, we create distance labels based on the graph structure
         data.y = create_distance_labels(to_networkx(data, to_undirected=False), data.y)
     elif const.MODEL in ["GCNSI", "GAT"]:
         # For GCNSI, we assume y is already in the correct format
         data.y = data.y.unsqueeze(1).float()
-    # elif const.MODEL == "GAT":
-    #     # For GAT we treat every node as class and therefore switch to classification
-    #     # get the index of the source node
-    #     source_node = torch.where(data.y == 1)[0]
-    #     assert source_node.numel() == 1, f"Expected exactly one source node, got {source_node.numel()}"
-    #     data.y = source_node.item() # Convert to single label for GAT
+    
     return data
 
 

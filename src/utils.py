@@ -36,13 +36,14 @@ def save_model(model, name: str):
     torch.save(model.state_dict(), f"{const.MODEL_PATH}/{name}.pth")
 
 
-def load_model(model, path: str):
+def load_model(model, model_name: str):
     """
     Loads model state from path.
     :param model: model
-    :param path: path to model
+    :param model_name: path to model
     :return: model with loaded state
     """
+    path = f"{const.MODEL_PATH}/{model_name}.pth"
     print(f"loading model: {path}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.load_state_dict(torch.load(path, map_location=torch.device(device)))

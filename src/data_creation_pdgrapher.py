@@ -117,7 +117,7 @@ def get_graph_data_from_topo(filepath):
     df = pd.read_csv(filepath, sep=r"\s+")
 
     # Create gene-to-index mapping for optional ML use
-    genes = set(df['Source']).union(df['Target'])
+    genes = sorted(set(df['Source']).union(df['Target']))  # SORTED for consistency!
     gene_to_idx = {gene: idx for idx, gene in enumerate(genes)}
 
     # Build NetworkX DiGraph with weights

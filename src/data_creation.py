@@ -117,7 +117,8 @@ def get_graph_data_from_topo(filepath):
     df = pd.read_csv(filepath, sep=r"\s+")
 
     # Create gene-to-index mapping for optional ML use
-    genes = set(df['Source']).union(df['Target'])
+    # CRITICAL: Use sorted() to ensure consistent ordering across runs!
+    genes = sorted(set(df['Source']).union(df['Target']))
     gene_to_idx = {gene: idx for idx, gene in enumerate(genes)}
 
     # Build NetworkX DiGraph with weights
@@ -293,8 +294,7 @@ def process_gene(
             [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()],
             dtype=torch.float
         )
-                    #TODO save storage since the graph structure won't change. 
-            # somehow store edge_index, edge_attr and node_mapping only once
+                    
         data = Data(
             x=X,
             y=y,
@@ -327,7 +327,11 @@ def create_data_set(
     edge_index, edge_attr = nx_to_pyg_edges(G, gene_to_idx)
 
     genes_with_outgoing_edges = [gene for gene in G.nodes() if G.out_degree(gene) > 0]
+    print(f"Genes that will be used as sources: {genes_with_outgoing_edges}")
+    
     perturbations_per_gene = math.ceil(desired_dataset_size / len(genes_with_outgoing_edges))
+    print(f"Perturbations per gene: {perturbations_per_gene}")
+    
     #### TODO: find a good way to calculate this. there are some hints in the racipe documentation on how to choose the number of init_conds add params
     # also document well how the params and dataset size is calculated
 

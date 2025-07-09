@@ -17,7 +17,7 @@
 # Activate virtual environment
 source .venv/bin/activate
 
-python -m src.data_creation_pdgrapher --network=tp53
+python -m src.data_creation_pdgrapher
 python -m src.data_processing_pdgrapher
 python -m src.train_pdgrapher
 python -m src.pdgrapher_perturbation_validation
