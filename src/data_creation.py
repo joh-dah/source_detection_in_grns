@@ -117,7 +117,6 @@ def get_graph_data_from_topo(filepath):
     df = pd.read_csv(filepath, sep=r"\s+")
 
     # Create gene-to-index mapping for optional ML use
-    # CRITICAL: Use sorted() to ensure consistent ordering across runs!
     genes = sorted(set(df['Source']).union(df['Target']))
     gene_to_idx = {gene: idx for idx, gene in enumerate(genes)}
 
