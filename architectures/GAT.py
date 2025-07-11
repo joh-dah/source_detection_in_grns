@@ -1,5 +1,4 @@
 from torch_geometric.nn import TransformerConv
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import src.constants as const
@@ -9,7 +8,6 @@ class GAT(nn.Module):
         super().__init__()
 
         self.layers = nn.ModuleList()
-        # First layer
         self.layers.append(
             TransformerConv(in_channels, hidden_dim, heads=heads, edge_dim=edge_dim, concat=True)
         )
@@ -18,7 +16,6 @@ class GAT(nn.Module):
                 TransformerConv(hidden_dim * heads, hidden_dim, heads=heads, edge_dim=edge_dim, concat=True)
             )
 
-        # Node-level classifier for source detection
         self.classifier = nn.Sequential(
             nn.Linear(hidden_dim * heads, 128),
             nn.ReLU(),

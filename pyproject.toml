@@ -18,5 +18,13 @@ dependencies = [
     "torch-scatter>=2.1.2",
     "torch-sparse>=0.6.18",
     "pdgrapher @ file:///${PROJECT_ROOT}/external/PDGrapher",
-    "grins @ file:///${PROJECT_ROOT}/external/GRiNS"
+    "grins @ file:///${PROJECT_ROOT}/external/GRiNS",
+    "pandas>=2.3.0",
+    "matplotlib>=3.10.3",
+    "seaborn>=0.13.2",
+    "jupyter>=1.1.1",
+    "ipykernel>=6.29.5",
+    "jax-cuda12-pjrt>=0.5.3",
+    "jax-cuda12-plugin>=0.5.3",
+    "nvidia-cuda-nvcc-cu12>=12.9.86",
 ]

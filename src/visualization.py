@@ -127,7 +127,7 @@ def plot_graph_with_colors(
     title: str,
     cmap: Union[Colormap, str] = "viridis",
     max_abs_value: float = None,
-    layout: callable = nx.circular_layout,
+    layout: callable = nx.spring_layout,
     source_node: int = None,
     predicted_source: int = None,
 ):
@@ -144,7 +144,7 @@ def plot_graph_with_colors(
     :param source_node: Optional true source node index for highlighting
     :param predicted_source: Optional predicted source node index for highlighting
     """
-    pos = layout(g)
+    pos = layout(g, seed=11)  # Fixed seed for reproducibility
 
     min_val, max_val = get_color_scale_range(node_values, max_abs_value)
     node_border_widths, node_border_colors = get_node_borders(

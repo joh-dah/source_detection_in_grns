@@ -6,8 +6,8 @@ data_creation:
     test_size: 1000
     normalize_data: true
 network: tp53
-model: pdgrapher
-model_name: pdgrapher_after_fix
+model: GAT
+model_name: GAT_after_fix
 on_cluster: true
 training:
     alpha: 0.5

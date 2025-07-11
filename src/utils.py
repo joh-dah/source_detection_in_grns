@@ -89,7 +89,7 @@ def save_metrics(metrics: dict, model_name: str, network: str):
     #     json.dump(metrics, file, indent=4)
 
 
-def load_processed_data(split: str = "train"):
+def load_processed_data(split: str = "train", path: str = None):
     """
     Load processed data
     :param split: split of the data to load, can be "train", "validation" or "test"
@@ -97,7 +97,8 @@ def load_processed_data(split: str = "train"):
     """
     print("Load processed data...")
 
-    path = Path(const.DATA_PATH) / Path(const.MODEL) / split
+    if path is None:
+        path = Path(const.DATA_PATH) / Path(const.MODEL) / split
 
     data = dp.SDDataset(
         path,
@@ -122,7 +123,7 @@ def create_topo_file_from_graph(network_name, G: nx.DiGraph, dir):
 
 
 
-def load_raw_data(split: str = "train"):
+def load_raw_data(split: str = "train", path: str = None):
     """
     Load raw data.
     :param split: split of the data to load, can be "train", "validation" or "test"
@@ -130,7 +131,8 @@ def load_raw_data(split: str = "train"):
     """
     print("Load raw data...")
 
-    path = Path(const.DATA_PATH) / Path(const.MODEL) / split / "raw"
+    if path is None:
+        path = Path(const.DATA_PATH) / Path(const.MODEL) / split / "raw"
 
     if not path.exists():
         raise FileNotFoundError(f"Path does not exist: {path}")

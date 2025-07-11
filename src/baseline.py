@@ -1,17 +1,3 @@
-#!/usr/bin/env python3
-"""
-Baseline methods for source detection in gene regulatory networks.
-
-This module implements various baseline methods including:
-- Rumor centrality
-- Degree centrality
-- Betweenness centrality
-- Closeness centrality
-- Random baseline
-
-The methods are evaluated using the same framework as the neural network models.
-"""
-
 import torch
 import numpy as np
 import networkx as nx
@@ -20,10 +6,7 @@ from tqdm import tqdm
 import src.constants as const
 import src.utils as utils
 import src.validation as validation
-import src.data_processing as dp
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 import argparse
-import yaml
 from typing import List, Dict, Tuple
 
 
@@ -34,31 +17,16 @@ class BaselineSourceDetector:
         self.method_name = method_name
     
     def predict_source_probabilities(self, data) -> torch.Tensor:
-        """
-        Predict source probabilities for each node in the graph.
-        
-        Args:
-            data: PyTorch Geometric data object with x, edge_index, y
-            
-        Returns:
-            torch.Tensor: Probabilities for each node being the source [num_nodes]
-        """
+        """Predict source probabilities for each node in the graph."""
         raise NotImplementedError("Subclasses must implement predict_source_probabilities")
     
     def predict_source(self, data) -> int:
-        """
-        Predict the most likely source node.
-        
-        Args:
-            data: PyTorch Geometric data object
-            
-        Returns:
-            int: Index of predicted source node
-        """
+        """Predict the most likely source node."""
         probs = self.predict_source_probabilities(data)
         return probs.argmax().item()
 
 
+# TODO: NOT RUMOR CENTRALITY! CHATGPT PLACEHOLDER
 class RumorCentralityDetector(BaselineSourceDetector):
     """
     Rumor centrality based source detection.
@@ -167,8 +135,8 @@ class RandomDetector(BaselineSourceDetector):
 
 def load_test_data() -> Tuple[List, List]:
     """Load test data for baseline evaluation."""
-    test_data_processed = utils.load_processed_data(split="test")
-    test_data_raw = utils.load_raw_data(split="test")
+    test_data_processed = utils.load_processed_data(split="test", path=Path(const.DATA_PATH) / "GAT" / "test")
+    test_data_raw = utils.load_raw_data(split="test",  path=Path(const.DATA_PATH) / "GAT" / "test"/"raw")
     return test_data_processed, test_data_raw
 
 
@@ -192,14 +160,13 @@ def evaluate_baseline_method(detector: BaselineSourceDetector,
     pred_label_set = []
     pred_sources = []
     
-    for data in tqdm(processed_data, desc=f"Making predictions with {detector.method_name}"):
+    for i, data in enumerate(tqdm(processed_data, desc=f"Making predictions with {detector.method_name}")):
         probs = detector.predict_source_probabilities(data)
         pred_label_set.append(probs)
         pred_sources.append(probs.argmax().item())
     
-    # Extract true sources
     true_sources = validation.extract_true_sources(processed_data)
-    
+
     # Calculate metrics using the validation framework
     metrics = validation.supervised_metrics(
         pred_label_set=pred_label_set,
@@ -216,7 +183,7 @@ def main():
     """Main function to run baseline evaluations."""
     parser = argparse.ArgumentParser(description="Evaluate baseline source detection methods")
     parser.add_argument("--methods", nargs="+", 
-                       choices=["rumor", "degree", "betweenness", "closeness", "outdegree", "random", "all"],
+                       choices=["rumor", "random", "all"],
                        default=["all"],
                        help="Baseline methods to evaluate")
     parser.add_argument("--save-results", action="store_true",
@@ -232,10 +199,6 @@ def main():
     # Define available detectors
     detectors = {
         "rumor": RumorCentralityDetector(),
-        "degree": DegreeCentralityDetector(),
-        "betweenness": BetweennessCentralityDetector(),
-        "closeness": ClosenessCentralityDetector(),
-        "outdegree": OutDegreeCentralityDetector(),
         "random": RandomDetector()
     }
     
@@ -254,23 +217,19 @@ def main():
         print(f"Evaluating {detector.method_name}")
         print(f"{'='*50}")
         
-        try:
-            results = evaluate_baseline_method(detector, processed_data, raw_data)
-            all_results[method_name] = results
-            
-            print(f"\nResults for {detector.method_name}:")
-            print("-" * 30)
-            for key, value in results.items():
-                if isinstance(value, dict):
-                    print(f"{key}:")
-                    for k, v in value.items():
-                        print(f"  {k}: {v}")
-                else:
-                    print(f"{key}: {value}")
+        results = evaluate_baseline_method(detector, processed_data, raw_data)
+        all_results[method_name] = results
+        
+        print(f"\nResults for {detector.method_name}:")
+        print("-" * 30)
+        for key, value in results.items():
+            if isinstance(value, dict):
+                print(f"{key}:")
+                for k, v in value.items():
+                    print(f"  {k}: {v}")
+            else:
+                print(f"{key}: {value}")
                     
-        except Exception as e:
-            print(f"Error evaluating {detector.method_name}: {e}")
-            all_results[method_name] = {"error": str(e)}
     
     # Save results using the same format as validation script
     if args.save_results:
@@ -287,8 +246,15 @@ def main():
                 timestamp = datetime.now().strftime("%m%d_%H%M")
                 filename = f"{const.NETWORK}_{timestamp}.json"
                 
+                # Wrap results in the expected format with "metrics" key
+                output_data = {
+                    "network": const.NETWORK,
+                    "metrics": results,
+                    "method": method_name
+                }
+                
                 with open(report_dir / filename, "w") as f:
-                    json.dump(results, f, indent=4)
+                    json.dump(output_data, f, indent=4)
                 
                 print(f"Results for {method_name} saved to {report_dir / filename}")
     
