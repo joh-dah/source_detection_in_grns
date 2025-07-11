@@ -7,7 +7,7 @@ stages:
     - network
     - data_creation
     outs:
-    - data/train/raw
+    - data/GAT/train/raw
   
   generate-validation-data:
     cmd: python -W ignore -m src.data_creation --data_split=val --network ${network}
@@ -17,7 +17,7 @@ stages:
     - network
     - data_creation
     outs:
-    - data/val/raw  
+    - data/GAT/val/raw  
 
   generate-test-data:
     cmd: python -W ignore -m src.data_creation --data_split test --network ${network}
@@ -27,46 +27,46 @@ stages:
     - network
     - data_creation
     outs:
-    - data/test/raw
+    - data/GAT/test/raw
 
   process-training-data:
     cmd: python -W ignore -m src.data_processing --data_split train
     deps:
     - src/data_processing.py
-    - data/train/raw
+    - data/GAT/train/raw
     params:
       - model
       - data_creation
     outs:
-    - data/train/processed  
+    - data/GAT/train/processed  
 
   process-validation-data:
     cmd: python -W ignore -m src.data_processing --data_split=val
     deps:
     - src/data_processing.py
-    - data/val/raw
+    - data/GAT/val/raw
     params:
     - model
     - data_creation
     outs:
-    - data/val/processed
+    - data/GAT/val/processed
 
   process-test-data:
     cmd: python -W ignore -m src.data_processing --data_split test
     deps:
     - src/data_processing.py
-    - data/test/raw
+    - data/GAT/test/raw
     params:
     - model
     - data_creation
     outs:
-    - data/test/processed
+    - data/GAT/test/processed
 
   training:
     cmd: python -W ignore -m src.training
     deps:
     - src/training.py
-    - data/train/processed
+    - data/GAT/train/processed
     params:
     - training
     - model
@@ -78,7 +78,7 @@ stages:
       cmd: python -W ignore -m src.validation --network ${network}
       deps:
       - src/validation.py
-      - data/val/processed
+      - data/GAT/val/processed
       - src/visualization.py
       - models/latest.pth
       params:
@@ -89,7 +89,7 @@ stages:
       cmd: python -W ignore -m src.visualization --network ${network}
       deps:
       - src/visualization.py
-      - data/val/processed
+      - data/GAT/val/processed
       - models/latest.pth
       params:
       - model

@@ -36,13 +36,14 @@ def save_model(model, name: str):
     torch.save(model.state_dict(), f"{const.MODEL_PATH}/{name}.pth")
 
 
-def load_model(model, path: str):
+def load_model(model, model_name: str):
     """
     Loads model state from path.
     :param model: model
-    :param path: path to model
+    :param model_name: path to model
     :return: model with loaded state
     """
+    path = f"{const.MODEL_PATH}/{model_name}.pth"
     print(f"loading model: {path}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.load_state_dict(torch.load(path, map_location=torch.device(device)))
@@ -61,11 +62,13 @@ def ranked_source_predictions(
     """
     if n_nodes is None:
         n_nodes = predictions.shape[0]
-    if const.MODEL in ["GAT", "GCNSI"]:
+    if const.MODEL in ["GAT", "GCNSI", "pdgrapher"]:
         top_nodes = torch.topk(predictions.flatten(), n_nodes).indices
     elif const.MODEL == "GCNR":
         top_nodes = torch.topk(predictions.flatten(), n_nodes, largest=False).indices
-    return top_nodes
+    else:
+        raise ValueError(f"Model {const.MODEL} not supported for ranked source predictions.")
+    return  top_nodes
 
 
 def save_metrics(metrics: dict, model_name: str, network: str):
@@ -86,7 +89,7 @@ def save_metrics(metrics: dict, model_name: str, network: str):
     #     json.dump(metrics, file, indent=4)
 
 
-def load_processed_data(split: str = "train"):
+def load_processed_data(split: str = "train", path: str = None):
     """
     Load processed data
     :param split: split of the data to load, can be "train", "validation" or "test"
@@ -94,7 +97,8 @@ def load_processed_data(split: str = "train"):
     """
     print("Load processed data...")
 
-    path = Path(const.DATA_PATH) / split
+    if path is None:
+        path = Path(const.DATA_PATH) / Path(const.MODEL) / split
 
     data = dp.SDDataset(
         path,
@@ -119,7 +123,7 @@ def create_topo_file_from_graph(network_name, G: nx.DiGraph, dir):
 
 
 
-def load_raw_data(split: str = "train"):
+def load_raw_data(split: str = "train", path: str = None):
     """
     Load raw data.
     :param split: split of the data to load, can be "train", "validation" or "test"
@@ -127,7 +131,8 @@ def load_raw_data(split: str = "train"):
     """
     print("Load raw data...")
 
-    path = Path(const.DATA_PATH) / split / "raw"
+    if path is None:
+        path = Path(const.DATA_PATH) / Path(const.MODEL) / split / "raw"
 
     if not path.exists():
         raise FileNotFoundError(f"Path does not exist: {path}")
