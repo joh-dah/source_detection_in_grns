@@ -127,7 +127,7 @@ def plot_graph_with_colors(
     title: str,
     cmap: Union[Colormap, str] = "viridis",
     max_abs_value: float = None,
-    layout: callable = nx.circular_layout,
+    layout: callable = nx.spring_layout,
     source_node: int = None,
     predicted_source: int = None,
 ):
@@ -144,7 +144,7 @@ def plot_graph_with_colors(
     :param source_node: Optional true source node index for highlighting
     :param predicted_source: Optional predicted source node index for highlighting
     """
-    pos = layout(g)
+    pos = layout(g, seed=11)  # Fixed seed for reproducibility
 
     min_val, max_val = get_color_scale_range(node_values, max_abs_value)
     node_border_widths, node_border_colors = get_node_borders(
@@ -182,12 +182,20 @@ def visualize_graph_predictions(raw_data, model, processed_data, network, index)
     """
     Visualizes initial, current, and predicted node statuses of a (sub)graph.
     """
+    device = next(model.parameters()).device  # Get device from model
+    processed_data = processed_data.to(device)  # Move data to same device as model
+    
     g = build_graph(raw_data)
     # Get per-node predictions and apply sigmoid
     with torch.no_grad():
         predictions = torch.sigmoid(model(processed_data).squeeze()).detach().cpu()
 
-    real_node_names = {v: k for k, v in raw_data.node_mapping.items()}
+    # Use node_mapping from processed_data, not raw_data, since model was trained on processed_data
+    if hasattr(processed_data, 'node_mapping'):
+        real_node_names = {v: k for k, v in processed_data.node_mapping.items()}
+    else:
+        real_node_names = {v: k for k, v in raw_data.node_mapping.items()}
+    
     source_node = torch.where(processed_data.y == 1)[0][0].item()  # Get the true source node
     predicted_source = predictions.argmax().item()  # Node with highest prediction
 
@@ -355,7 +363,11 @@ def main():
     Path(const.FIGURES_PATH).mkdir(parents=True, exist_ok=True)
     
     assert const.MODEL == "GAT", "This visualization script only supports GAT models."
-    model = GAT()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = GAT().to(device)
+    # Load the trained model weights
+    model = utils.load_model(model, model_name)
+    model.eval()  # Set to evaluation mode
     all_processed_val_data = utils.load_processed_data(split="val")
     all_raw_val_data = utils.load_raw_data(split="val")
     indices = random.sample(range(len(all_processed_val_data)), N_GRAPHS)

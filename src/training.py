@@ -104,21 +104,19 @@ def validate(model, val_loader, criterion, is_data_parallel):
         if not is_data_parallel:
             data_list = data_list.to(device)
 
-        out = model(data_list)  # shape: [N, 1]
-        y = extract_labels(data_list, is_data_parallel, out.device)  # shape: [N]
-
-        y = y.view(-1, 1).float()  # match shape + dtype
+        out = model(data_list)
+        y = extract_labels(data_list, is_data_parallel, out.device)
+        y = y.view(-1, 1).float()
 
         loss = criterion(out, y)
-
-        preds = (out.sigmoid() > 0.5).float()  # binary prediction
+        preds = (out.sigmoid() > 0.5).float()
         correct += (preds == y).sum().item()
         total += y.size(0)
-
         total_loss += loss.item()
 
     avg_loss = total_loss / len(val_loader)
     acc = correct / total if total > 0 else None
+
     return avg_loss, acc
 
 
@@ -128,7 +126,6 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
 
     print(f"Training samples: {len(train_dataset)}")
     print(f"Validation samples: {len(val_dataset)}")
-
 
     optimizer = torch.optim.Adam(model.parameters(), lr=const.LEARNING_RATE, weight_decay=const.WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2, eta_min=1e-6)
@@ -140,6 +137,7 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
     for epoch in tqdm(range(1, const.EPOCHS + 1), disable=const.ON_CLUSTER):
         model.train()
         agg_train_loss = 0
+        batch_count = 0
 
         for data_list in train_loader:
             optimizer.zero_grad()
@@ -156,6 +154,10 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
             w = torch.ones(y.shape[0]).to(out.device)
             if const.CLASS_WEIGHTING:
                 w = node_weights(y).to(out.device)
+                if epoch == 1 and batch_count == 0:
+                    print(f"Weights range: [{w.min():.3f}, {w.max():.3f}]")
+                    print(f"Weights for positive samples: {w[y.flatten() == 1]}")
+                    
             if const.GRAPH_WEIGHTING:
                 w *= graph_weights(data_list).to(out.device)
 
@@ -163,12 +165,16 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
                 loss = criterion(out, y, w)
             else:
                 loss = criterion(out, y)
+                
+            if epoch == 1 and batch_count == 0:
+                print(f"Loss: {loss.item():.6f}")
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
             optimizer.step()
             scheduler.step()
             agg_train_loss += loss.item()
+            batch_count += 1
 
         writer.add_scalar("Loss/train", agg_train_loss, epoch)
         writer.add_scalar("LearningRate", scheduler.get_last_lr()[0], epoch)
@@ -210,7 +216,11 @@ def main():
         criterion = torch.nn.BCEWithLogitsLoss()
     elif const.MODEL == "GAT":
         model = GAT()
-        criterion = torch.nn.BCEWithLogitsLoss()
+        # Use weighted BCE loss for GAT to handle class imbalance
+        # Calculate pos_weight based on expected class distribution
+        # Assuming roughly 1 source per graph with ~10-20 nodes
+        pos_weight = torch.tensor([10.0]).to(device)  # Give 10x weight to positive class, move to device
+        criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     train_data = utils.load_processed_data(split="train")
     val_data = utils.load_processed_data(split="val")

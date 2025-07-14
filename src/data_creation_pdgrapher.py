@@ -117,7 +117,7 @@ def get_graph_data_from_topo(filepath):
     df = pd.read_csv(filepath, sep=r"\s+")
 
     # Create gene-to-index mapping for optional ML use
-    genes = sorted(set(df['Source']).union(df['Target']))
+    genes = sorted(set(df['Source']).union(df['Target']))  # SORTED for consistency!
     gene_to_idx = {gene: idx for idx, gene in enumerate(genes)}
 
     # Build NetworkX DiGraph with weights
@@ -282,24 +282,17 @@ def process_gene(
 
     local_datapoints = []
     for row_id, diff_row in difference_to_og_steady_state.iterrows():
-        og_row = og_steady_state_df.iloc[row_id]
+        og_row = og_steady_state_df.iloc[row_id].values
+        perturbed = perturbed_steady_state_df.iloc[row_id].values
+        perturbed_genes = [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()]
 
-        X = torch.stack([
-            torch.tensor(og_row, dtype=torch.float),
-            torch.tensor(diff_row, dtype=torch.float)
-        ], dim=0).T
-
-        y = torch.tensor(
-            [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()],
-            dtype=torch.float
-        )
-                    
         data = Data(
-            x=X,
-            y=y,
-            edge_index=edge_index,
-            edge_attr=edge_attr,
-            node_mapping=gene_to_idx
+            original=og_row,
+            perturbed=perturbed,
+            perturbed_gene_list=perturbed_genes,
+            perturbed_gene=gene_to_perturb,
+            gene_symbols=list(gene_to_idx.keys()),
+            num_nodes=len(gene_to_idx),
         )
         local_datapoints.append(data)
 
@@ -325,12 +318,14 @@ def create_data_set(
     G, gene_to_idx = get_graph_data_from_topo(topo_file)
     edge_index, edge_attr = nx_to_pyg_edges(G, gene_to_idx)
 
+    # create a edge_index.pt file
+    edge_index_dir = Path(const.DATA_PATH) / Path(const.MODEL) / "edge_index"
+    edge_index_dir.mkdir(parents=True, exist_ok=True)
+    edge_index_file = edge_index_dir / "raw_edge_index.pt"
+    torch.save(edge_index, edge_index_file)
+
     genes_with_outgoing_edges = [gene for gene in G.nodes() if G.out_degree(gene) > 0]
-    print(f"Genes that will be used as sources: {genes_with_outgoing_edges}")
-    
     perturbations_per_gene = math.ceil(desired_dataset_size / len(genes_with_outgoing_edges))
-    print(f"Perturbations per gene: {perturbations_per_gene}")
-    
     #### TODO: find a good way to calculate this. there are some hints in the racipe documentation on how to choose the number of init_conds add params
     # also document well how the params and dataset size is calculated
 
@@ -358,30 +353,18 @@ def main():
     """
     Creates a data set of graphs with modeled signal propagation for training and validation.
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--data_split",
-        type=str,
-        help="whether to create the data set for training, validation or test",
-    )
-    parser.add_argument(
-        "--network", 
-        type=str, 
-        help="name of the network that should be used"
-    )
-    args = parser.parse_args()
+    network = const.NETWORK
 
-    data_split = args.data_split
-    dest_dir = Path(const.DATA_PATH) / Path(const.MODEL) / data_split / "raw"
-    topo_file = f"{const.TOPO_PATH}/{args.network}.topo"
-    sample_count = const.DATASET_SIZE[data_split]
+    dest_dir = Path(const.DATA_PATH)/ Path(const.MODEL) / "raw"
+    topo_file = f"{const.TOPO_PATH}/{network}.topo"
+    sample_count = sum(const.DATASET_SIZE.values())
 
     shutil.rmtree(dest_dir, ignore_errors=True)
 
     create_data_set(
         dest_dir,
         topo_file,
-        args.network,
+        network,
         sample_count,
     )
 

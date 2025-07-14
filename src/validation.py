@@ -104,8 +104,9 @@ def TP_FP_metrics(true_sources: list, pred_sources: list) -> dict:
 
 def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
     """
-    Get the average rank of the source, the average prediction for the source
+    Get the average rank of the source, the average prediction for the source,
     and additional metrics that help to evaluate the prediction.
+    Also computes how often the true source is in the top 3 and top 5 predictions.
     :param pred_label_set: predicted labels for each data instance in the data set (per-node probabilities)
     :param true_sources: list of true source node indices
     :return: dictionary with prediction metrics
@@ -113,6 +114,8 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
     source_ranks = []
     predictions_for_source = []
     general_predictions = []
+    in_top3 = []
+    in_top5 = []
 
     for i, pred_labels in enumerate(
         tqdm(pred_label_set, desc="evaluate model", disable=const.ON_CLUSTER)
@@ -120,9 +123,13 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
         true_source = true_sources[i]
         ranked_predictions = (utils.ranked_source_predictions(pred_labels)).tolist()
 
-        source_ranks.append(ranked_predictions.index(true_source))
+        source_rank = ranked_predictions.index(true_source)
+        source_ranks.append(source_rank)
         predictions_for_source.append(pred_labels[true_source].item())
         general_predictions += pred_labels.tolist()
+
+        in_top3.append(source_rank < 3)
+        in_top5.append(source_rank < 5)
 
     return {
         "avg rank of source": np.mean(source_ranks),
@@ -130,6 +137,8 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
         "avg prediction over all nodes": np.mean(general_predictions),
         "min prediction over all nodes": min(general_predictions),
         "max prediction over all nodes": max(general_predictions),
+        "source in top 3": np.mean(in_top3),
+        "source in top 5": np.mean(in_top5),
     }
 
 
@@ -323,7 +332,7 @@ def main():
     assert const.MODEL == "GAT", "This validation script only supports GAT models."
     model = GAT()
 
-    model = utils.load_model(model, os.path.join(const.MODEL_PATH, f"{model_name}.pth"))
+    model = utils.load_model(model, model_name)
     raw_test_data = utils.load_raw_data(split="test")
     processed_test_data = utils.load_processed_data(split="test")
     pred_labels = predictions(model, processed_test_data)
