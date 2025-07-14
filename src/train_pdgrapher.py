@@ -29,7 +29,7 @@ def main():
 
     edge_index = torch.load(f"{data_processed_dir}/edge_index.pt", weights_only=False)
     model = PDGrapher(edge_index, model_kwargs={
-        "n_layers_nn": 2, "n_layers_gnn": 2, "positional_features_dim": 64, "embedding_layer_dim": 8,
+        "n_layers_nn": const.LAYERS, "n_layers_gnn": const.LAYERS, "positional_features_dim": 64, "embedding_layer_dim": 8,
         "dim_gnn": 8, "num_vars": dataset.get_num_vars()
         })
     model.set_optimizers_and_schedulers([optim.Adam(model.response_prediction.parameters(), lr=0.0075),
@@ -46,9 +46,9 @@ def main():
 
     # Iterate over all of the folds and train on each one
     if const.N_FOLDS == 1:
-        model_performance = trainer.train(model, dataset, n_epochs = 200)
+        model_performance = trainer.train(model, dataset, n_epochs = const.EPOCHS)
     else:
-        model_performanc = trainer.train_kfold(model, dataset, n_epochs = 1)
+        model_performance = trainer.train_kfold(model, dataset, n_epochs = const.EPOCHS)
 
     print(model_performance)
     with open(f"examples/PDGrapher/multifold_final.txt", "w") as f:

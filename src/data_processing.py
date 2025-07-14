@@ -67,28 +67,6 @@ class SDDataset(Dataset):
         return data
 
 
-def create_distance_labels(
-    graph: nx.DiGraph, initial_values: torch.tensor
-) -> torch.tensor:
-    """
-    Creates the labels for the GCNR model. Each label is the distance of the node to the nearest source.
-    :param graph: graph for which to create the distance labels
-    :param initial_values: initial values indicating the source nodes
-    :return: distance labels
-    """
-    distances = []
-    # extract all sources from prob_model
-    sources = torch.where(initial_values == 1)[0].tolist()
-    for source in sources:
-        distances.append(nx.single_source_shortest_path_length(graph, source))
-    # get min distance for each node
-    min_distances = []
-    for node in graph.nodes:
-        min_distances.append(min([distance[node] for distance in distances]))
-
-    return torch.tensor(np.expand_dims(min_distances, axis=1)).float()
-
-
 def normalize_datapoint(x: torch.Tensor) -> torch.Tensor:
     """
     Normalizes the features of a data point.
@@ -121,13 +99,7 @@ def process_data(data: Data) -> Data:
     
     data.x = normalize_datapoint(data.x)
     data.edge_attr = data.edge_attr.unsqueeze(1).float()
-    
-    if const.MODEL == "GCNR":
-        # For GCNR, we create distance labels based on the graph structure
-        data.y = create_distance_labels(to_networkx(data, to_undirected=False), data.y)
-    elif const.MODEL in ["GCNSI", "GAT"]:
-        # For GCNSI, we assume y is already in the correct format
-        data.y = data.y.unsqueeze(1).float()
+    data.y = data.y.unsqueeze(1).float()
     
     return data
 

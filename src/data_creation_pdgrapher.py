@@ -1,4 +1,9 @@
 """ Creates a data set of graphs with modeled signal propagation for training and validation."""
+import os
+# Set JAX platform to CPU before any JAX imports to avoid CUDA issues
+os.environ['JAX_PLATFORMS'] = 'cpu'
+os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
+
 import argparse
 import math
 from pathlib import Path

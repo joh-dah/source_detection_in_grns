@@ -10,7 +10,6 @@ import grins.racipe_run as rr
 import grins.gen_params as gen_params
 import grins.gen_diffrax_ode as gen_ode
 import pandas as pd
-import jax.numpy as jnp
 from torch_geometric.data import Data
 import torch
 from tqdm import tqdm
