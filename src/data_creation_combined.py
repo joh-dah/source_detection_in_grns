@@ -10,6 +10,7 @@ import grins.racipe_run as rr
 import grins.gen_params as gen_params
 import grins.gen_diffrax_ode as gen_ode
 import pandas as pd
+import jax.numpy as jnp
 from torch_geometric.data import Data
 import torch
 from tqdm import tqdm
@@ -226,10 +227,10 @@ def nx_to_pyg_edges(G, gene_to_idx):
     for u, v, data in G.edges(data=True):
         src.append(gene_to_idx[u])
         tgt.append(gene_to_idx[v])
-        weights.append(data.get("weight", 1))  # default to 1 if no weight present
+        weights.append(data.get("weight", 1.0))  # default to 1.0 if no weight present
 
     edge_index = torch.tensor([src, tgt], dtype=torch.long)
-    edge_attr = torch.tensor(weights, dtype=torch.long)
+    edge_attr = torch.tensor(weights, dtype=torch.float).unsqueeze(-1)  # Add dimension for edge features
 
     return edge_index, edge_attr
 
@@ -282,23 +283,19 @@ def process_gene(
     local_datapoints = []
     for row_id, diff_row in difference_to_og_steady_state.iterrows():
         og_row = og_steady_state_df.iloc[row_id]
+        perturbed_row = perturbed_steady_state_df.iloc[row_id]
 
-        X = torch.stack([
-            torch.tensor(og_row, dtype=torch.float),
-            torch.tensor(diff_row, dtype=torch.float)
-        ], dim=0).T
-
-        y = torch.tensor(
-            [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()],
-            dtype=torch.float
-        )
+        # Create binary perturbation indicator
+        binary_perturbation_indicator = [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()]
                     
         data = Data(
-            x=X,
-            y=y,
-            edge_index=edge_index,
-            edge_attr=edge_attr,
-            node_mapping=gene_to_idx
+            original=og_row.values.astype(np.float32),
+            perturbed=perturbed_row.values.astype(np.float32),
+            difference=diff_row.values.astype(np.float32),
+            binary_perturbation_indicator=binary_perturbation_indicator,
+            perturbed_gene=gene_to_perturb,
+            gene_mapping=gene_to_idx,
+            num_nodes=len(gene_to_idx)
         )
         local_datapoints.append(data)
 
@@ -353,34 +350,43 @@ def create_data_set(
         list(tqdm(pool.starmap(process_gene, args), total=len(args), desc="Processing genes"))
 
 
+def save_edge_data(topo_file, network_name):
+    """
+    Extract and save edge_index and edge_attr from the topology file.
+    This creates the raw edge data that will be used by all models.
+    """
+    print("Extracting and saving edge data...")
+    G, gene_to_idx = get_graph_data_from_topo(topo_file)
+    edge_index, edge_attr = nx_to_pyg_edges(G, gene_to_idx)
+    
+    # Save edge data
+    edge_data_dir = Path(const.DATA_PATH) / "edge_index"
+    edge_data_dir.mkdir(parents=True, exist_ok=True)
+    
+    torch.save(edge_index, edge_data_dir / "raw_edge_index.pt")
+    torch.save(edge_attr, edge_data_dir / "raw_edge_attr.pt")
+    
+    print(f"Saved edge_index with shape {edge_index.shape} to {edge_data_dir / 'raw_edge_index.pt'}")
+    print(f"Saved edge_attr with shape {edge_attr.shape} to {edge_data_dir / 'raw_edge_attr.pt'}")
+    print(f"Edge attr sample values: {edge_attr[:10]}")
+
+
 def main():
     """
     Creates a data set of graphs with modeled signal propagation for training and validation.
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--data_split",
-        type=str,
-        help="whether to create the data set for training, validation or test",
-    )
-    parser.add_argument(
-        "--network", 
-        type=str, 
-        help="name of the network that should be used"
-    )
-    args = parser.parse_args()
 
-    data_split = args.data_split
-    dest_dir = Path(const.DATA_PATH) / "raw"
-    topo_file = f"{const.TOPO_PATH}/{args.network}.topo"
-    sample_count = const.DATASET_SIZE[data_split]
+    dest_dir = Path(const.DATA_PATH) / "raw"  # Model-agnostic raw data location
+    topo_file = f"{const.TOPO_PATH}/{const.NETWORK}.topo"
+    sample_count = sum(const.DATASET_SIZE.values()) # TODO change this
 
-    shutil.rmtree(dest_dir, ignore_errors=True)
+    # First, save the edge data (index and attributes)
+    save_edge_data(topo_file, const.NETWORK)
 
     create_data_set(
         dest_dir,
         topo_file,
-        args.network,
+        const.NETWORK,
         sample_count,
     )
 

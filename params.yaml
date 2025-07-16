@@ -4,9 +4,9 @@ data_creation:
     test_size: 1000
     normalize_data: true
 network: tiny
-model: pdgrapher
+model: GAT
 model_name: pdgrapher_control
-on_cluster: true
+on_cluster: false
 training:
     alpha: 0.5
     batch_size: 64
