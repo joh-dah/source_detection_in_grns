@@ -6,8 +6,8 @@ import torch
 import src.constants as const
 import src.data_processing_combined as dp
 import glob
-import torch_geometric.datasets as datasets
-import torch_geometric.transforms as T
+import pandas as pd
+import networkx as nx
 import networkx as nx
 import pandas as pd
 from datetime import datetime
@@ -119,6 +119,28 @@ def create_topo_file_from_graph(network_name, G: nx.DiGraph, dir):
         for u, v, d in G.edges(data='weight'):
             f.write(f"{u} {v} {d}\n")
 
+
+def get_graph_data_from_topo(filepath):
+    """
+    Reads a .topo file and returns:
+    - A NetworkX directed graph with gene names as node labels and 'Type' as edge weight.
+    - A mapping from gene names to integer indices (useful for ML models like PyG).
+    
+    :param filepath: path to the topology file
+    :return: G_named (NetworkX DiGraph), gene_to_idx (dict)
+    """
+    df = pd.read_csv(filepath, sep=r"\s+")
+
+    # Create gene-to-index mapping for optional ML use
+    genes = sorted(set(df['Source']).union(df['Target']))
+    gene_to_idx = {gene: idx for idx, gene in enumerate(genes)}
+
+    # Build NetworkX DiGraph with weights
+    edges_with_weights = list(zip(df['Source'], df['Target'], df['Type']))
+    G = nx.DiGraph()
+    G.add_weighted_edges_from(edges_with_weights)
+
+    return G, gene_to_idx
 
 
 def load_raw_data(split: str = "train", path: str = None):

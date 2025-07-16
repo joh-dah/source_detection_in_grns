@@ -1,5 +1,4 @@
 """ Creates a data set of graphs with modeled signal propagation for training and validation."""
-import argparse
 import math
 from pathlib import Path
 import shutil
@@ -10,7 +9,6 @@ import grins.racipe_run as rr
 import grins.gen_params as gen_params
 import grins.gen_diffrax_ode as gen_ode
 import pandas as pd
-import jax.numpy as jnp
 from torch_geometric.data import Data
 import torch
 from tqdm import tqdm
@@ -60,7 +58,6 @@ def update_init_conds_file(
     )
 
 
-
 def generate_relevant_param_names(nodes, edges):
     param_names = []
     for node in nodes:
@@ -100,32 +97,6 @@ def update_param_files(
         param_file,
         index=False,
     )
-
-
-def get_graph_data_from_topo(filepath):
-    """
-    Reads a .topo file and returns:
-    - A NetworkX directed graph with gene names as node labels and 'Type' as edge weight.
-    - A mapping from gene names to integer indices (useful for ML models like PyG).
-    
-    :param filepath: path to the topology file
-    :return: G_named (NetworkX DiGraph), gene_to_idx (dict)
-    """
-    import pandas as pd
-    import networkx as nx
-
-    df = pd.read_csv(filepath, sep=r"\s+")
-
-    # Create gene-to-index mapping for optional ML use
-    genes = sorted(set(df['Source']).union(df['Target']))
-    gene_to_idx = {gene: idx for idx, gene in enumerate(genes)}
-
-    # Build NetworkX DiGraph with weights
-    edges_with_weights = list(zip(df['Source'], df['Target'], df['Type']))
-    G = nx.DiGraph()
-    G.add_weighted_edges_from(edges_with_weights)
-
-    return G, gene_to_idx
 
 
 def simulate_loss_of_function(G, gene_to_perturb):
@@ -235,17 +206,10 @@ def nx_to_pyg_edges(G, gene_to_idx):
     return edge_index, edge_attr
 
 
-def simulate_topological_inaccuracies(X, y, edge_index, edge_attr, gene_to_idx, gene_to_perturb):
-    """
-    Simulate topological inaccuracies by perturbing the graph structure.
-    Randomly remove edges and nodes"""
-
 def process_gene(
     gene_to_perturb,
     G,
     gene_to_idx,
-    edge_index,
-    edge_attr,
     raw_data_dir,
     topo_file,
     og_network_name,
@@ -315,11 +279,10 @@ def create_data_set(
     desired_dataset_size: int,
 ):
     shutil.rmtree(raw_data_dir, ignore_errors=True)
-    Path(raw_data_dir).mkdir(parents=True, exist_ok=True)
+    raw_data_dir.mkdir(parents=True, exist_ok=True)
     print(f"Creating data set with {desired_dataset_size} samples for {og_network_name} in {raw_data_dir}")
 
-    G, gene_to_idx = get_graph_data_from_topo(topo_file)
-    edge_index, edge_attr = nx_to_pyg_edges(G, gene_to_idx)
+    G, gene_to_idx = utils.get_graph_data_from_topo(topo_file)
 
     genes_with_outgoing_edges = [gene for gene in G.nodes() if G.out_degree(gene) > 0]
     print(f"Genes that will be used as sources: {genes_with_outgoing_edges}")
@@ -335,8 +298,6 @@ def create_data_set(
             gene,
             G,
             gene_to_idx,
-            edge_index,
-            edge_attr,
             raw_data_dir,
             topo_file,
             og_network_name,
@@ -350,38 +311,14 @@ def create_data_set(
         list(tqdm(pool.starmap(process_gene, args), total=len(args), desc="Processing genes"))
 
 
-def save_edge_data(topo_file, network_name):
-    """
-    Extract and save edge_index and edge_attr from the topology file.
-    This creates the raw edge data that will be used by all models.
-    """
-    print("Extracting and saving edge data...")
-    G, gene_to_idx = get_graph_data_from_topo(topo_file)
-    edge_index, edge_attr = nx_to_pyg_edges(G, gene_to_idx)
-    
-    # Save edge data
-    edge_data_dir = Path(const.DATA_PATH) / "edge_index"
-    edge_data_dir.mkdir(parents=True, exist_ok=True)
-    
-    torch.save(edge_index, edge_data_dir / "raw_edge_index.pt")
-    torch.save(edge_attr, edge_data_dir / "raw_edge_attr.pt")
-    
-    print(f"Saved edge_index with shape {edge_index.shape} to {edge_data_dir / 'raw_edge_index.pt'}")
-    print(f"Saved edge_attr with shape {edge_attr.shape} to {edge_data_dir / 'raw_edge_attr.pt'}")
-    print(f"Edge attr sample values: {edge_attr[:10]}")
-
-
 def main():
     """
     Creates a data set of graphs with modeled signal propagation for training and validation.
     """
 
-    dest_dir = Path(const.DATA_PATH) / "raw"  # Model-agnostic raw data location
+    dest_dir = Path(const.RAW_PATH)
     topo_file = f"{const.TOPO_PATH}/{const.NETWORK}.topo"
-    sample_count = sum(const.DATASET_SIZE.values()) # TODO change this
-
-    # First, save the edge data (index and attributes)
-    save_edge_data(topo_file, const.NETWORK)
+    sample_count = const.N_SAMPLES
 
     create_data_set(
         dest_dir,

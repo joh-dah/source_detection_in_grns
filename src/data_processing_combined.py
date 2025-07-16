@@ -1,19 +1,16 @@
 """ Creates new processed data based on the selected model. """
-import argparse
-import glob
 from pathlib import Path
 from src import constants as const
+from src import utils
 import networkx as nx
-import numpy as np
 import os
 import shutil
 from torch_geometric.data import Data, Dataset
-from torch_geometric.utils.convert import to_networkx
 import torch
 import multiprocessing as mp
 from tqdm import tqdm
-from src.create_splits import create_splits_for_data
-from torch_geometric.utils import add_remaining_self_loops, to_undirected
+from src.create_splits_combined import run_data_splitting
+from torch_geometric.utils import add_remaining_self_loops, to_undirected, from_networkx
 
 
 class SDDataset(Dataset):
@@ -22,7 +19,7 @@ class SDDataset(Dataset):
     Handles both forward/backward modes (PDGrapher) and individual file mode (GNN).
     Always reads raw data from data/raw and writes processed data to data/processed/{model}.
     """
-    def __init__(self, model_type, processing_func, transform=None, pre_transform=None, mode="individual", raw_data_dir="data/raw"):
+    def __init__(self, model_type, processing_func, transform=None, pre_transform=None, mode="individual", raw_data_dir="data/raw", edge_index=None, edge_attr=None):
         """
         Args:
             model_type: Type of model (e.g., "GAT", "GCNSI", "PDGrapher")
@@ -38,6 +35,9 @@ class SDDataset(Dataset):
         self.processed_data_dir = Path(f"data/processed/{model_type}")
         self.transform = transform
         self.mode = mode
+        self.edge_index = edge_index
+        self.edge_attr = edge_attr
+
         
         # Create processed data directory
         self.processed_data_dir.mkdir(parents=True, exist_ok=True)
@@ -101,28 +101,9 @@ class SDDataset(Dataset):
         """Process each file individually with multiprocessing (for GNN-style datasets)"""
         # Ensure processed directory exists
         self.processed_data_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Load edge_index and edge_attr once before processing all files
-        edge_index = None
-        edge_attr = None
-        if self.processing_func == process_data:
-            edge_index_path = self.processed_data_dir / "edge_index.pt"
-            if edge_index_path.exists():
-                edge_index = torch.load(edge_index_path, weights_only=False)
-                print(f"Loaded edge_index once for all files: {edge_index.shape}")
-            else:
-                print(f"Warning: edge_index not found at {edge_index_path}")
-            
-            # Load edge_attr if available
-            edge_attr_path = self.processed_data_dir / "edge_attr.pt"
-            if edge_attr_path.exists():
-                edge_attr = torch.load(edge_attr_path, weights_only=False)
-                print(f"Loaded edge_attr once for all files: {edge_attr.shape}")
-            else:
-                print(f"No edge_attr found at {edge_attr_path}")
-        
+
         params = [
-            (self.processing_func, str(self.raw_files[i]), i, str(self.processed_data_dir), edge_index, edge_attr)
+            (self.processing_func, str(self.raw_files[i]), i, str(self.processed_data_dir), self.edge_index, self.edge_attr)
             for i in range(self.size)
         ]
         with mp.get_context("spawn").Pool(const.N_CORES) as pool:
@@ -152,7 +133,6 @@ class SDDataset(Dataset):
             data = torch.load(path, weights_only=False)
             return data
     
-
 
 def process_single(args):
     processing_func, raw_path, idx, processed_dir, edge_index, edge_attr = args
@@ -202,29 +182,8 @@ def normalize_paired_tensors(tensor1, tensor2) -> tuple[torch.Tensor, torch.Tens
 def backward_data(data: Data) -> Data:
     """
     Transforms a Data object containing original and perturbed gene expression data into a new Data object
-    with normalized healthy and diseased expression profiles, mutation indicators, and gene metadata.
-
-    Args:
-        data (Data): Input Data object with the following attributes:
-            - original: Raw healthy gene expression values.
-            - perturbed: Raw diseased gene expression values.
-            - difference: Difference between original and perturbed values.
-            - binary_perturbation_indicator: Tensor indicating mutated genes (binary mask).
-            - perturbed_gene: Name of the perturbed gene.
-            - gene_mapping: Mapping of gene symbols to indices.
-            - num_nodes: Number of genes (nodes).
-
-    Returns:
-        Data: A new Data object with the following attributes:
-            - perturbagen_name: Name of the perturbagen (gene).
-            - diseased: Normalized diseased gene expression tensor.
-            - intervention: Binary tensor indicating whether the gene is treated (1) or not (0).
-            - treated: Normalized treated gene expression tensor.
-            - gene_symbols: List of gene symbol strings.
-            - mutations: Tensor indicating mutated genes (binary mask).
-            - num_nodes: Number of genes (nodes).
+    with normalized diseased and treated expression profiles, intervention indicators, and gene metadata.
     """
-    # Normalize both tensors with the same scale
     diseased_norm, treated_norm = normalize_paired_tensors(data.original, data.perturbed)
     
     return Data(
@@ -242,26 +201,7 @@ def forward_data(data: Data) -> Data:
     """
     Transforms a Data object containing original and perturbed gene expression data into a new Data object
     with normalized healthy and diseased expression profiles, mutation indicators, and gene metadata.
-
-    Args:
-        data (Data): Input Data object with the following attributes:
-            - original: Raw healthy gene expression values.
-            - perturbed: Raw diseased gene expression values.
-            - difference: Difference between original and perturbed values.
-            - binary_perturbation_indicator: Tensor indicating mutated genes (binary mask).
-            - perturbed_gene: Name of the perturbed gene.
-            - gene_mapping: Mapping of gene symbols to indices.
-            - num_nodes: Number of genes (nodes).
-
-    Returns:
-        Data: A new Data object with the following attributes:
-            - healthy: Normalized healthy gene expression tensor.
-            - diseased: Normalized diseased gene expression tensor.
-            - mutations: Tensor indicating mutated genes (binary mask).
-            - gene_symbols: List of gene symbol strings.
-            - num_nodes: Number of genes (nodes).
     """
-    # Normalize both tensors with the same scale
     healthy_norm, diseased_norm = normalize_paired_tensors(data.original, data.perturbed)
     
     return Data(
@@ -294,65 +234,26 @@ def process_data(data: Data, edge_index: torch.Tensor = None, edge_attr: torch.T
     return data
 
 
-def store_edge_index(model_type):
+def store_edge_index_for_pdgrapher(edge_index: torch.Tensor):
     """
     Process the raw edge index and edge attributes, and store them in the model-specific processed directory.
     
     Args:
         model_type: Type of model (e.g., "GAT", "GCNSI", "PDGrapher")
     """
-    print("Storing edge index and edge attributes...")
-    
-    # Load edge index
-    edge_index_file = Path(const.DATA_PATH) / "edge_index" / "raw_edge_index.pt"
-    if not edge_index_file.exists():
-        raise FileNotFoundError(f"Edge index file not found: {edge_index_file}")    
-    edge_index = torch.load(edge_index_file, weights_only=False)
-
-    # Load edge attributes if available
-    edge_attr_file = Path(const.DATA_PATH) / "edge_index" / "raw_edge_attr.pt"
-    edge_attr = None
-    if edge_attr_file.exists():
-        edge_attr = torch.load(edge_attr_file, weights_only=False)
-        print(f"Loaded edge_attr with shape {edge_attr.shape}")
-    else:
-        print("No edge attributes found - will create default ones if needed")
+    print("Processing and storing edge index...")
 
     edge_index = add_remaining_self_loops(edge_index)[0]
     edge_index = to_undirected(edge_index)
-    
-    # Handle edge attributes for undirected graph
-    if edge_attr is not None:
-        # When converting to undirected, we need to duplicate edge attributes
-        # PyG's to_undirected adds reverse edges, so we need to extend edge_attr accordingly
-        original_num_edges = edge_attr.shape[0]
-        current_num_edges = edge_index.shape[1]
-        
-        if current_num_edges > original_num_edges:
-            # Extend edge_attr to match the new number of edges
-            # For reverse edges, we use the same attributes as the original edges
-            edge_attr = torch.cat([edge_attr, edge_attr], dim=0)
-            edge_attr = edge_attr[:current_num_edges]  # Trim to exact size needed
-        
-        print(f"Edge attributes shape after undirected conversion: {edge_attr.shape}")
-    
-    # Save edge index and attributes in model-specific processed directory
-    processed_dir = Path(f"data/processed/{model_type}")
+    processed_dir = Path(const.PROCESSED_PATH)
     processed_dir.mkdir(parents=True, exist_ok=True)
-    torch.save(edge_index, processed_dir / "edge_index.pt")
-    
-    if edge_attr is not None:
-        torch.save(edge_attr, processed_dir / "edge_attr.pt")
-        print(f"Edge attributes saved to {processed_dir / 'edge_attr.pt'}")
-    else:
-        # For models that need edge attributes (like GAT), create default ones
-        if model_type == "GAT":
-            # Create default edge attributes (all ones) for GAT
-            default_edge_attr = torch.ones(edge_index.shape[1], 1, dtype=torch.float)
-            torch.save(default_edge_attr, processed_dir / "edge_attr.pt")
-            print(f"Created default edge attributes for GAT: shape {default_edge_attr.shape}")
-    
-    print(f"Edge index saved to {processed_dir / 'edge_index.pt'} with shape {edge_index.shape}")
+    torch.save(edge_index, const.PROCESSED_EDGE_INDEX_PATH)
+
+
+def add_noise_to_graph(G: nx.DiGraph, noise_level: float = 0.1) -> nx.DiGraph:
+    """ PLACEHOLDER FUNCTION"""
+    # TODO: Implement actual noise addition logic
+    return G  # No changes made, just a placeholder for now
 
 
 def create_datasets_for_model(model_type, raw_data_dir="data/raw"):
@@ -363,10 +264,18 @@ def create_datasets_for_model(model_type, raw_data_dir="data/raw"):
         model_type: Type of model ("pdgrapher", "GCNSI", "GAT", etc.)
         raw_data_dir: Directory containing raw data files
     """
+
+    G, _ = utils.get_graph_data_from_topo(Path(const.TOPO_PATH) / f"{const.NETWORK}.topo")
+    G = add_noise_to_graph(G, 0.1)
+    # create a torch geometric edge_index from the graph
+    G = from_networkx(G, group_edge_attrs=['weight'])
+    G.edge_attr = G.edge_attr.float()
     
     if model_type.lower() == "pdgrapher":
         # Create both forward and backward datasets for PDGrapher
         print("Creating PDGrapher-style datasets...")
+
+        store_edge_index_for_pdgrapher(G.edge_index)
         
         # Create backward dataset
         backward_dataset = SDDataset(
@@ -395,7 +304,9 @@ def create_datasets_for_model(model_type, raw_data_dir="data/raw"):
             model_type=model_type,
             processing_func=process_data,
             mode="individual",
-            raw_data_dir=raw_data_dir
+            raw_data_dir=raw_data_dir,
+            edge_index = G.edge_index,
+            edge_attr = G.edge_attr
         )
         
         print(f"{model_type} dataset created successfully!")
@@ -418,14 +329,11 @@ def main():
         shutil.rmtree(processed_dir)
     processed_dir.mkdir(parents=True, exist_ok=True)
 
-    # Store edge_index BEFORE processing data so it's available for loading
-    store_edge_index(const.MODEL)
-
     # Create datasets using the unified approach
     datasets = create_datasets_for_model(const.MODEL)
     
     # Create splits (this is model-agnostic)
-    create_splits_for_data(processed_dir, nfolds=const.N_FOLDS, splits_type='random')
+    run_data_splitting()
     
     print(f"Data processing complete for {const.MODEL}!")
     return datasets
@@ -454,7 +362,7 @@ class PDGrapherDataset:
             model_type=model_type,
             processing_func=processing_func,
             mode=data_type,
-            raw_data_dir="data/raw"
+            raw_data_dir=const.RAW_PATH
         )
         
     def __len__(self):

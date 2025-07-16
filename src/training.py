@@ -11,7 +11,6 @@ from torch_geometric.nn.data_parallel import DataParallel
 from src.data_processing_combined import SDDataset  # Updated import
 from torch_geometric.data import Data
 from torch.utils.tensorboard import SummaryWriter
-import torch.nn.functional as F
 from pathlib import Path
 
 writer = SummaryWriter()
@@ -215,17 +214,8 @@ def load_processed_data_new_structure(split="train"):
     
     # Load splits - they are stored in splits/splits.pt subdirectory
     splits_file = processed_dir / "splits" / "splits.pt"
-    if not splits_file.exists():
-        raise FileNotFoundError(f"Splits file not found: {splits_file}. Please run data processing first.")
-    
     splits = torch.load(splits_file, weights_only=False)
-    
-    # Handle both single split and k-fold splits
-    if const.N_FOLDS == 1:
-        split_indices = splits[f'{split}_index']  # Changed from '_indices' to '_index'
-    else:
-        # For k-fold, use the first fold by default (can be extended later)
-        split_indices = splits[1][f'{split}_index']  # Changed from '_indices' to '_index'
+    split_indices = splits[f'{split}_index']
     
     # Simple dataset class that loads individual processed files
     class ProcessedDataset(torch.utils.data.Dataset):
@@ -254,23 +244,14 @@ def main():
         criterion = torch.nn.BCEWithLogitsLoss()
     elif const.MODEL == "GAT":
         model = GAT()
-        # Use weighted BCE loss for GAT to handle class imbalance
-        # Calculate pos_weight based on expected class distribution
-        # Assuming roughly 1 source per graph with ~10-20 nodes
         pos_weight = torch.tensor([10.0]).to(device)  # Give 10x weight to positive class, move to device
         criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    # Load data using new structure
-    try:
-        train_data = load_processed_data_new_structure(split="train")
-        val_data = load_processed_data_new_structure(split="val")
-        print(f"Loaded training data: {len(train_data)} samples")
-        print(f"Loaded validation data: {len(val_data)} samples")
-    except Exception as e:
-        print(f"Error loading data: {e}")
-        print("Make sure to run data processing first:")
-        print(f"python -m src.data_processing_combined  # with const.MODEL = '{const.MODEL}'")
-        return
+    train_data = load_processed_data_new_structure(split="train")
+    val_data = load_processed_data_new_structure(split="val")
+    print(f"Loaded training data: {len(train_data)} samples")
+    print(f"Loaded validation data: {len(val_data)} samples")
+
     
     train(model, model_name, train_data, val_data, criterion)
 

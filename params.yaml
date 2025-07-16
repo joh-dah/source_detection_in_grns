@@ -1,10 +1,9 @@
 data_creation:
-    training_size: 1000
-    validation_size: 1000
-    test_size: 1000
+    n_samples: 1000
+    training_share: 0.6
     normalize_data: true
 network: tiny
-model: GAT
+model: pdgrapher
 model_name: pdgrapher_control
 on_cluster: false
 training:

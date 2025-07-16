@@ -7,6 +7,10 @@ params = yaml.full_load(open("params.yaml", "r"))
 MODEL = params["model"]
 MODEL_NAME = params["model_name"]
 DATA_PATH = "data"
+PROCESSED_PATH = f"{DATA_PATH}/processed/{MODEL}"
+RAW_PATH = f"{DATA_PATH}/raw"
+RAW_EDGE_INDEX_PATH = f"{DATA_PATH}/edge_index.pt"
+PROCESSED_EDGE_INDEX_PATH = f"{PROCESSED_PATH}/edge_index.pt"
 TOPO_PATH = "topos"
 MODEL_PATH = "models"
 FIGURES_PATH = "figures"
@@ -20,11 +24,8 @@ else:
 # Data Creation
 dc = params["data_creation"]
 NORMALIZE_DATA = dc["normalize_data"]
-DATASET_SIZE = {
-    "train": dc["training_size"],
-    "val": dc["validation_size"],
-    "test": dc["test_size"],
-}
+N_SAMPLES = dc["n_samples"]
+TRAINING_SHARE = dc["training_share"]
 
 # Training
 training = params["training"]
@@ -49,6 +50,3 @@ NETWORK = params["network"]  # "tiny" or "tp53"
 
 N_NODES = network_dict[NETWORK]
 GCNSI_N_FEATURES = 2
-
-#pdgrapher constants
-N_FOLDS = 1
