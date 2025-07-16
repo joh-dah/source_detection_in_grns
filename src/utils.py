@@ -64,8 +64,6 @@ def ranked_source_predictions(
         n_nodes = predictions.shape[0]
     if const.MODEL in ["GAT", "GCNSI", "pdgrapher"]:
         top_nodes = torch.topk(predictions.flatten(), n_nodes).indices
-    elif const.MODEL == "GCNR":
-        top_nodes = torch.topk(predictions.flatten(), n_nodes, largest=False).indices
     else:
         raise ValueError(f"Model {const.MODEL} not supported for ranked source predictions.")
     return  top_nodes

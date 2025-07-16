@@ -1,6 +1,5 @@
 import datetime
 from typing import Tuple
-from architectures.GCNR import GCNR
 from architectures.GCNSI import GCNSI
 from architectures.GAT import GAT
 import torch
@@ -37,7 +36,7 @@ class WeightedMSELoss(torch.nn.Module):
 
 
 def subsampleClasses(y: torch.Tensor, y_hat: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-    source_indicator = 0 if const.MODEL == "GCNR" else 1
+    source_indicator = 1
     non_sources = torch.where(y != source_indicator)[0]
     sources = torch.where(y == source_indicator)[0]
     random_numbers = torch.randperm(non_sources.shape[0])[: sources.shape[0]]
@@ -47,7 +46,7 @@ def subsampleClasses(y: torch.Tensor, y_hat: torch.Tensor) -> Tuple[torch.Tensor
 
 
 def node_weights(y: torch.Tensor) -> torch.Tensor:
-    source_indicator = 0 if const.MODEL == "GCNR" else 1
+    source_indicator = 1
     non_sources = torch.where(y != source_indicator)[0]
     sources = torch.where(y == source_indicator)[0]
     weights = torch.ones(y.shape[0])
@@ -206,12 +205,7 @@ def main():
     current_time = datetime.datetime.now().strftime("%m-%d_%H-%M")
     model_name = f"{const.MODEL}_{current_time}" if const.MODEL_NAME is None else const.MODEL_NAME
     
-    if const.MODEL == "GCNR":
-        model = GCNR()
-        criterion = MSLELoss() if const.USE_LOG_LOSS else torch.nn.MSELoss()
-        if const.CLASS_WEIGHTING or const.GRAPH_WEIGHTING:
-            criterion = WeightedMSELoss()
-    elif const.MODEL == "GCNSI":
+    if const.MODEL == "GCNSI":
         model = GCNSI()
         criterion = torch.nn.BCEWithLogitsLoss()
     elif const.MODEL == "GAT":

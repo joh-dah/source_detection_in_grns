@@ -13,10 +13,7 @@ import torch
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from tqdm import tqdm
 from src import utils
-from architectures.GCNR import GCNR
-from architectures.GCNSI import GCNSI
 from architectures.GAT import GAT
-from src.data_processing import SDDataset, process_data
 import random
 from matplotlib.patches import Patch
 

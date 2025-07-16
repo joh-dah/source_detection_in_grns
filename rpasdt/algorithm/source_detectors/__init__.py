@@ -1,1 +1,0 @@
-"""Source detection algorithms module."""
