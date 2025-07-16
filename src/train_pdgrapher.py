@@ -52,7 +52,7 @@ def main():
 
     # Iterate over all of the folds and train on each one
     if const.N_FOLDS == 1:
-        model_performance = trainer.train(model, dataset, n_epochs = const.EPOCHS)
+        model_performance = trainer.train(model, dataset, n_epochs = 2)
     else:
         model_performance = trainer.train_kfold(model, dataset, n_epochs = const.EPOCHS)
 
