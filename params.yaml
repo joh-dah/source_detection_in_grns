@@ -6,14 +6,14 @@ data_creation:
     test_size: 1000
     normalize_data: true
 network: tiny
-model: pdgrapher
+model: GAT
 model_name: pdgrapher_control
-on_cluster: true
+on_cluster: false
 training:
     alpha: 0.5
     batch_size: 64
     class_weighting: false
-    epochs: 200  #fix of by one epoch
+    epochs: 20  #fix of by one epoch
     graph_weighting: false
     hidden_size: 128
     heads: 4

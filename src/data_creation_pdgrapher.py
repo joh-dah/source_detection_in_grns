@@ -1,5 +1,4 @@
 """ Creates a data set of graphs with modeled signal propagation for training and validation."""
-import argparse
 import math
 from pathlib import Path
 import shutil
@@ -10,7 +9,6 @@ import grins.racipe_run as rr
 import grins.gen_params as gen_params
 import grins.gen_diffrax_ode as gen_ode
 import pandas as pd
-import jax.numpy as jnp
 from torch_geometric.data import Data
 import torch
 from tqdm import tqdm
@@ -117,7 +115,7 @@ def get_graph_data_from_topo(filepath):
     df = pd.read_csv(filepath, sep=r"\s+")
 
     # Create gene-to-index mapping for optional ML use
-    genes = sorted(set(df['Source']).union(df['Target']))  # SORTED for consistency!
+    genes = sorted(set(df['Source']).union(df['Target']))
     gene_to_idx = {gene: idx for idx, gene in enumerate(genes)}
 
     # Build NetworkX DiGraph with weights
@@ -289,9 +287,10 @@ def process_gene(
         data = Data(
             original=og_row,
             perturbed=perturbed,
-            perturbed_gene_list=perturbed_genes,
+            difference=diff_row.values,
+            binary_perturbation_indicator=perturbed_genes,
             perturbed_gene=gene_to_perturb,
-            gene_symbols=list(gene_to_idx.keys()),
+            gene_mapping=gene_to_idx,
             num_nodes=len(gene_to_idx),
         )
         local_datapoints.append(data)
@@ -326,6 +325,8 @@ def create_data_set(
 
     genes_with_outgoing_edges = [gene for gene in G.nodes() if G.out_degree(gene) > 0]
     perturbations_per_gene = math.ceil(desired_dataset_size / len(genes_with_outgoing_edges))
+    print(f"Perturbations per gene: {perturbations_per_gene}")
+    
     #### TODO: find a good way to calculate this. there are some hints in the racipe documentation on how to choose the number of init_conds add params
     # also document well how the params and dataset size is calculated
 
@@ -353,18 +354,16 @@ def main():
     """
     Creates a data set of graphs with modeled signal propagation for training and validation.
     """
-    network = const.NETWORK
-
     dest_dir = Path(const.DATA_PATH)/ Path(const.MODEL) / "raw"
-    topo_file = f"{const.TOPO_PATH}/{network}.topo"
-    sample_count = sum(const.DATASET_SIZE.values())
+    topo_file = f"{const.TOPO_PATH}/{const.NETWORK}.topo"
+    sample_count = sum(const.DATASET_SIZE.values()) #TODO fix this
 
     shutil.rmtree(dest_dir, ignore_errors=True)
 
     create_data_set(
         dest_dir,
         topo_file,
-        network,
+        const.NETWORK,
         sample_count,
     )
 

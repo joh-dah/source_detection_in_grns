@@ -15,11 +15,12 @@ def main():
     torch.manual_seed(0)
     np.random.seed(0) """
 
-    data_processed_dir = Path(const.DATA_PATH) / const.MODEL / "processed"
+    data_processed_dir = Path(const.DATA_PATH) /"processed"/const.MODEL
+    splits_path = data_processed_dir / "splits" / "splits.pt"
 
     #check if files exist
-    if not os.path.exists(f"{data_processed_dir}/splits/splits.pt"):
-        raise FileNotFoundError("Splits file not found. Please run 'src/create_splits.py' first.")
+    if not os.path.exists(splits_path):
+        raise FileNotFoundError(f"Splits file not found at {splits_path}. Please run 'src/create_splits.py' first.")
 
     dataset = Dataset(
         forward_path=f"{data_processed_dir}/data_forward.pt",
@@ -35,9 +36,14 @@ def main():
     model.set_optimizers_and_schedulers([optim.Adam(model.response_prediction.parameters(), lr=0.0075),
         optim.Adam(model.perturbation_discovery.parameters(), lr=0.0033)])
     
+    # if cuda is available, use it, otherwise set accelerator to cpu
+    if torch.cuda.is_available():
+        accelerator = "cuda"
+    else:
+        accelerator = "cpu"
 
     trainer = Trainer(
-        fabric_kwargs={"accelerator": "cuda", "devices": 1},
+        fabric_kwargs={"accelerator": accelerator, "devices": 1},
         log=True, logging_name="tuned",
         use_forward_data=True, use_backward_data=True, use_supervision=True,
         use_intervention_data=True, supervision_multiplier=0.05,
@@ -46,7 +52,7 @@ def main():
 
     # Iterate over all of the folds and train on each one
     if const.N_FOLDS == 1:
-        model_performance = trainer.train(model, dataset, n_epochs = 200)
+        model_performance = trainer.train(model, dataset, n_epochs = 2)
     else:
         model_performanc = trainer.train_kfold(model, dataset, n_epochs = 1)
 

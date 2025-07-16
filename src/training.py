@@ -9,10 +9,11 @@ import src.constants as const
 from src import utils
 from torch_geometric.loader import DataLoader, DataListLoader
 from torch_geometric.nn.data_parallel import DataParallel
-from src.data_processing import SDDataset
+from src.data_processing_combined import SDDataset  # Updated import
 from torch_geometric.data import Data
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
+from pathlib import Path
 
 writer = SummaryWriter()
 
@@ -201,10 +202,58 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
     return model
 
 
+def load_processed_data_new_structure(split="train"):
+    """
+    Load processed data using the new data structure.
+    
+    Args:
+        split: "train", "val", or "test"
+    
+    Returns:
+        Dataset: Dataset for the specified split
+    """
+    processed_dir = Path(f"data/processed/{const.MODEL}")
+    
+    # Load splits - they are stored in splits/splits.pt subdirectory
+    splits_file = processed_dir / "splits" / "splits.pt"
+    if not splits_file.exists():
+        raise FileNotFoundError(f"Splits file not found: {splits_file}. Please run data processing first.")
+    
+    splits = torch.load(splits_file, weights_only=False)
+    
+    # Handle both single split and k-fold splits
+    if const.N_FOLDS == 1:
+        split_indices = splits[f'{split}_index']  # Changed from '_indices' to '_index'
+    else:
+        # For k-fold, use the first fold by default (can be extended later)
+        split_indices = splits[1][f'{split}_index']  # Changed from '_indices' to '_index'
+    
+    # Simple dataset class that loads individual processed files
+    class ProcessedDataset(torch.utils.data.Dataset):
+        def __init__(self, processed_dir, indices):
+            self.processed_dir = processed_dir
+            self.indices = indices
+            
+        def __len__(self):
+            return len(self.indices)
+            
+        def __getitem__(self, idx):
+            file_idx = self.indices[idx]
+            file_path = self.processed_dir / f"{file_idx}.pt"
+            return torch.load(file_path, weights_only=False)
+    
+    return ProcessedDataset(processed_dir, split_indices)
+
+
 def main():
     print("Prepare Data ...")
     current_time = datetime.datetime.now().strftime("%m-%d_%H-%M")
     model_name = f"{const.MODEL}_{current_time}" if const.MODEL_NAME is None else const.MODEL_NAME
+    
+    # Check if processed data exists for this model
+    processed_dir = Path(f"data/processed/{const.MODEL}")
+    if not processed_dir.exists():
+        raise FileNotFoundError(f"Processed data not found for {const.MODEL}. Please run data processing first: python -m src.data_processing_combined")
     
     if const.MODEL == "GCNR":
         model = GCNR()
@@ -222,8 +271,18 @@ def main():
         pos_weight = torch.tensor([10.0]).to(device)  # Give 10x weight to positive class, move to device
         criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    train_data = utils.load_processed_data(split="train")
-    val_data = utils.load_processed_data(split="val")
+    # Load data using new structure
+    try:
+        train_data = load_processed_data_new_structure(split="train")
+        val_data = load_processed_data_new_structure(split="val")
+        print(f"Loaded training data: {len(train_data)} samples")
+        print(f"Loaded validation data: {len(val_data)} samples")
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        print("Make sure to run data processing first:")
+        print(f"python -m src.data_processing_combined  # with const.MODEL = '{const.MODEL}'")
+        return
+    
     train(model, model_name, train_data, val_data, criterion)
 
 
