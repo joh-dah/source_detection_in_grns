@@ -1,0 +1,16 @@
+data_creation:
+  n_samples: 1000
+  training_share: 0.6
+  normalize_data: true
+
+# Environment settings
+network: tiny
+on_cluster: false
+seed: 42
+
+# Paths
+data_path: "data"
+model_path: "models"
+figures_path: "figures"
+report_path: "reports"
+topo_path: "topos"

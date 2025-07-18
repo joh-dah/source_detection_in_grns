@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-Validation script for PDGrapher Perturbation Discovery Model
-This script loads a trained perturbation discovery model and evaluates it on test data.
-"""
-
 import torch
 import numpy as np
 from pathlib import Path
@@ -13,8 +7,6 @@ import src.utils as utils
 import yaml
 import networkx as nx
 from tqdm import tqdm
-
-# Import PDGrapher components
 from pdgrapher import Dataset
 from pdgrapher._models import PerturbationDiscoveryModel, GCNArgs
 from pdgrapher._utils import get_thresholds
@@ -210,22 +202,16 @@ def supervised_metrics(
 
 
 def main():
+    assert const.MODEL == "pdgrapher", "This script is only for PDGrapher perturbation discovery validation."
     model_path = "examples/PDGrapher/tunedperturbation_discovery.pt"
-    data_path = Path(const.DATA_PATH) / const.MODEL / "processed"
-    edge_index_path = data_path / "edge_index.pt"
     
     # Setup device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
-    
-    # Load data
-    data_path = Path(data_path)
-    edge_index_path = edge_index_path
-    print(f"Loading edge index from: {edge_index_path}")
-    edge_index = torch.load(edge_index_path)
-    
-    print(f"Loading model from: {model_path}")
+
+    edge_index = torch.load(const.PROCESSED_EDGE_INDEX_PATH)
     model = load_perturbation_discovery_model(model_path, edge_index, device)
+    data_path = Path(const.PROCESSED_PATH)
     
     # Load dataset
     print("Loading dataset...")

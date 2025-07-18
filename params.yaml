@@ -3,14 +3,15 @@ data_creation:
     training_share: 0.6
     normalize_data: true
 network: tiny
-model: pdgrapher
-model_name: pdgrapher_control
 on_cluster: false
+seed: 42
+model: GAT
+model_name: gat_control2
 training:
     alpha: 0.5
     batch_size: 64
     class_weighting: false
-    epochs: 20  #fix of by one epoch
+    epochs: 2  #fix of by one epoch
     graph_weighting: false
     hidden_size: 128
     heads: 4

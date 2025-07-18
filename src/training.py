@@ -83,13 +83,81 @@ def extract_labels(data_list, is_data_parallel: bool, device: torch.device) -> t
     return data_list.y.to(device)
 
 
-def save_model_checkpoint(model: torch.nn.Module, model_name: str, is_data_parallel: bool):
-    if is_data_parallel:
-        utils.save_model(model.module, "latest")
-        utils.save_model(model.module, model_name)
+def save_best_model(model: torch.nn.Module, model_name: str, is_data_parallel: bool, best_val_loss: float, epoch: int):
+    """
+    Save the best model with timestamp following the same pattern as PDGrapher.
+    
+    Args:
+        model: The trained model
+        model_name: Base model name
+        is_data_parallel: Whether model uses DataParallel
+        best_val_loss: Best validation loss achieved
+        epoch: Epoch at which best model was achieved
+    """
+    # Extract the actual model if using DataParallel
+    actual_model = model.module if is_data_parallel else model
+    
+    # Create timestamp string
+    now = datetime.datetime.now()
+    timestamp = f"{now.day:02d}-{now.month:02d}_{now.hour:02d}-{now.minute:02d}"
+    
+    # Create model save directory
+    model_save_dir = Path(const.MODEL_PATH) / const.MODEL
+    model_save_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create model filename with timestamp
+    model_filename = f"{model_name}_d-{timestamp}.pt"
+    model_save_path = model_save_dir / model_filename
+    
+    # Create comprehensive save dictionary
+    save_dict = {
+        'model_state_dict': actual_model.state_dict(),
+        'model_config': {
+            'model_type': const.MODEL,
+            'architecture': actual_model.__class__.__name__,
+            'learning_rate': const.LEARNING_RATE,
+            'weight_decay': const.WEIGHT_DECAY,
+            'batch_size': const.BATCH_SIZE,
+            'epochs': const.EPOCHS,
+            'class_weighting': const.CLASS_WEIGHTING,
+            'graph_weighting': const.GRAPH_WEIGHTING,
+            'subsample': const.SUBSAMPLE
+        },
+        'training_performance': {
+            'best_val_loss': best_val_loss,
+            'best_epoch': epoch,
+            'total_epochs': const.EPOCHS
+        },
+        'timestamp': timestamp,
+        'device_used': str(device),
+        'data_parallel': is_data_parallel
+    }
+    
+    # Save the model
+    torch.save(save_dict, model_save_path)
+    
+    print(f"✅ Best model saved to: {model_save_path}")
+    
+    # Also save a copy with the latest name for easy loading
+    latest_path = model_save_dir / f"{model_name}_latest.pt"
+    torch.save(save_dict, latest_path)
+    print(f"✅ Latest model copy saved to: {latest_path}")
+    
+    return model_save_path
+
+
+def save_model_checkpoint(model: torch.nn.Module, model_name: str, is_data_parallel: bool, best_val_loss: float = None, epoch: int = None):
+    """Legacy function that now calls the new save_best_model function."""
+    if best_val_loss is not None and epoch is not None:
+        return save_best_model(model, model_name, is_data_parallel, best_val_loss, epoch)
     else:
-        utils.save_model(model, "latest")
-        utils.save_model(model, model_name)
+        # Fallback to old behavior if metrics not provided
+        if is_data_parallel:
+            utils.save_model(model.module, "latest")
+            utils.save_model(model.module, model_name)
+        else:
+            utils.save_model(model, "latest")
+            utils.save_model(model, model_name)
 
 
 @torch.no_grad()
@@ -119,7 +187,6 @@ def validate(model, val_loader, criterion, is_data_parallel):
     return avg_loss, acc
 
 
-
 def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val_dataset: SDDataset, criterion: torch.nn.Module):
     model, train_loader, val_loader, is_data_parallel = configure_model_and_loader(model, train_dataset, val_dataset)
 
@@ -131,6 +198,7 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
 
     early_stop_patience = 10
     best_loss = float("inf")
+    best_epoch = 0
     patience_counter = 0
 
     for epoch in tqdm(range(1, const.EPOCHS + 1), disable=const.ON_CLUSTER):
@@ -187,8 +255,9 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
         if val_loss < best_loss:
             print("Saving new best model ...")
             best_loss = val_loss
+            best_epoch = epoch
             patience_counter = 0
-            save_model_checkpoint(model, model_name, is_data_parallel)
+            save_best_model(model, model_name, is_data_parallel, best_loss, best_epoch)
         else:
             patience_counter += 1
             if patience_counter >= early_stop_patience:
@@ -197,41 +266,14 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
 
     writer.flush()
     writer.close()
+    
+    # Print final training summary
+    print(f"\n🎯 Training Complete!")
+    print(f"   Best validation loss: {best_loss:.4f}")
+    print(f"   Best epoch: {best_epoch}")
+    print(f"   Model saved with timestamp")
+    
     return model
-
-
-def load_processed_data_new_structure(split="train"):
-    """
-    Load processed data using the new data structure.
-    
-    Args:
-        split: "train", "val", or "test"
-    
-    Returns:
-        Dataset: Dataset for the specified split
-    """
-    processed_dir = Path(f"data/processed/{const.MODEL}")
-    
-    # Load splits - they are stored in splits/splits.pt subdirectory
-    splits_file = processed_dir / "splits" / "splits.pt"
-    splits = torch.load(splits_file, weights_only=False)
-    split_indices = splits[f'{split}_index']
-    
-    # Simple dataset class that loads individual processed files
-    class ProcessedDataset(torch.utils.data.Dataset):
-        def __init__(self, processed_dir, indices):
-            self.processed_dir = processed_dir
-            self.indices = indices
-            
-        def __len__(self):
-            return len(self.indices)
-            
-        def __getitem__(self, idx):
-            file_idx = self.indices[idx]
-            file_path = self.processed_dir / f"{file_idx}.pt"
-            return torch.load(file_path, weights_only=False)
-    
-    return ProcessedDataset(processed_dir, split_indices)
 
 
 def main():
@@ -247,12 +289,11 @@ def main():
         pos_weight = torch.tensor([10.0]).to(device)  # Give 10x weight to positive class, move to device
         criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    train_data = load_processed_data_new_structure(split="train")
-    val_data = load_processed_data_new_structure(split="val")
+    train_data = utils.load_processed_data(split="train")
+    val_data = utils.load_processed_data(split="val")
     print(f"Loaded training data: {len(train_data)} samples")
     print(f"Loaded validation data: {len(val_data)} samples")
 
-    
     train(model, model_name, train_data, val_data, criterion)
 
 

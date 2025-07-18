@@ -2,6 +2,7 @@
 from pathlib import Path
 from src import constants as const
 from src import utils
+from src.create_splits_combined import create_data_splits
 import networkx as nx
 import os
 import shutil
@@ -9,7 +10,6 @@ from torch_geometric.data import Data, Dataset
 import torch
 import multiprocessing as mp
 from tqdm import tqdm
-from src.create_splits_combined import run_data_splitting
 from torch_geometric.utils import add_remaining_self_loops, to_undirected, from_networkx
 
 
@@ -331,10 +331,8 @@ def main():
 
     # Create datasets using the unified approach
     datasets = create_datasets_for_model(const.MODEL)
-    
-    # Create splits (this is model-agnostic)
-    run_data_splitting()
-    
+    create_data_splits()
+
     print(f"Data processing complete for {const.MODEL}!")
     return datasets
 

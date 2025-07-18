@@ -36,17 +36,16 @@ def save_model(model, name: str):
     torch.save(model.state_dict(), f"{const.MODEL_PATH}/{name}.pth")
 
 
-def load_model(model, model_name: str):
+def load_model(model, model_path: str):
     """
     Loads model state from path.
     :param model: model
     :param model_name: path to model
     :return: model with loaded state
     """
-    path = f"{const.MODEL_PATH}/{model_name}.pth"
-    print(f"loading model: {path}")
+    print(f"loading model: {model_path}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.load_state_dict(torch.load(path, map_location=torch.device(device)))
+    model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
     return model
 
 
@@ -87,23 +86,39 @@ def save_metrics(metrics: dict, model_name: str, network: str):
     #     json.dump(metrics, file, indent=4)
 
 
-def load_processed_data(split: str = "train", path: str = None):
+
+def load_processed_data(split="train"):
     """
-    Load processed data
-    :param split: split of the data to load, can be "train", "validation" or "test"
-    :return: processed data
+    Load processed data using the new data structure.
+    
+    Args:
+        split: "train", "val", or "test"
+    
+    Returns:
+        Dataset: Dataset for the specified split
     """
-    print("Load processed data...")
-
-    if path is None:
-        path = Path(const.DATA_PATH) / Path(const.MODEL) / split
-
-    data = dp.SDDataset(
-        path,
-        pre_transform=dp.process_data,
-    )
-
-    return data
+    processed_dir = Path(const.PROCESSED_PATH)
+    
+    # Load splits - they are stored in splits/splits.pt subdirectory
+    splits_file = processed_dir / "splits" / "splits.pt"
+    splits = torch.load(splits_file, weights_only=False)
+    split_indices = splits[f'{split}_index']
+    
+    # Simple dataset class that loads individual processed files
+    class ProcessedDataset(torch.utils.data.Dataset):
+        def __init__(self, processed_dir, indices):
+            self.processed_dir = processed_dir
+            self.indices = indices
+            
+        def __len__(self):
+            return len(self.indices)
+            
+        def __getitem__(self, idx):
+            file_idx = self.indices[idx]
+            file_path = self.processed_dir / f"{file_idx}.pt"
+            return torch.load(file_path, weights_only=False)
+    
+    return ProcessedDataset(processed_dir, split_indices)
 
 
 def create_topo_file_from_graph(network_name, G: nx.DiGraph, dir):
@@ -120,7 +135,7 @@ def create_topo_file_from_graph(network_name, G: nx.DiGraph, dir):
             f.write(f"{u} {v} {d}\n")
 
 
-def get_graph_data_from_topo(filepath):
+def get_graph_data_from_topo(filepath=None):
     """
     Reads a .topo file and returns:
     - A NetworkX directed graph with gene names as node labels and 'Type' as edge weight.
@@ -129,6 +144,9 @@ def get_graph_data_from_topo(filepath):
     :param filepath: path to the topology file
     :return: G_named (NetworkX DiGraph), gene_to_idx (dict)
     """
+    if filepath is None:
+        filepath = Path(const.TOPO_PATH) / f"{const.NETWORK}.topo"
+
     df = pd.read_csv(filepath, sep=r"\s+")
 
     # Create gene-to-index mapping for optional ML use
@@ -143,7 +161,7 @@ def get_graph_data_from_topo(filepath):
     return G, gene_to_idx
 
 
-def load_raw_data(split: str = "train", path: str = None):
+def load_raw_data(path: str = None):
     """
     Load raw data.
     :param split: split of the data to load, can be "train", "validation" or "test"
@@ -152,7 +170,7 @@ def load_raw_data(split: str = "train", path: str = None):
     print("Load raw data...")
 
     if path is None:
-        path = Path(const.DATA_PATH) / Path(const.MODEL) / split / "raw"
+        path = Path(const.RAW_PATH)
 
     if not path.exists():
         raise FileNotFoundError(f"Path does not exist: {path}")

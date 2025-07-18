@@ -1,264 +1,108 @@
 """ Initiates the validation of the classifier specified in the constants file. """
 import argparse
 import yaml
-import os.path
 import numpy as np
 import torch
-import torch_geometric
 from tqdm import tqdm
 import networkx as nx
 from sklearn.metrics import roc_auc_score, roc_curve
-import rpasdt.algorithm.models as rpasdt_models
-from rpasdt.algorithm.simulation import perform_source_detection_simulation
-from rpasdt.algorithm.taxonomies import SourceDetectionAlgorithm
-from torch_geometric.utils.convert import from_networkx
-from torcheval.metrics.functional import binary_f1_score
-
+from sklearn.metrics import f1_score
 import src.data_processing as dp
-from architectures.GCNR import GCNR
-from architectures.GCNSI import GCNSI
+from architectures.GAT import GAT
 import src.constants as const
-from src import visualization as vis
 from src import utils
 
 
-def find_closest_sources(matching_graph: nx.Graph, unmatched_nodes: list) -> list:
-    """
-    Find the minimum weight adjacent edge for each unmatched node.
-    :param matching_graph: the graph with only the sources, the predicted sources and the distances between them
-    :param unmatched_nodes: nodes that didn´t match any other node
-    :return: list of the minimum weight adjacent edge for each unmatched node
-    """
-    new_edges = []
-    for node in unmatched_nodes:
-        min_weight = float("inf")
-        min_weight_node = None
-        for neighbor in matching_graph.neighbors(node):
-            if matching_graph.get_edge_data(node, neighbor)["weight"] < min_weight:
-                min_weight = matching_graph.get_edge_data(node, neighbor)["weight"]
-                min_weight_node = neighbor
-        new_edges += [(node, min_weight_node), (min_weight_node, node)]
-    return new_edges
-
-
-def min_matching_distance(
-    edge_index: torch.tensor, sources: list, predicted_sources: list
-) -> tuple[float, list]:
-    """
-    Calculates the average minimal matching distance between the sources and the predicted sources.
-    This Metric tries to match each source to a predicted source while minimizing the sum of the distances between them.
-    When |sources| != |predicted_sources|, some nodes of the smaller set will be matched to multiple nodes of the larger set.
-    This penelizes the prediction of too many or too few sources.
-    To compare the results of different amounts of sources, the result gets normalized by the minimum of the number of sources
-    and the number of predicted sources.
-    :param edge_index: The edge_index of the graph to evaluate on.
-    :param sources: The indices of the sources.
-    :param predicted_sources: The indices of the predicted sources.
-    :return: The avg minimal matching distance between the sources and the predicted sources.
-    """
-    G = nx.Graph()
-    G.add_nodes_from(range(len(edge_index[0])))
-    G.add_edges_from(edge_index.t().tolist())
-
-    # creating a graph with only the sources, the predicted sources and the distances between them
-    matching_graph = nx.Graph()
-    for source in sources:
-        distances = nx.single_source_shortest_path_length(G, source)
-        new_edges = [
-            ("s" + str(source), str(k), v)
-            for k, v in distances.items()
-            if k in predicted_sources
-        ]
-        matching_graph.add_weighted_edges_from(new_edges)
-
-    # finding the minimum weight matching
-    matching = nx.algorithms.bipartite.matching.minimum_weight_full_matching(
-        matching_graph
-    )
-    matching_list = [(u, v) for u, v in matching.items()]
-
-    # finding the unmatched nodes and adding the closest source to the matching
-    unmatched_nodes = [v for v in matching_graph.nodes if v not in matching]
-    new_edges = find_closest_sources(matching_graph, unmatched_nodes)
-    # vis.plot_matching_graph(
-    #     matching_graph, matching_list, new_edges, title_for_matching_graph
-    # )
-    matching_list += new_edges
-
-    # calculating the sum of the weights of the matching
-    min_matching_distance = (
-        sum([matching_graph.get_edge_data(k, v)["weight"] for k, v in matching_list])
-        / 2
-    )  # counting each edge twice
-    return min_matching_distance / max(1, min(len(sources), len(predicted_sources)))
-
-
-def compute_roc_curve(
-    pred_label_set: list, data_set: list
-) -> tuple[float, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Compute Area Under the Receiver Operating Characteristic Curve (ROC AUC) and the false positive rates and
-    true positive rates for the given data set and the predicted labels.
-    :param pred_label_set: list of predicted labels for each data instance in the data set
-    :param data_set: list of data instances containing true labels
-    :return: ROC AUC score, true positive rates, and false positive rates
-    """
-    all_true_labels = []
-    all_pred_labels = []
-    for i, pred_labels in enumerate(
-        tqdm(pred_label_set[:10], desc="evaluate model", disable=const.ON_CLUSTER)
-    ):
-        all_true_labels += data_set[i].y.tolist()
-        all_pred_labels += pred_labels.flatten().tolist()
-
-    if const.MODEL == "GCNR":
-        all_pred_labels = 0 - np.array(all_pred_labels)
-    false_positive, true_positive, thresholds = roc_curve(
-        all_true_labels, all_pred_labels, pos_label=1
-    )
-    roc_score = roc_auc_score(all_true_labels, all_pred_labels)
-    return roc_score, true_positive, false_positive, thresholds
-
-
-def predicted_sources(pred_labels: list, threshold: float) -> list:
-    """
-    Get the predicted sources from the predicted labels.
-    :param pred_labels: the predicted labels for the instances
-    :param true_sources: list of true sources
-    :return: list of predicted sources
-    """
-    if const.MODEL == "GCNR":
-        pred_sources = torch.where(pred_labels < threshold)[0]
-    if const.MODEL == "GCNSI":
-        pred_sources = torch.where(pred_labels > threshold)[0]
-    return pred_sources.tolist()
-
-
-def get_max_dist_from_sources(sources: list, edge_index: torch.tensor) -> float:
-    """
-    Get the maximum distance from the sources to any other node in the graph.
-    :param sources: list of sources
-    :param edge_index: edge_index of the graph
-    :return: avg maximum distances from the sources to any other node in the graph
-    """
-    G = nx.Graph()
-    G.add_nodes_from(range(len(edge_index[0])))
-    G.add_edges_from(edge_index.t().tolist())
-    max_dists = []
-    for source in sources:
-        distances = nx.single_source_shortest_path_length(G, source)
-        max_dists.append(max(distances.values()))
-    return np.mean(max_dists)
-
-
-def get_avg_dist_from_sources(sources: list, edge_index: torch.tensor) -> float:
-    """
-    Get the average distance from the sources to any other node in the graph.
-    :param sources: list of sources
-    :param edge_index: edge_index of the graph
-    :return: avg average distances from the sources to any other node in the graph
-    """
-    G = nx.Graph()
-    G.add_nodes_from(range(len(edge_index[0])))
-    G.add_edges_from(edge_index.t().tolist())
-    avg_dists = []
-    for source in sources:
-        distances = nx.single_source_shortest_path_length(G, source)
-        avg_dists.append(np.mean(list(distances.values())))
-    return np.mean(avg_dists)
-
-
-def distance_metrics(pred_label_set: list, data_set: list, threshold: float) -> dict:
+def distance_metrics(true_sources, pred_sources, data_set: list) -> dict:
     """
     Get the average min matching distance and the average distance to the source in general.
-    :param pred_label_set: list of predicted labels for each data instance in the data set
+    :param true_sources: list of true source node indices
+    :param pred_sources: list of predicted source node indices
     :param data_set: list of data instances containing true labels
     :return: dictionary with the average minimum matching distance and average distance to the source
     """
-    min_matching_dists = []
-    dist_to_source = []
+    dists_to_source = []
 
-    for i, pred_labels in enumerate(
-        tqdm(pred_label_set, desc="evaluate model", disable=const.ON_CLUSTER)
+    for i, true_source in enumerate(
+        tqdm(true_sources, desc="calculate distances", disable=const.ON_CLUSTER)
     ):
-        true_labels = data_set[i].y
-        true_sources = torch.where(true_labels == 1)[0].tolist()
-        pred_sources = predicted_sources(pred_labels, threshold)
-        dist_to_source.append(
-            get_avg_dist_from_sources(true_sources, data_set[i].edge_index)
-        )
-        if len(pred_sources) == 0:
-            min_matching_dists.append(
-                get_max_dist_from_sources(true_sources, data_set[i].edge_index)
-            )
-            continue
-        matching_dist = min_matching_distance(
-            data_set[i].edge_index, true_sources, pred_sources
-        )
-        min_matching_dists.append(matching_dist)
+        pred_source = pred_sources[i]
+        if true_source == pred_source:
+            dists_to_source.append(0)
+        else:
+            # get the graph from the data instance
+            nx_graph = nx.from_edgelist(data_set[i].edge_index.t().tolist())
+
+            # calculate the shortest path distance
+            try:
+                dist = nx.shortest_path_length(nx_graph, source=true_source, target=pred_source)
+            except nx.NetworkXNoPath:
+                dist = float("inf")
+            dists_to_source.append(dist)
 
     return {
-        "avg min matching distance": np.mean(min_matching_dists),
-        "avg dist to source": np.mean(dist_to_source),
+        "avg dist to source": np.mean(dists_to_source),
     }
 
 
-def TP_FP_metrics(pred_label_set: list, data_set: list, threshold: float) -> dict:
+def TP_FP_metrics(true_sources: list, pred_sources: list) -> dict:
     """
-    Calculate the true positive rate and false positive rate metrics based on the predicted labels and data set.
-    :param pred_label_set: predicted labels for each data instance in the data set
-    :param data_set: a data set containing true labels
+    Calculate the true positive and false positive rates based on the true and predicted sources.
+    :param true_sources: list of true sources for each data instance
+    :param pred_sources: list of predicted sources for each data instance
     :return: dictionary with the true positive rate and false positive rate.
     """
-    TPs = 0
-    FPs = 0
-    FNs = 0
-    F1_scores = []
-    n_positives = 0
-    n_negatives = 0
-    for i, pred_labels in enumerate(
-        tqdm(pred_label_set, desc="evaluate model", disable=const.ON_CLUSTER)
-    ):
-        true_sources = torch.where(data_set[i].y == 1)[0].tolist()
-        pred_sources = predicted_sources(pred_labels, threshold)
-        n_TP = len(np.intersect1d(true_sources, pred_sources))
-        n_FP = len(pred_sources) - n_TP
-        n_FN = len(true_sources) - n_TP
-        F1_scores.append(2 * n_TP / (2 * n_TP + n_FP + n_FN) if n_TP > 0 else 0)
-        TPs += n_TP
-        FPs += n_FP
-        n_positives += len(true_sources)
-        n_negatives += len(pred_labels) - len(true_sources)
+    true_positive = 0
+    false_positive = 0
+
+    for true_source, pred_source in zip(true_sources, pred_sources):
+        if true_source == pred_source:
+            true_positive += 1
+        else:
+            false_positive += 1
+
+    total_instances = len(true_sources)
+    true_positive_rate = true_positive / total_instances
+    false_positive_rate = false_positive / total_instances
+    
+    f1 = f1_score(true_sources, pred_sources, average='weighted')
 
     return {
-        "True positive rate": TPs / n_positives,
-        "False positive rate": FPs / n_negatives,
-        "avg F1 score": np.mean(F1_scores),
+        "true positive rate": true_positive_rate,
+        "false positive rate": false_positive_rate,
+        "f1 score": f1,
     }
 
 
-def prediction_metrics(pred_label_set: list, data_set: list) -> dict:
+
+def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
     """
-    Get the average rank of the source, the average prediction for the source
+    Get the average rank of the source, the average prediction for the source,
     and additional metrics that help to evaluate the prediction.
-    :param pred_label_set: predicted labels for each data instance in the data set
-    :param data_set: a data set containing true labels
+    Also computes how often the true source is in the top 3 and top 5 predictions.
+    :param pred_label_set: predicted labels for each data instance in the data set (per-node probabilities)
+    :param true_sources: list of true source node indices
     :return: dictionary with prediction metrics
     """
     source_ranks = []
     predictions_for_source = []
     general_predictions = []
+    in_top3 = []
+    in_top5 = []
 
     for i, pred_labels in enumerate(
         tqdm(pred_label_set, desc="evaluate model", disable=const.ON_CLUSTER)
     ):
-        true_sources = torch.where(data_set[i].y == 1)[0].tolist()
+        true_source = true_sources[i]
         ranked_predictions = (utils.ranked_source_predictions(pred_labels)).tolist()
 
-        for source in true_sources:
-            source_ranks.append(ranked_predictions.index(source))
-            predictions_for_source += pred_labels[true_sources].tolist()
-            general_predictions += pred_labels.flatten().tolist()
+        source_rank = ranked_predictions.index(true_source)
+        source_ranks.append(source_rank)
+        predictions_for_source.append(pred_labels[true_source].item())
+        general_predictions += pred_labels.tolist()
+
+        in_top3.append(source_rank < 3)
+        in_top5.append(source_rank < 5)
 
     return {
         "avg rank of source": np.mean(source_ranks),
@@ -266,101 +110,43 @@ def prediction_metrics(pred_label_set: list, data_set: list) -> dict:
         "avg prediction over all nodes": np.mean(general_predictions),
         "min prediction over all nodes": min(general_predictions),
         "max prediction over all nodes": max(general_predictions),
+        "source in top 3": np.mean(in_top3),
+        "source in top 5": np.mean(in_top5),
     }
 
 
 def supervised_metrics(
     pred_label_set: list,
-    data_set: list,
-    model_name: str,
-    threshold: float,
-    network: str,
+    raw_data_set: list,
+    processed_data_set: list,
+    true_sources: list,
+    pred_sources: list,
 ) -> dict:
     """
     Performs supervised evaluation metrics for models that predict whether each node is a source or not.
     :param pred_label_set: list of predicted labels for each data instance in the data set
-    :param data_set: the data set containing true labels
-    :param model_name: name of the model being evaluated
-    :param threshold: threshold for the predicted labels
+    :param raw_data_set: the raw data set containing true labels
+    :param processed_data_set: the processed data set with PyTorch Geometric format
+    :param true_sources: list of true source node indices
+    :param pred_sources: list of predicted source node indices
     :return: dictionary containing the evaluation metrics
     """
     metrics = {}
 
     print("Evaluating Model ...")
-    roc_score, true_positives, false_positives, thresholds = compute_roc_curve(
-        pred_label_set, data_set
-    )
-    vis.plot_roc_curve(
-        true_positives, false_positives, thresholds, model_name, network
-    )
 
-    metrics |= prediction_metrics(pred_label_set, data_set)
-    metrics |= distance_metrics(pred_label_set, data_set, threshold)
-    metrics |= TP_FP_metrics(pred_label_set, data_set, threshold)
-    metrics |= {"roc score": roc_score}
+    # Graph-level metrics (source detection)
+    metrics |= prediction_metrics(pred_label_set, true_sources)
+    metrics |= distance_metrics(true_sources, pred_sources, raw_data_set)
+    metrics |= TP_FP_metrics(true_sources, pred_sources)
+    
+    # Node-level metrics (binary classification)
+    metrics |= node_classification_metrics(pred_label_set, processed_data_set)
 
     for key, value in metrics.items():
-        metrics[key] = round(value, 3)
+        if isinstance(value, (int, float)):
+            metrics[key] = round(value, 3)
         print(f"{key}: {metrics[key]}")
-
-    return metrics
-
-
-def min_matching_distance_netsleuth(
-    result: rpasdt_models.SourceDetectionSimulationResult,
-) -> float:
-    """
-    Calculate the average minimum matching distance for the NETSLEUTH results.
-    :param result: NETSLEUTH results
-    :return: average minimum matching distance
-    """
-    min_matching_dists = []
-    for mm_r in result.raw_results["NETSLEUTH"]:
-        data = from_networkx(mm_r.G)
-        min_matching_dists.append(
-            min_matching_distance(
-                data.edge_index, mm_r.real_sources, mm_r.detected_sources
-            )
-        )
-    return np.mean(min_matching_dists)
-
-
-def create_simulation_config() -> rpasdt_models.SourceDetectionSimulationConfig:
-    """
-    Create a rpasdt simulation config with the NETSLEUTH source detector.
-    """
-    return rpasdt_models.SourceDetectionSimulationConfig(
-        source_detectors={
-            "NETSLEUTH": rpasdt_models.SourceDetectorSimulationConfig(
-                alg=SourceDetectionAlgorithm.NET_SLEUTH,
-                config=rpasdt_models.CommunitiesBasedSourceDetectionConfig(),
-            )
-        }
-    )
-
-
-def unsupervised_metrics(val_data: list) -> dict:
-    """
-    Performs unsupervised evaluation metrics for models.
-    :param val_data: the validation data
-    :return: dictionary containing the evaluation metrics
-    """
-    print("Evaluating unsupervised methods ...")
-    simulation_config = create_simulation_config()
-
-    result = perform_source_detection_simulation(simulation_config, val_data)
-    avg_mm_distance = min_matching_distance_netsleuth(result)
-
-    metrics = {
-        "avg min matching distance": avg_mm_distance,
-        "True positive rate": result.aggregated_results["NETSLEUTH"].TPR,
-        "False positive rate": result.aggregated_results["NETSLEUTH"].FPR,
-        "avg F1 score": result.aggregated_results["NETSLEUTH"].F1,
-    }
-
-    for key, value in metrics.items():
-        metrics[key] = round(value, 3)
-        print(f"unsupervised - {key}: {metrics[key]}")
 
     return metrics
 
@@ -373,32 +159,26 @@ def data_stats(raw_data_set: list) -> dict:
     """
     n_nodes = []
     n_sources = []
-    centrality = []
-    n_nodes_infected = []
-    precent_infected = []
+    n_nodes_affected = []
+    precent_affected = []
     for data in tqdm(raw_data_set, desc="get data stats"):
-        n_nodes.append(len(data.y))
-        n_sources.append(len(torch.where(data.y == 1)[0].tolist()))
-        n_nodes_infected.append(len(torch.where(data.x == 1)[0].tolist()))
-        precent_infected.append(n_nodes_infected[-1] / n_nodes[-1])
-        graph = nx.from_edgelist(data.edge_index.t().tolist())
-        centrality.append(np.mean(list(nx.degree_centrality(graph).values())))
+        n_nodes.append(data.num_nodes)
+        indicator = torch.tensor(data.binary_perturbation_indicator)
+        diff = torch.tensor(data.difference)
+        n_sources.append(len(torch.where(indicator == 1)[0].tolist()))
+        n_nodes_affected.append(len(torch.where(diff != 0)[0].tolist()))
+        precent_affected.append(n_nodes_affected[-1] / n_nodes[-1])
 
     stats = {
         "graph stats": {
-            "avg number of nodes": np.mean(n_nodes),
-            "avg centrality": np.mean(centrality),
+            "number of nodes": n_nodes, # TODO add more stats like n_edges
         },
         "infection stats": {
-            "avg number of sources": np.mean(n_sources),
-            "avg portion of infected nodes": np.mean(precent_infected),
-            "std portion of infected nodes": np.std(precent_infected),
+            "avg number of sources": round(float(np.mean(n_sources)), 3),
+            "avg portion of affected nodes": round(float(np.mean(precent_affected)), 3),
+            "std portion of affected nodes": round(float(np.std(precent_affected)), 3),
         },
     }
-
-    for key, value in stats.items():
-        for k, v in value.items():
-            stats[key][k] = round(v, 3)
 
     return stats
 
@@ -408,41 +188,94 @@ def predictions(model: torch.nn.Module, data_set: dp.SDDataset) -> list:
     Generate predictions using the specified model for the given data set.
     :param model: the model used for making predictions
     :param data_set: the data set to make predictions on
-    :return: predictions generated by the model
+    :return: predictions generated by the model (per-node predictions)
     """
     predictions = []
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    model.eval()
+    
     for data in tqdm(
         data_set, desc="make predictions with model", disable=const.ON_CLUSTER
     ):
-        if const.MODEL == "GCNSI":
-            predictions.append(torch.sigmoid(model(data).detach()))
-        elif const.MODEL == "GCNR":
-            predictions.append(model(data).detach())
+        data = data.to(device)
+        with torch.no_grad():
+            pred = model(data).detach().squeeze()  # shape: [N] for N nodes
+            # Apply sigmoid to get probabilities for each node being a source
+            pred_probs = torch.sigmoid(pred)
+        predictions.append(pred_probs.cpu())
+
     return predictions
 
 
-def optimize_threshold(model: torch.nn.Module, data_set: dp.SDDataset) -> float | float:
+def extract_true_sources(processed_data) -> list:
     """
-    Calculates the optimal threshold for the given model on the given data set. The optimal threshold is the one that
-    maximizes the F1 score. For performance reasons, only the first n samples of the data set are used.
-    :param model: the model to optimize the threshold for
-    :param data_set: the data set used for determining the optimal threshold
-    :return: the optimal threshold and the corresponding F1 score on the given data set
+    Extract true source nodes from the processed data (exactly one source per graph).
+    :param processed_data: list of PyTorch Geometric data instances
+    :return: list of source node indices (one per graph)
     """
-    n_samples = 100
-    y_hat = torch.cat(predictions(model, data_set[:n_samples])).flatten()
-    y = torch.cat([data.y for data in data_set[:n_samples]]).flatten()
-    if const.MODEL == "GCNR":
-        y_hat = 0 - y_hat
-        y = torch.where(y == 0, 1, 0)
-    thresholds = y_hat.unique()
-    f1_scores = []
-    for threshold in thresholds:
-        f1 = binary_f1_score(input=y_hat, target=y, threshold=threshold)
-        f1_scores.append(f1)
-    if const.MODEL == "GCNR":
-        thresholds = -thresholds.numpy()
-    return thresholds[np.argmax(f1_scores)], np.max(f1_scores)
+    true_sources = []
+    
+    for data in processed_data:
+        # Find the single source node (y == 1)
+        source_node = torch.where(data.y == 1)[0][0].item()
+        true_sources.append(source_node)
+    
+    return true_sources
+
+
+def node_classification_metrics(pred_label_set: list, processed_data: list) -> dict:
+    """
+    Calculate AUC-ROC and other binary classification metrics for per-node source detection.
+    :param pred_label_set: list of per-node prediction probabilities
+    :param processed_data: list of data instances with true labels
+    :return: dictionary with classification metrics
+    """
+    all_preds = []
+    all_labels = []
+    
+    for i, (pred_probs, data) in enumerate(zip(pred_label_set, processed_data)):
+        # Ensure pred_probs is flattened
+        if isinstance(pred_probs, torch.Tensor):
+            pred_list = pred_probs.flatten().tolist()
+        else:
+            pred_list = pred_probs
+        all_preds.extend(pred_list)
+        
+        # Ensure labels are flattened integers
+        if isinstance(data.y, torch.Tensor):
+            label_list = data.y.flatten().int().tolist()
+        else:
+            label_list = data.y
+        all_labels.extend(label_list)
+    
+    # Calculate AUC-ROC if we have both classes
+    unique_labels = set(all_labels)
+    if len(unique_labels) > 1:
+        auc_roc = roc_auc_score(all_labels, all_preds)
+        fpr, tpr, thresholds = roc_curve(all_labels, all_preds)
+    else:
+        auc_roc = 0.0
+        fpr, tpr, thresholds = None, None, None
+    
+    # Calculate binary predictions using 0.5 threshold
+    binary_preds = [1 if p > 0.5 else 0 for p in all_preds]
+    
+    # Calculate precision, recall, F1
+    from sklearn.metrics import precision_score, recall_score, f1_score
+    precision = precision_score(all_labels, binary_preds, average='binary', zero_division=0)
+    recall = recall_score(all_labels, binary_preds, average='binary', zero_division=0)
+    f1_binary = f1_score(all_labels, binary_preds, average='binary', zero_division=0)
+    
+    return {
+        "node_auc_roc": auc_roc,
+        "node_precision": precision,
+        "node_recall": recall,
+        "node_f1": f1_binary,
+        "total_nodes": len(all_labels),
+        "positive_nodes": sum(all_labels),
+        "predicted_positive": sum(binary_preds)
+    }
 
 
 def main():
@@ -461,28 +294,28 @@ def main():
     model_name = (
         utils.latest_model_name() if const.MODEL_NAME is None else const.MODEL_NAME
     )
-    if const.MODEL == "GCNR":
-        model = GCNR()
-    elif const.MODEL == "GCNSI":
-        model = GCNSI()
 
-    model = utils.load_model(model, os.path.join(const.MODEL_PATH, f"{model_name}.pth"))
-    processed_val_data = utils.load_processed_data(validation=True)
-    raw_val_data = utils.load_raw_data(validation=True)
-    pred_labels = predictions(model, processed_val_data)
+    # assert that model is gat
+    assert const.MODEL == "GAT", "This validation script only supports GAT models."
+    model = GAT()
 
-    print("Deriving optimal threshold...")
-    threshold, f1 = optimize_threshold(
-        model, utils.load_processed_data(validation=False)
-    )
-    print(f"Optimal threshold based on training dataset: {threshold}, F1 score: {f1}")
+    model = utils.load_model(model, model_name)
+    raw_test_data = utils.load_raw_data()
+    processed_test_data = utils.load_processed_data(split="test")
+    pred_labels = predictions(model, processed_test_data)
+    
+    # Extract true sources (exactly one per graph)
+    true_sources = extract_true_sources(processed_test_data)
+    
+    # Get predicted sources (node with highest prediction probability)
+    pred_sources = [pred.argmax().item() for pred in pred_labels]
 
     metrics_dict = {}
     metrics_dict["network"] = network
     metrics_dict["metrics"] = supervised_metrics(
-        pred_labels, raw_val_data, model_name, threshold, network
+        pred_labels, raw_test_data, processed_test_data, true_sources, pred_sources
     )
-    metrics_dict["data stats"] = data_stats(raw_val_data)
+    metrics_dict["data stats"] = data_stats(raw_test_data)
     metrics_dict["parameters"] = yaml.full_load(open("params.yaml", "r"))
     utils.save_metrics(metrics_dict, model_name, network)
 
