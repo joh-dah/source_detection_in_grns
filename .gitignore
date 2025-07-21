@@ -3,7 +3,7 @@ __pycache__/
 venv/
 data/
 figures/
-models/**/*.pt
+models/
 src/__pycache__/
 .idea/
 /figures
