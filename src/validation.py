@@ -174,16 +174,21 @@ class ModelValidator:
         predictions = []
         
         with torch.no_grad():
-            for i, data in enumerate(tqdm(test_loader, desc="PDGrapher predictions", disable=const.ON_CLUSTER)):
+            for _, data in enumerate(tqdm(test_loader, desc="PDGrapher predictions", disable=const.ON_CLUSTER)):
                 # Prepare input data
                 diseased = data.diseased.to(self.device).view(-1, 1)
                 treated = data.treated.to(self.device).view(-1, 1)
                 batch = data.batch.to(self.device)
                 mutations = data.mutations.to(self.device) if hasattr(data, 'mutations') else None
-                
+
+                # Ensure all relevant tensors are on the correct device
                 if hasattr(data, 'edge_index') and data.edge_index is not None:
                     data.edge_index = data.edge_index.to(self.device)
-                
+                if mutations is not None and isinstance(mutations, torch.Tensor):
+                    mutations = mutations.to(self.device)
+                if hasattr(data, 'intervention') and data.intervention is not None and isinstance(data.intervention, torch.Tensor):
+                    data.intervention = data.intervention.to(self.device)
+
                 # Predict interventions
                 intervention_logits = model(
                     torch.cat([diseased, treated], dim=1),
@@ -191,7 +196,7 @@ class ModelValidator:
                     mutilate_mutations=mutations,
                     threshold_input=thresholds
                 )
-                
+
                 intervention_logits = intervention_logits.flatten()
                 predictions.append(intervention_logits)
         
