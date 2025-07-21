@@ -5,7 +5,7 @@ data_creation:
 
 # Environment settings
 network: tiny
-on_cluster: false
+on_cluster: true
 seed: 42
 
 # Paths
