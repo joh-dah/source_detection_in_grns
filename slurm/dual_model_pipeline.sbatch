@@ -45,11 +45,10 @@ echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
 
 # Use GAT config for data creation (both models use same data params)
-export MODEL_TYPE=gat
 export EXPERIMENT_NAME=$EXPERIMENT
 
 # Create raw data (shared between models)
-python -m src.data_creation --model gat --experiment $EXPERIMENT
+python -m src.data_creation --experiment $EXPERIMENT
 
 echo "Data creation completed at: \$(date)"
 EOF
@@ -89,7 +88,7 @@ export MODEL_TYPE=gat
 export EXPERIMENT_NAME=$EXPERIMENT
 
 # Process data for GAT
-python -m src.data_processing_combined --model gat --experiment $EXPERIMENT
+python -m src.data_processing --model gat --experiment $EXPERIMENT
 
 echo "GAT data processing completed at: \$(date)"
 EOF
@@ -129,7 +128,7 @@ export MODEL_TYPE=pdgrapher
 export EXPERIMENT_NAME=$EXPERIMENT
 
 # Process data for PDGrapher
-python -m src.data_processing_combined --model pdgrapher --experiment $EXPERIMENT
+python -m src.data_processing --model pdgrapher --experiment $EXPERIMENT
 
 echo "PDGrapher data processing completed at: \$(date)"
 EOF
@@ -251,7 +250,7 @@ export MODEL_TYPE=gat
 export EXPERIMENT_NAME=$EXPERIMENT
 
 # Validate GAT model
-python -m src.validation_combined --model gat --experiment $EXPERIMENT
+python -m src.validation --model gat --experiment $EXPERIMENT
 
 echo "GAT validation completed at: \$(date)"
 EOF
@@ -291,7 +290,7 @@ export MODEL_TYPE=pdgrapher
 export EXPERIMENT_NAME=$EXPERIMENT
 
 # Validate PDGrapher model
-python -m src.validation_combined --model pdgrapher --experiment $EXPERIMENT
+python -m src.validation --model pdgrapher --experiment $EXPERIMENT
 
 echo "PDGrapher validation completed at: \$(date)"
 EOF
