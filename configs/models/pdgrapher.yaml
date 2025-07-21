@@ -2,20 +2,25 @@ model: PDGrapher
 model_name: pdgrapher_default
 
 training:
-  epochs: 100
+  epochs: 50
   layers: 2
-  positional_features_dim: 64
-  embedding_layer_dim: 8
-  dim_gnn: 8
-  supervision_multiplier: 0.05
-  
-  # Optimizer settings
-  learning_rate: 0.005
-  
-  # Training options
-  use_forward_data: true
-  use_backward_data: true
-  use_supervision: true
-  use_intervention_data: true
-  log_train: false
-  log_test: true
+  alpha: 0.5
+  batch_size: 64
+  class_weighting: false
+  graph_weighting: false
+  hidden_size: 128
+  heads: 4
+  dropout: 0.3
+  learning_rate: 1.0e-4
+  subsample: false
+  weight_decay: 5.0e-4
+#  positional_features_dim: 64
+  # embedding_layer_dim: 8
+  # dim_gnn: 8
+  # supervision_multiplier: 0.05
+  # use_forward_data: true
+  # use_backward_data: true
+  # use_supervision: true
+  # use_intervention_data: true
+  # log_train: false
+  # log_test: true
