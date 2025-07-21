@@ -65,7 +65,7 @@ echo "Submitting GAT data processing job..."
 GAT_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="dual_gat_processing"
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard
@@ -105,7 +105,7 @@ echo "Submitting PDGrapher data processing job..."
 PDG_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="dual_pdg_processing"
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard
@@ -145,7 +145,7 @@ echo "Submitting GAT training job..."
 GAT_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="dual_gat_training"
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:1
@@ -186,7 +186,7 @@ echo "Submitting PDGrapher training job..."
 PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="dual_pdg_training"
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:1
@@ -230,7 +230,7 @@ GAT_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_TRAIN_JOB_ID <<EOF
 #SBATCH --time=30:00
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --mem=8G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --account=sci-renard
 #SBATCH --chdir=$BASE_DIR
@@ -270,7 +270,7 @@ PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
 #SBATCH --time=30:00
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --mem=8G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --account=sci-renard
 #SBATCH --chdir=$BASE_DIR
@@ -309,7 +309,7 @@ SUMMARY_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_VAL_JOB_ID:$PDG_VAL
 #SBATCH --job-name="dual_summary"
 #SBATCH --time=10:00
 #SBATCH --partition=cpu
-#SBATCH --mem=4G
+#SBATCH --mem=8G
 #SBATCH --ntasks=1
 #SBATCH --account=sci-renard
 #SBATCH --chdir=$BASE_DIR
