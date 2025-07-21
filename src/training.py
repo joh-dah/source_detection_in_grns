@@ -8,7 +8,7 @@ import src.constants as const
 from src import utils
 from torch_geometric.loader import DataLoader, DataListLoader
 from torch_geometric.nn.data_parallel import DataParallel
-from src.data_processing_combined import SDDataset  # Updated import
+from src.data_processing import SDDataset  # Updated import
 from torch_geometric.data import Data
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path

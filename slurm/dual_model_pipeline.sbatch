@@ -46,6 +46,8 @@ echo "Experiment: $EXPERIMENT"
 
 # Use GAT config for data creation (both models use same data params)
 export EXPERIMENT_NAME=$EXPERIMENT
+# Set model type to gat for data creation
+export MODEL_TYPE=gat
 
 # Create raw data (shared between models)
 python -m src.data_creation --experiment $EXPERIMENT
