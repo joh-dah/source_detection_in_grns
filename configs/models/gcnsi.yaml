@@ -1,0 +1,11 @@
+model: GCNSI
+model_name: gcnsi_default
+
+training:
+  batch_size: 64
+  epochs: 50
+  learning_rate: 1.0e-4
+  weight_decay: 5.0e-4
+  class_weighting: false
+  graph_weighting: false
+  subsample: false

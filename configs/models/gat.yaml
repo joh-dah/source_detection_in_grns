@@ -1,0 +1,16 @@
+model: GAT
+model_name: gat_default
+
+training:
+  alpha: 0.5
+  batch_size: 64
+  class_weighting: false
+  epochs: 50
+  graph_weighting: false
+  hidden_size: 128
+  heads: 4
+  layers: 2
+  dropout: 0.3
+  learning_rate: 1.0e-4
+  subsample: false
+  weight_decay: 5.0e-4

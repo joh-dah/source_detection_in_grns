@@ -3,10 +3,9 @@ __pycache__/
 venv/
 data/
 figures/
-models/
+models/**/*.pt
 src/__pycache__/
 .idea/
-/models
 /figures
 /roc
 /reports
