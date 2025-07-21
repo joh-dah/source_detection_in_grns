@@ -4,7 +4,7 @@ import json
 import os
 import torch
 import src.constants as const
-import src.data_processing_combined as dp
+import src.data_processing as dp
 import glob
 import pandas as pd
 import networkx as nx
