@@ -59,7 +59,7 @@ class ModelValidator:
         if not PDGRAPHER_AVAILABLE:
             raise ImportError("PDGrapher is not available. Please install it first.")
             
-        edge_index = torch.load(const.PROCESSED_EDGE_INDEX_PATH)
+        edge_index = torch.load(const.PROCESSED_EDGE_INDEX_PATH, map_location=self.device)
         
         # Load checkpoint
         checkpoint = torch.load(self.model_path, map_location=self.device)
@@ -175,19 +175,16 @@ class ModelValidator:
         
         with torch.no_grad():
             for _, data in enumerate(tqdm(test_loader, desc="PDGrapher predictions", disable=const.ON_CLUSTER)):
-                # Prepare input data
-                diseased = data.diseased.to(self.device).view(-1, 1)
-                treated = data.treated.to(self.device).view(-1, 1)
-                batch = data.batch.to(self.device)
-                mutations = data.mutations.to(self.device) if hasattr(data, 'mutations') else None
-
-                # Ensure all relevant tensors are on the correct device
-                if hasattr(data, 'edge_index') and data.edge_index is not None:
-                    data.edge_index = data.edge_index.to(self.device)
-                if mutations is not None and isinstance(mutations, torch.Tensor):
-                    mutations = mutations.to(self.device)
-                if hasattr(data, 'intervention') and data.intervention is not None and isinstance(data.intervention, torch.Tensor):
-                    data.intervention = data.intervention.to(self.device)
+                # Move all relevant tensors to the correct device
+                for attr in ['diseased', 'treated', 'batch', 'mutations', 'edge_index', 'intervention']:
+                    if hasattr(data, attr):
+                        tensor = getattr(data, attr)
+                        if tensor is not None and isinstance(tensor, torch.Tensor):
+                            setattr(data, attr, tensor.to(self.device))
+                diseased = data.diseased.view(-1, 1)
+                treated = data.treated.view(-1, 1)
+                batch = data.batch
+                mutations = data.mutations if hasattr(data, 'mutations') else None
 
                 # Predict interventions
                 intervention_logits = model(
@@ -198,7 +195,7 @@ class ModelValidator:
                 )
 
                 intervention_logits = intervention_logits.flatten()
-                predictions.append(intervention_logits)
+                predictions.append(intervention_logits.cpu())
         
         return predictions
     
@@ -221,9 +218,13 @@ class ModelValidator:
         """Extract true sources from PDGrapher data."""
         true_sources = []
         for i, data in enumerate(test_loader):
-            true_source_tensor = torch.where(data.intervention == 1)[0]
+            # Ensure intervention is on CPU for indexing
+            intervention = data.intervention
+            if intervention.device != torch.device("cpu"):
+                intervention = intervention.cpu()
+            true_source_tensor = torch.where(intervention == 1)[0]
             if len(true_source_tensor) > 0:
-                true_source = int(true_source_tensor[0].cpu())
+                true_source = int(true_source_tensor[0])
                 true_sources.append(true_source)
             else:
                 print(f"WARNING: No true source found in sample {i}")
