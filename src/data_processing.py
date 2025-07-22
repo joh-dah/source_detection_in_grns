@@ -2,7 +2,7 @@
 from pathlib import Path
 from src import constants as const
 from src import utils
-from src.create_splits_combined import create_data_splits
+from src.create_splits import create_data_splits
 import networkx as nx
 import os
 import shutil

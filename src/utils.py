@@ -102,7 +102,7 @@ def load_processed_data(split="train"):
     # Load splits - they are stored in splits/splits.pt subdirectory
     splits_file = processed_dir / "splits" / "splits.pt"
     splits = torch.load(splits_file, weights_only=False)
-    split_indices = splits[f'{split}_index']
+    split_indices = splits[f'{split}_index_backward']
     
     # Simple dataset class that loads individual processed files
     class ProcessedDataset(torch.utils.data.Dataset):
