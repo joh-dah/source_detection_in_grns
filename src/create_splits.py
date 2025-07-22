@@ -129,14 +129,8 @@ def create_data_splits():
         'test_index_forward': test_indices,
         'train_index_backward': train_indices,
         'val_index_backward': val_indices,
-        'test_index_backward': test_indices
+        'test_index_backward': test_indices,
     }
-    else:
-        splits = {
-            'train_index': train_indices,
-            'val_index': val_indices,
-            'test_index': test_indices
-        }
 
     # Save splits to file
     torch.save(splits, osp.join(outdir, 'splits.pt'))

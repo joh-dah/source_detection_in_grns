@@ -117,8 +117,7 @@ class ModelValidator:
         """Load raw test data based on split indices."""
         processed_dir = Path(f"data/processed/{const.MODEL}")
         splits = torch.load(processed_dir / "splits" / "splits.pt", weights_only=False)
-        test_index = "test_index_backward" if const.MODEL == "pdgrapher" else "test_index"
-        test_indices = splits[test_index]
+        test_indices = splits["test_index_backward"]
         
         raw_data_dir = Path("data/raw")
         raw_files = sorted(list(raw_data_dir.glob("*.pt")))
