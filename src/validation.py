@@ -412,7 +412,7 @@ def supervised_metrics(
     metrics.update(TP_FP_metrics(true_sources, pred_sources))
     
     # Node-level metrics only for GAT (since it does node classification)
-    if model_type == "gat" and processed_data is not None:
+    if model_type.lower() == "gat" and processed_data is not None:
         metrics.update(node_classification_metrics(pred_label_set, processed_data))
 
     # Round numerical values
