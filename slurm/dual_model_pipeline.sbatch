@@ -340,6 +340,37 @@ EOF
 
 echo "Summary job submitted with ID: $SUMMARY_JOB_ID"
 
+
+# =============================================================================
+# Baseline
+# =============================================================================
+echo "Submitting baseline job..."
+BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$SUMMARY_JOB_ID <<EOF
+#!/bin/bash
+#SBATCH --job-name="dual_baseline"
+#SBATCH --mem=16G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --account=sci-renard
+#SBATCH --partition=cpu
+#SBATCH --time=1:00:00
+#SBATCH --chdir=$BASE_DIR   
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
+#SBATCH --output=$SLURM_OUT_DIR/dual_baseline_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/dual_baseline_%j.err
+source .venv/bin/activate
+echo "=== STARTING BASELINE SCRIPT ==="
+echo "Job ID: \$SLURM_JOB_ID"
+echo "Start time: \$(date)"
+echo "Experiment: $EXPERIMENT"
+# Run the baseline script
+python -m src.baseline --experiment $EXPERIMENT
+echo "Baseline script completed at: \$(date)"
+EOF
+)
+echo "Baseline job submitted with ID: $BASELINE_JOB_ID"
+
 # =============================================================================
 # Final Summary
 # =============================================================================

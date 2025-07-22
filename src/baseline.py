@@ -186,8 +186,6 @@ def main():
                        choices=["rumor", "random", "all"],
                        default=["all"],
                        help="Baseline methods to evaluate")
-    parser.add_argument("--save-results", action="store_true",
-                       help="Save results to file")
     
     args = parser.parse_args()
     
@@ -230,33 +228,30 @@ def main():
             else:
                 print(f"{key}: {value}")
                     
+
+    from datetime import datetime
+    import json
     
-    # Save results using the same format as validation script
-    if args.save_results:
-        # Use the same format as utils.save_metrics
-        from datetime import datetime
-        import json
-        
-        for method_name, results in all_results.items():
-            if "error" not in results:
-                # Create reports directory structure
-                report_dir = Path("reports") / f"baseline_{method_name}"
-                report_dir.mkdir(parents=True, exist_ok=True)
-                
-                timestamp = datetime.now().strftime("%m%d_%H%M")
-                filename = f"{const.NETWORK}_{timestamp}.json"
-                
-                # Wrap results in the expected format with "metrics" key
-                output_data = {
-                    "network": const.NETWORK,
-                    "metrics": results,
-                    "method": method_name
-                }
-                
-                with open(report_dir / filename, "w") as f:
-                    json.dump(output_data, f, indent=4)
-                
-                print(f"Results for {method_name} saved to {report_dir / filename}")
+    for method_name, results in all_results.items():
+        if "error" not in results:
+            # Create reports directory structure
+            report_dir = Path("reports") / f"baseline_{method_name}"
+            report_dir.mkdir(parents=True, exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%m%d_%H%M")
+            filename = f"{const.NETWORK}_{timestamp}.json"
+            
+            # Wrap results in the expected format with "metrics" key
+            output_data = {
+                "network": const.NETWORK,
+                "metrics": results,
+                "method": method_name
+            }
+            
+            with open(report_dir / filename, "w") as f:
+                json.dump(output_data, f, indent=4)
+            
+            print(f"Results for {method_name} saved to {report_dir / filename}")
     
     # Print summary comparison
     print(f"\n{'='*60}")
