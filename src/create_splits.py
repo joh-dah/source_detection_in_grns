@@ -122,8 +122,7 @@ def create_data_splits():
         temp_indices, test_size=0.5, random_state=const.SEED
     )
 
-    if const.MODEL.lower() == "pdgrapher":
-        splits = {
+    splits = {
         'train_index_forward': train_indices,
         'val_index_forward': val_indices,
         'test_index_forward': test_indices,
