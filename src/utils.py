@@ -68,18 +68,18 @@ def ranked_source_predictions(
     return  top_nodes
 
 
-def save_metrics(metrics: dict, model_name: str, network: str):
+def save_metrics(metrics: dict, network: str):
     """
     Save dictionary with metrics as json in reports folder.
     One "latest.json" is created and named after the corresponding model.
     :params metrics: dictionary containing metrics
     :params model_name: name of the corresponding model
     """
-    (Path(const.REPORT_PATH) / model_name).mkdir(parents=True, exist_ok=True)
+    (Path(const.REPORT_PATH) / const.MODEL).mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%m%d_%H%M")
     filename = f"{network}_{timestamp}.json"
     with open(
-        os.path.join((Path(const.REPORT_PATH) / model_name), filename), "w"
+        os.path.join((Path(const.REPORT_PATH) / const.MODEL), filename), "w"
     ) as file:
         json.dump(metrics, file, indent=4)
     # with open(os.path.join(const.REPORT_PATH, "latest.json"), "w") as file:

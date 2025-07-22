@@ -463,11 +463,9 @@ def main():
         "parameters": yaml.full_load(open("params.yaml", "r"))
     }
     
-    # Save results
-    model_save_name = validator.model_name
-    utils.save_metrics(metrics_dict, model_save_name, network)
-    
-    print(f"Validation complete! Results saved for {model_type} model: {model_save_name}")
+    utils.save_metrics(metrics_dict, network)
+
+    print(f"Validation complete! Results saved for {model_type} model with {network} network")
 
 
 if __name__ == "__main__":
