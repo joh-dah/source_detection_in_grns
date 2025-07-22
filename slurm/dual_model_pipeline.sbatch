@@ -359,13 +359,14 @@ BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$SUMMARY_JOB_ID <<EOF
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
 #SBATCH --output=$SLURM_OUT_DIR/dual_baseline_%j.out
 #SBATCH --error=$SLURM_OUT_DIR/dual_baseline_%j.err
+
 source .venv/bin/activate
 echo "=== STARTING BASELINE SCRIPT ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
 # Run the baseline script
-python -m src.baseline --experiment $EXPERIMENT
+python -m src.baseline
 echo "Baseline script completed at: \$(date)"
 EOF
 )
