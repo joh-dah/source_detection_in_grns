@@ -25,7 +25,7 @@ echo "Submitting shared data creation job..."
 DATA_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="dual_data_creation"
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64
 #SBATCH --account=sci-renard
@@ -366,7 +366,7 @@ echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
 # Run the baseline script
-python -m src.baseline
+python -m src.baseline --experiment $EXPERIMENT
 echo "Baseline script completed at: \$(date)"
 EOF
 )

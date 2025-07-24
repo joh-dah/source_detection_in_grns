@@ -14,13 +14,3 @@ training:
   learning_rate: 1.0e-4
   subsample: false
   weight_decay: 5.0e-4
-#  positional_features_dim: 64
-  # embedding_layer_dim: 8
-  # dim_gnn: 8
-  # supervision_multiplier: 0.05
-  # use_forward_data: true
-  # use_backward_data: true
-  # use_supervision: true
-  # use_intervention_data: true
-  # log_train: false
-  # log_test: true

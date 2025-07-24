@@ -86,8 +86,16 @@ def save_metrics(metrics: dict, network: str):
     #     json.dump(metrics, file, indent=4)
 
 
+def extract_gat_true_sources(processed_test_data):
+    """Extract true sources from GAT processed data."""
+    true_sources = []
+    for data in processed_test_data:
+        source_node = torch.where(data.y == 1)[0][0].item()
+        true_sources.append(source_node)
+    return true_sources
 
-def load_processed_data(split="train"):
+
+def load_processed_data(split="train", model_type=None):
     """
     Load processed data using the new data structure.
     
@@ -97,13 +105,13 @@ def load_processed_data(split="train"):
     Returns:
         Dataset: Dataset for the specified split
     """
-    processed_dir = Path(const.PROCESSED_PATH)
-    
-    # Load splits - they are stored in splits/splits.pt subdirectory
-    splits_file = processed_dir / "splits" / "splits.pt"
+    splits_file = Path(const.SPLITS_PATH)
     splits = torch.load(splits_file, weights_only=False)
     split_indices = splits[f'{split}_index_backward']
-    
+    if model_type is None:
+        model_type = const.MODEL.lower()
+    data_path = Path(const.DATA_PATH) / f"processed/{model_type}"
+
     # Simple dataset class that loads individual processed files
     class ProcessedDataset(torch.utils.data.Dataset):
         def __init__(self, processed_dir, indices):
@@ -118,7 +126,7 @@ def load_processed_data(split="train"):
             file_path = self.processed_dir / f"{file_idx}.pt"
             return torch.load(file_path, weights_only=False)
     
-    return ProcessedDataset(processed_dir, split_indices)
+    return ProcessedDataset(data_path, split_indices)
 
 
 def create_topo_file_from_graph(network_name, G: nx.DiGraph, dir):
@@ -161,18 +169,17 @@ def get_graph_data_from_topo(filepath=None):
     return G, gene_to_idx
 
 
-def load_raw_data(path: str = None):
-    """
-    Load raw data.
-    :param split: split of the data to load, can be "train", "validation" or "test"
-    :return: list of raw Data objects
-    """
-    print("Load raw data...")
-
-    if path is None:
-        path = Path(const.RAW_PATH)
-
-    if not path.exists():
-        raise FileNotFoundError(f"Path does not exist: {path}")
-
-    return [torch.load(p, weights_only=False) for p in path.glob("*.pt")]
+def load_raw_test_data():
+        """Load raw test data based on split indices."""
+        splits = torch.load(const.SPLITS_PATH, weights_only=False)
+        test_indices = splits["test_index_backward"]
+        
+        raw_data_dir = Path("data/raw")
+        raw_files = sorted(list(raw_data_dir.glob("*.pt")))
+        
+        raw_test_data = []
+        for idx in test_indices:
+            raw_data = torch.load(raw_files[idx], weights_only=False)
+            raw_test_data.append(raw_data)
+        
+        return raw_test_data

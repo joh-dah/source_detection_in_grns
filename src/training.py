@@ -281,10 +281,10 @@ def main():
     current_time = datetime.datetime.now().strftime("%m-%d_%H-%M")
     model_name = f"{const.MODEL}_{current_time}" if const.MODEL_NAME is None else const.MODEL_NAME
     
-    if const.MODEL == "GCNSI":
+    if const.MODEL == "gcnsi":
         model = GCNSI()
         criterion = torch.nn.BCEWithLogitsLoss()
-    elif const.MODEL == "GAT":
+    elif const.MODEL == "gat":
         model = GAT()
         pos_weight = torch.tensor([10.0]).to(device)  # Give 10x weight to positive class, move to device
         criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
