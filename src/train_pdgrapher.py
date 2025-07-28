@@ -17,7 +17,7 @@ def main():
     np.random.seed(0) """
 
     data_processed_dir = Path(const.DATA_PATH) / "processed" / const.MODEL
-    splits_path = data_processed_dir / "splits" / "splits.pt"
+    splits_path = const.SPLITS_PATH
 
     # Check if files exist
     if not os.path.exists(splits_path):
@@ -26,7 +26,7 @@ def main():
     dataset = Dataset(
         forward_path=f"{data_processed_dir}/data_forward.pt",
         backward_path=f"{data_processed_dir}/data_backward.pt",
-        splits_path=f"{data_processed_dir}/splits/splits.pt"
+        splits_path=const.SPLITS_PATH,
     )
 
     edge_index = torch.load(f"{data_processed_dir}/edge_index.pt", weights_only=False)

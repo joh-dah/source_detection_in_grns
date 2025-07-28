@@ -90,10 +90,13 @@ def get_config_from_args():
 params = get_config_from_args()
 
 # General
-MODEL = params["model"]
+MODEL = params["model"].lower()
+if MODEL not in ["gat", "pdgrapher", "gcnsi"]:
+    raise ValueError(f"Invalid model type: {MODEL}. Expected one of ['gat', 'pdgrapher', 'gcnsi'].")
 MODEL_NAME = params["model_name"]
 DATA_PATH = "data_dev"
 PROCESSED_PATH = f"{DATA_PATH}/processed/{MODEL}"
+SPLITS_PATH = f"{DATA_PATH}/splits/splits.pt"
 RAW_PATH = f"{DATA_PATH}/raw"
 RAW_EDGE_INDEX_PATH = f"{DATA_PATH}/edge_index.pt"
 PROCESSED_EDGE_INDEX_PATH = f"{PROCESSED_PATH}/edge_index.pt"
@@ -105,7 +108,7 @@ ON_CLUSTER = params["on_cluster"]
 SEED = params["seed"]
 
 if ON_CLUSTER:
-    N_CORES = 64
+    N_CORES = 32
 else:
     N_CORES = 2
 
@@ -133,6 +136,7 @@ GRAPH_WEIGHTING = training["graph_weighting"]
 network_dict = {
     "tiny": 4,
     "tp53": 30,
+    "dorothea_150": 150,
 }
 NETWORK = params["network"]  # "tiny" or "tp53"
 

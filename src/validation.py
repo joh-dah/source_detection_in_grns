@@ -118,8 +118,7 @@ class ModelValidator:
     
     def _load_raw_test_data_from_indices(self):
         """Load raw test data based on split indices."""
-        processed_dir = Path(f"data/processed/{const.MODEL}")
-        splits = torch.load(processed_dir / "splits" / "splits.pt", weights_only=False)
+        splits = torch.load(const.SPLITS_PATH, weights_only=False)
         test_indices = splits["test_index_backward"]
         
         raw_data_dir = Path("data/raw")
@@ -139,11 +138,11 @@ class ModelValidator:
         dataset = Dataset(
             forward_path=str(data_path / "data_forward.pt"),
             backward_path=str(data_path / "data_backward.pt"),
-            splits_path=str(data_path / "splits" / "splits.pt")
+            splits_path=str(const.SPLITS_PATH)
         )
         
-        # Get test data loader
-        (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1)
+        # Get test data loader with reduced workers for cluster compatibility
+        (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1, num_workers=4)
         
         return dataset, test_loader_backward
     
@@ -176,9 +175,6 @@ class ModelValidator:
         predictions = []
         true_sources = []
         
-        # Debug information
-        print(f"DEBUG: Processing {len(test_loader)} test samples")
-        
         with torch.no_grad():
             for i, data in enumerate(tqdm(test_loader, desc="PDGrapher predictions", disable=const.ON_CLUSTER)):
                 # Extract true source first (before moving to device)
@@ -189,13 +185,6 @@ class ModelValidator:
                 if len(true_source_tensor) > 0:
                     true_source = int(true_source_tensor[0])
                     true_sources.append(true_source)
-                    
-                    # Debug: Print first few samples
-                    if i < 3:
-                        print(f"DEBUG Sample {i}: True source = {true_source}, intervention shape = {intervention.shape}")
-                        print(f"DEBUG Sample {i}: Intervention vector (first 10): {intervention[:10].tolist()}")
-                        if hasattr(data, 'gene_symbols') and len(data.gene_symbols) > true_source:
-                            print(f"DEBUG Sample {i}: True source gene = {data.gene_symbols[true_source]}")
                 else:
                     print(f"WARNING: No true source found in sample {i}")
                     true_sources.append(-1)
@@ -221,17 +210,7 @@ class ModelValidator:
 
                 intervention_logits = intervention_logits.flatten()
                 predictions.append(intervention_logits.cpu())
-                
-                # Debug: Print prediction info for first few samples
-                if i < 3:
-                    pred_source = intervention_logits.argmax().item()
-                    print(f"DEBUG Sample {i}: Predicted source = {pred_source}")
-                    if hasattr(data, 'gene_symbols') and len(data.gene_symbols) > pred_source:
-                        print(f"DEBUG Sample {i}: Predicted source gene = {data.gene_symbols[pred_source]}")
-                    print(f"DEBUG Sample {i}: Top 5 predictions: {intervention_logits.topk(5).indices.tolist()}")
         
-        print(f"DEBUG: Extracted {len(true_sources)} true sources and {len(predictions)} predictions")
-        # Store true sources for later retrieval
         self._pdgrapher_true_sources = true_sources
         return predictions
     

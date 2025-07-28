@@ -11,6 +11,9 @@ SLURM_OUT_DIR="$BASE_DIR/slurm_out"
 # Experiment configuration (can be overridden via environment)
 EXPERIMENT=${EXPERIMENT_NAME:-testrun}
 
+# gpu configuration
+COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx21,gx24,gx25,gx26,gx27,gx28,gx29"
+
 # Create output directory if it doesn't exist
 mkdir -p $SLURM_OUT_DIR
 
@@ -25,12 +28,12 @@ echo "Submitting shared data creation job..."
 DATA_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="dual_data_creation"
-#SBATCH --mem=32G
+#SBATCH --mem=128G
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=64
+#SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
-#SBATCH --time=3:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -70,7 +73,7 @@ GAT_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
 #SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
-#SBATCH --time=1:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -110,7 +113,7 @@ PDG_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
 #SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
-#SBATCH --time=1:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -149,9 +152,10 @@ GAT_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:1
+#SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu
-#SBATCH --time=2:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -190,9 +194,10 @@ PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:1
+#SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu
-#SBATCH --time=4:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -227,8 +232,9 @@ echo "Submitting GAT validation job..."
 GAT_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_TRAIN_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="dual_gat_validation"
-#SBATCH --time=30:00
+#SBATCH --time=3-00:00:00
 #SBATCH --partition=gpu
+#SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
@@ -267,8 +273,9 @@ echo "Submitting PDGrapher validation job..."
 PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="dual_pdg_validation"
-#SBATCH --time=30:00
+#SBATCH --time=3-00:00:00
 #SBATCH --partition=gpu
+#SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
@@ -366,7 +373,7 @@ echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
 # Run the baseline script
-python -m src.baseline
+python -m src.baseline --experiment $EXPERIMENT
 echo "Baseline script completed at: \$(date)"
 EOF
 )

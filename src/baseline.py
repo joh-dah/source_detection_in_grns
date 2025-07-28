@@ -135,8 +135,9 @@ class RandomDetector(BaselineSourceDetector):
 
 def load_test_data() -> Tuple[List, List]:
     """Load test data for baseline evaluation."""
-    test_data_processed = utils.load_processed_data(split="test", path=Path(const.DATA_PATH) / "GAT" / "test")
-    test_data_raw = utils.load_raw_data(split="test",  path=Path(const.DATA_PATH) / "GAT" / "test"/"raw")
+    # load gat processed data because it has individual files
+    test_data_processed = utils.load_processed_data(split="test", model_type="gat")
+    test_data_raw = utils.load_raw_test_data()
     return test_data_processed, test_data_raw
 
 
@@ -165,15 +166,14 @@ def evaluate_baseline_method(detector: BaselineSourceDetector,
         pred_label_set.append(probs)
         pred_sources.append(probs.argmax().item())
     
-    true_sources = validation.extract_true_sources(processed_data)
+    true_sources = utils.extract_gat_true_sources(processed_data)
 
     # Calculate metrics using the validation framework
     metrics = validation.supervised_metrics(
         pred_label_set=pred_label_set,
-        raw_data_set=raw_data,
-        processed_data_set=processed_data,
         true_sources=true_sources,
-        pred_sources=pred_sources
+        pred_sources=pred_sources,
+        processed_data=processed_data,
     )
     
     return metrics
@@ -181,13 +181,8 @@ def evaluate_baseline_method(detector: BaselineSourceDetector,
 
 def main():
     """Main function to run baseline evaluations."""
-    parser = argparse.ArgumentParser(description="Evaluate baseline source detection methods")
-    parser.add_argument("--methods", nargs="+", 
-                       choices=["rumor", "random", "all"],
-                       default=["all"],
-                       help="Baseline methods to evaluate")
-    
-    args = parser.parse_args()
+    # Komplett über Environment-Variablen oder constants
+    methods = ["all"]  # Default oder über eine andere Methode konfigurieren
     
     # Load test data
     print("Loading test data...")
@@ -201,10 +196,10 @@ def main():
     }
     
     # Select methods to evaluate
-    if "all" in args.methods:
+    if "all" in methods:
         methods_to_eval = list(detectors.keys())
     else:
-        methods_to_eval = args.methods
+        methods_to_eval = methods
     
     # Evaluate each method
     all_results = {}

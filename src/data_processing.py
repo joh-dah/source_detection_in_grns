@@ -271,7 +271,7 @@ def create_datasets_for_model(model_type, raw_data_dir="data/raw"):
     G = from_networkx(G, group_edge_attrs=['weight'])
     G.edge_attr = G.edge_attr.float()
     
-    if model_type.lower() == "pdgrapher":
+    if model_type == "pdgrapher":
         # Create both forward and backward datasets for PDGrapher
         print("Creating PDGrapher-style datasets...")
 
@@ -296,7 +296,7 @@ def create_datasets_for_model(model_type, raw_data_dir="data/raw"):
         print("PDGrapher-style datasets created successfully!")
         return {"backward": backward_dataset, "forward": forward_dataset}
         
-    elif model_type in ["GCNSI", "GAT"]:
+    elif model_type in ["gcnsi", "gat"]:
         # Create individual file dataset for GNN models
         print(f"Creating {model_type} dataset...")
         
