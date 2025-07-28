@@ -94,7 +94,7 @@ MODEL = params["model"].lower()
 if MODEL not in ["gat", "pdgrapher", "gcnsi"]:
     raise ValueError(f"Invalid model type: {MODEL}. Expected one of ['gat', 'pdgrapher', 'gcnsi'].")
 MODEL_NAME = params["model_name"]
-DATA_PATH = "data"
+DATA_PATH = "data_dev"
 PROCESSED_PATH = f"{DATA_PATH}/processed/{MODEL}"
 SPLITS_PATH = f"{DATA_PATH}/splits/splits.pt"
 RAW_PATH = f"{DATA_PATH}/raw"
