@@ -31,6 +31,9 @@ class ModelValidator:
         self.model_path = f"{const.MODEL_PATH}/{const.MODEL}/{self.model_name}_latest.pt"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
+        # Initialize cached true sources for PDGrapher
+        self._pdgrapher_true_sources = None
+        
         print(f"Initializing validator for {self.model_type} using device: {self.device}")
         
     def load_model(self):
@@ -171,9 +174,32 @@ class ModelValidator:
         thresholds = {k: torch.tensor(v).to(self.device) for k, v in thresholds.items()}
         
         predictions = []
+        true_sources = []
+        
+        # Debug information
+        print(f"DEBUG: Processing {len(test_loader)} test samples")
         
         with torch.no_grad():
-            for _, data in enumerate(tqdm(test_loader, desc="PDGrapher predictions", disable=const.ON_CLUSTER)):
+            for i, data in enumerate(tqdm(test_loader, desc="PDGrapher predictions", disable=const.ON_CLUSTER)):
+                # Extract true source first (before moving to device)
+                intervention = data.intervention
+                if intervention.device != torch.device("cpu"):
+                    intervention = intervention.cpu()
+                true_source_tensor = torch.where(intervention == 1)[0]
+                if len(true_source_tensor) > 0:
+                    true_source = int(true_source_tensor[0])
+                    true_sources.append(true_source)
+                    
+                    # Debug: Print first few samples
+                    if i < 3:
+                        print(f"DEBUG Sample {i}: True source = {true_source}, intervention shape = {intervention.shape}")
+                        print(f"DEBUG Sample {i}: Intervention vector (first 10): {intervention[:10].tolist()}")
+                        if hasattr(data, 'gene_symbols') and len(data.gene_symbols) > true_source:
+                            print(f"DEBUG Sample {i}: True source gene = {data.gene_symbols[true_source]}")
+                else:
+                    print(f"WARNING: No true source found in sample {i}")
+                    true_sources.append(-1)
+                
                 # Move all relevant tensors to the correct device
                 for attr in ['diseased', 'treated', 'batch', 'mutations', 'edge_index', 'intervention']:
                     if hasattr(data, attr):
@@ -195,7 +221,18 @@ class ModelValidator:
 
                 intervention_logits = intervention_logits.flatten()
                 predictions.append(intervention_logits.cpu())
+                
+                # Debug: Print prediction info for first few samples
+                if i < 3:
+                    pred_source = intervention_logits.argmax().item()
+                    print(f"DEBUG Sample {i}: Predicted source = {pred_source}")
+                    if hasattr(data, 'gene_symbols') and len(data.gene_symbols) > pred_source:
+                        print(f"DEBUG Sample {i}: Predicted source gene = {data.gene_symbols[pred_source]}")
+                    print(f"DEBUG Sample {i}: Top 5 predictions: {intervention_logits.topk(5).indices.tolist()}")
         
+        print(f"DEBUG: Extracted {len(true_sources)} true sources and {len(predictions)} predictions")
+        # Store true sources for later retrieval
+        self._pdgrapher_true_sources = true_sources
         return predictions
     
     def extract_true_sources(self, test_data):
@@ -215,20 +252,27 @@ class ModelValidator:
     
     def _extract_pdgrapher_true_sources(self, test_loader):
         """Extract true sources from PDGrapher data."""
-        true_sources = []
-        for i, data in enumerate(test_loader):
-            # Ensure intervention is on CPU for indexing
-            intervention = data.intervention
-            if intervention.device != torch.device("cpu"):
-                intervention = intervention.cpu()
-            true_source_tensor = torch.where(intervention == 1)[0]
-            if len(true_source_tensor) > 0:
-                true_source = int(true_source_tensor[0])
-                true_sources.append(true_source)
-            else:
-                print(f"WARNING: No true source found in sample {i}")
-                true_sources.append(-1)
-        return true_sources
+        # True sources were already extracted during prediction phase
+        # to ensure exact same data ordering
+        if hasattr(self, '_pdgrapher_true_sources'):
+            return self._pdgrapher_true_sources
+        else:
+            # Fallback - but this shouldn't happen with the fixed code
+            print("WARNING: True sources not found from prediction phase, falling back to separate extraction")
+            true_sources = []
+            for i, data in enumerate(test_loader):
+                # Ensure intervention is on CPU for indexing
+                intervention = data.intervention
+                if intervention.device != torch.device("cpu"):
+                    intervention = intervention.cpu()
+                true_source_tensor = torch.where(intervention == 1)[0]
+                if len(true_source_tensor) > 0:
+                    true_source = int(true_source_tensor[0])
+                    true_sources.append(true_source)
+                else:
+                    print(f"WARNING: No true source found in sample {i}")
+                    true_sources.append(-1)
+            return true_sources
     
     def get_raw_data_for_stats(self, test_data):
         """Get raw data for statistics calculation."""

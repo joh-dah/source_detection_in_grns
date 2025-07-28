@@ -5,13 +5,13 @@ data_creation:
 network: custom_10
 on_cluster: false
 seed: 42
-model: GAT
-model_name: gat_control2
+model: pdgrapher
+model_name: pdgrapher_debug
 training:
     alpha: 0.5
     batch_size: 64
     class_weighting: false
-    epochs: 2  #fix of by one epoch
+    epochs: 20  #fix of by one epoch
     graph_weighting: false
     hidden_size: 128
     heads: 4
