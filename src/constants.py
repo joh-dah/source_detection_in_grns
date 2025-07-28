@@ -94,7 +94,7 @@ MODEL = params["model"].lower()
 if MODEL not in ["gat", "pdgrapher", "gcnsi"]:
     raise ValueError(f"Invalid model type: {MODEL}. Expected one of ['gat', 'pdgrapher', 'gcnsi'].")
 MODEL_NAME = params["model_name"]
-DATA_PATH = "data_dev"
+DATA_PATH = f"data/{params["experiment"]}/" if "experiment" in params else "data/"
 PROCESSED_PATH = f"{DATA_PATH}/processed/{MODEL}"
 SPLITS_PATH = f"{DATA_PATH}/splits/splits.pt"
 RAW_PATH = f"{DATA_PATH}/raw"
@@ -134,11 +134,15 @@ CLASS_WEIGHTING = training["class_weighting"]
 GRAPH_WEIGHTING = training["graph_weighting"]
 
 network_dict = {
-    "tiny": 4,
-    "tp53": 30,
+    "custom_4": 4,
+    "custom_10": 10,
+    "tp53_30": 30,
+    "dorothea_39": 39,
+    "dorothea_60": 60,
+    "dorothea_99": 99,
     "dorothea_150": 150,
 }
-NETWORK = params["network"]  # "tiny" or "tp53"
+NETWORK = params["network"]
 
 N_NODES = network_dict[NETWORK]
 GCNSI_N_FEATURES = 2
