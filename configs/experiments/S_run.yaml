@@ -4,4 +4,4 @@ data_creation:
 training:
   epochs: 100 
 
-network: tp53
+network: tp53_30
