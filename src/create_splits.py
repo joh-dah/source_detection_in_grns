@@ -36,8 +36,8 @@ def create_data_splits():
     }
 
     # Save splits to file
-    torch.save(splits, osp.join(outdir, 'splits.pt'))
-    print(f"Created splits for {dataset_size} individual files and saved to {osp.join(outdir, 'splits.pt')}")
+    torch.save(splits,const.SPLITS_PATH)
+    print(f"Created splits for {dataset_size} individual files and saved to {const.SPLITS_PATH}")
     return splits
         
 

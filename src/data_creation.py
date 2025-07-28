@@ -14,11 +14,6 @@ import torch
 from tqdm import tqdm
 import networkx as nx
 import multiprocessing as mp
-import os
-import warnings
-
-os.environ['JAX_PLATFORMS'] = 'cpu'
-warnings.filterwarnings('ignore', category=RuntimeWarning, module='jaxlib')
 
 
 def get_steady_state_df(dest_dir, network_name) -> pd.DataFrame:

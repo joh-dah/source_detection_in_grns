@@ -108,7 +108,7 @@ ON_CLUSTER = params["on_cluster"]
 SEED = params["seed"]
 
 if ON_CLUSTER:
-    N_CORES = 64
+    N_CORES = 32
 else:
     N_CORES = 2
 
