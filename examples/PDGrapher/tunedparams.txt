@@ -1,2 +1,2 @@
-Response Prediction Model parameters:	122353
-Perturbation Discovery Model parameters:	241873
+Response Prediction Model parameters:	41393
+Perturbation Discovery Model parameters:	81233
