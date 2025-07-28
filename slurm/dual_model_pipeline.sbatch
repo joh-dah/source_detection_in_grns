@@ -225,6 +225,38 @@ EOF
 
 echo "PDGrapher training job submitted with ID: $PDG_TRAIN_JOB_ID"
 
+
+# =============================================================================
+# Job 3c: Baseline
+# =============================================================================
+echo "Submitting baseline job..."
+BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
+#!/bin/bash
+#SBATCH --job-name="dual_baseline"
+#SBATCH --mem=16G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --account=sci-renard
+#SBATCH --partition=cpu
+#SBATCH --time=1:00:00
+#SBATCH --chdir=$BASE_DIR   
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
+#SBATCH --output=$SLURM_OUT_DIR/dual_baseline_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/dual_baseline_%j.err
+
+source .venv/bin/activate
+echo "=== STARTING BASELINE SCRIPT ==="
+echo "Job ID: \$SLURM_JOB_ID"
+echo "Start time: \$(date)"
+echo "Experiment: $EXPERIMENT"
+# Run the baseline script
+python -m src.baseline --experiment $EXPERIMENT
+echo "Baseline script completed at: \$(date)"
+EOF
+)
+echo "Baseline job submitted with ID: $BASELINE_JOB_ID"
+
 # =============================================================================
 # Job 4a: GAT Validation (depends on GAT training)
 # =============================================================================
@@ -347,38 +379,6 @@ EOF
 
 echo "Summary job submitted with ID: $SUMMARY_JOB_ID"
 
-
-# =============================================================================
-# Baseline
-# =============================================================================
-echo "Submitting baseline job..."
-BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$SUMMARY_JOB_ID <<EOF
-#!/bin/bash
-#SBATCH --job-name="dual_baseline"
-#SBATCH --mem=16G
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --account=sci-renard
-#SBATCH --partition=cpu
-#SBATCH --time=1:00:00
-#SBATCH --chdir=$BASE_DIR   
-#SBATCH --mail-type=FAIL
-#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_baseline_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_baseline_%j.err
-
-source .venv/bin/activate
-echo "=== STARTING BASELINE SCRIPT ==="
-echo "Job ID: \$SLURM_JOB_ID"
-echo "Start time: \$(date)"
-echo "Experiment: $EXPERIMENT"
-# Run the baseline script
-python -m src.baseline --experiment $EXPERIMENT
-echo "Baseline script completed at: \$(date)"
-EOF
-)
-echo "Baseline job submitted with ID: $BASELINE_JOB_ID"
-
 # =============================================================================
 # Final Summary
 # =============================================================================
@@ -392,16 +392,17 @@ echo "  2a. GAT Processing:      $GAT_PROC_JOB_ID (after $DATA_JOB_ID)"
 echo "  2b. PDGrapher Processing:$PDG_PROC_JOB_ID (after $DATA_JOB_ID)"
 echo "  3a. GAT Training:        $GAT_TRAIN_JOB_ID (after $GAT_PROC_JOB_ID)"
 echo "  3b. PDGrapher Training:  $PDG_TRAIN_JOB_ID (after $PDG_PROC_JOB_ID)"
+echo "  3c. Baseline:            $BASELINE_JOB_ID (after $GAT_PROC_JOB_ID)"
 echo "  4a. GAT Validation:      $GAT_VAL_JOB_ID (after $GAT_TRAIN_JOB_ID)"
 echo "  4b. PDGrapher Validation:$PDG_VAL_JOB_ID (after $PDG_TRAIN_JOB_ID)"
 echo "  5. Summary Report:       $SUMMARY_JOB_ID (after both validations)"
 echo ""
 echo "Monitor all jobs with:"
 echo "  squeue -u \$USER"
-echo "  squeue -j $DATA_JOB_ID,$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID,$GAT_TRAIN_JOB_ID,$PDG_TRAIN_JOB_ID,$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID,$SUMMARY_JOB_ID"
+echo "  squeue -j $DATA_JOB_ID,$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID,$GAT_TRAIN_JOB_ID,$PDG_TRAIN_JOB_ID,$BASELINE_JOB_ID,$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID,$SUMMARY_JOB_ID"
 echo ""
 echo "Cancel all jobs if needed:"
-echo "  scancel $DATA_JOB_ID $GAT_PROC_JOB_ID $PDG_PROC_JOB_ID $GAT_TRAIN_JOB_ID $PDG_TRAIN_JOB_ID $GAT_VAL_JOB_ID $PDG_VAL_JOB_ID $SUMMARY_JOB_ID"
+echo "  scancel $DATA_JOB_ID $GAT_PROC_JOB_ID $PDG_PROC_JOB_ID $GAT_TRAIN_JOB_ID $PDG_TRAIN_JOB_ID $BASELINE_JOB_ID $GAT_VAL_JOB_ID $PDG_VAL_JOB_ID $SUMMARY_JOB_ID"
 echo ""
 echo "Check logs in: $SLURM_OUT_DIR"
 echo ""

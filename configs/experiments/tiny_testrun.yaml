@@ -2,4 +2,6 @@ data_creation:
   n_samples: 1000 
 
 training:
-  epochs: 20 
+  epochs: 5
+
+network: custom_4

@@ -54,6 +54,8 @@ def load_config(model_type: str = None, experiment: str = None, config_path: str
         exp_config_path = config_dir / "experiments" / f"{experiment}.yaml"
         if exp_config_path.exists():
             exp_config = yaml.safe_load(open(exp_config_path))
+            # add experiment name to config
+            exp_config["experiment"] = experiment
             config = deep_merge(config, exp_config)
         else:
             print(f"Warning: Experiment config not found: {exp_config_path}")
