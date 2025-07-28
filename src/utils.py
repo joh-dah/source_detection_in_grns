@@ -68,6 +68,16 @@ def ranked_source_predictions(
     return  top_nodes
 
 
+def get_current_time() -> str:
+    """
+    Get the current timestamp in the format MMDD_HHMM.
+    
+    Returns:
+        str: Current timestamp formatted as MMDD_HHMM.
+    """
+    return datetime.now().strftime("%m%d_%H%M")
+
+
 def save_metrics(metrics: dict, network: str):
     """
     Save dictionary with metrics as json in reports folder.

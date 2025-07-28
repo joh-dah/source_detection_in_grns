@@ -19,7 +19,7 @@ class SDDataset(Dataset):
     Handles both forward/backward modes (PDGrapher) and individual file mode (GNN).
     Always reads raw data from data/raw and writes processed data to data/processed/{model}.
     """
-    def __init__(self, model_type, processing_func, transform=None, pre_transform=None, mode="individual", raw_data_dir="data/raw", edge_index=None, edge_attr=None):
+    def __init__(self, model_type, processing_func, transform=None, pre_transform=None, mode="individual", raw_data_dir=const.RAW_PATH, edge_index=None, edge_attr=None):
         """
         Args:
             model_type: Type of model (e.g., "GAT", "GCNSI", "PDGrapher")
@@ -32,7 +32,7 @@ class SDDataset(Dataset):
         self.model_type = model_type
         self.processing_func = processing_func or pre_transform  # Backward compatibility
         self.raw_data_dir = Path(raw_data_dir)
-        self.processed_data_dir = Path(f"data/processed/{model_type}")
+        self.processed_data_dir = Path(const.PROCESSED_PATH)
         self.transform = transform
         self.mode = mode
         self.edge_index = edge_index
@@ -256,7 +256,7 @@ def add_noise_to_graph(G: nx.DiGraph, noise_level: float = 0.1) -> nx.DiGraph:
     return G  # No changes made, just a placeholder for now
 
 
-def create_datasets_for_model(model_type, raw_data_dir="data/raw"):
+def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
     """
     Create datasets based on model type using the unified SDDataset approach.
     
