@@ -92,7 +92,7 @@ params = get_config_from_args()
 # General
 MODEL = params["model"]
 MODEL_NAME = params["model_name"]
-DATA_PATH = "data"
+DATA_PATH = "data_dev"
 PROCESSED_PATH = f"{DATA_PATH}/processed/{MODEL}"
 RAW_PATH = f"{DATA_PATH}/raw"
 RAW_EDGE_INDEX_PATH = f"{DATA_PATH}/edge_index.pt"

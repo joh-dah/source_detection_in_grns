@@ -215,6 +215,7 @@ def process_gene(
     og_network_name,
     perturbations_per_gene,
 ):
+    print(f"Processing gene {gene_to_perturb}. Starting time: {utils.get_current_time()}")
     subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
     num_init_conds = int(np.cbrt(perturbations_per_gene))
     num_params = perturbations_per_gene // num_init_conds
