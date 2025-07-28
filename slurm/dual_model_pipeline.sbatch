@@ -37,8 +37,8 @@ DATA_JOB_ID=$(sbatch --parsable <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_data_creation_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_data_creation_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_data_creation_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_data_creation_%j.err
 
 source .venv/bin/activate
 
@@ -77,8 +77,8 @@ GAT_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_gat_processing_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_gat_processing_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_gat_processing_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_gat_processing_%j.err
 
 source .venv/bin/activate
 
@@ -117,8 +117,8 @@ PDG_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_pdg_processing_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_pdg_processing_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_pdg_processing_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_pdg_processing_%j.err
 
 source .venv/bin/activate
 
@@ -159,8 +159,8 @@ GAT_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_gat_training_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_gat_training_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_gat_training_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_gat_training_%j.err
 
 source .venv/bin/activate
 
@@ -201,8 +201,8 @@ PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_pdg_training_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_pdg_training_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_pdg_training_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_pdg_training_%j.err
 
 source .venv/bin/activate
 
@@ -242,16 +242,23 @@ BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR   
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_baseline_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_baseline_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_baseline_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_baseline_%j.err
 
 source .venv/bin/activate
 echo "=== STARTING BASELINE SCRIPT ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
+echo "Depends on GAT processing job: $GAT_PROC_JOB_ID"
+
+# Set baseline config
+export MODEL_TYPE=gat
+export EXPERIMENT_NAME=$EXPERIMENT
+
 # Run the baseline script
 python -m src.baseline --experiment $EXPERIMENT
+
 echo "Baseline script completed at: \$(date)"
 EOF
 )
@@ -274,8 +281,8 @@ GAT_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_TRAIN_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_gat_validation_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_gat_validation_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_gat_validation_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_gat_validation_%j.err
 
 source .venv/bin/activate
 
@@ -315,8 +322,8 @@ PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_pdg_validation_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_pdg_validation_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_pdg_validation_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_pdg_validation_%j.err
 
 source .venv/bin/activate
 
@@ -340,46 +347,6 @@ EOF
 echo "PDGrapher validation job submitted with ID: $PDG_VAL_JOB_ID"
 
 # =============================================================================
-# Job 5: Summary Report (depends on both validations)
-# =============================================================================
-echo "Submitting summary report job..."
-SUMMARY_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_VAL_JOB_ID:$PDG_VAL_JOB_ID <<EOF
-#!/bin/bash
-#SBATCH --job-name="dual_summary"
-#SBATCH --time=10:00
-#SBATCH --partition=cpu
-#SBATCH --mem=8G
-#SBATCH --ntasks=1
-#SBATCH --account=sci-renard
-#SBATCH --chdir=$BASE_DIR
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/dual_summary_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/dual_summary_%j.err
-
-source .venv/bin/activate
-
-echo "=== GENERATING DUAL MODEL SUMMARY ==="
-echo "Job ID: \$SLURM_JOB_ID"
-echo "Start time: \$(date)"
-echo "Experiment: $EXPERIMENT"
-echo "Depends on GAT validation: $GAT_VAL_JOB_ID"
-echo "Depends on PDGrapher validation: $PDG_VAL_JOB_ID"
-
-# Create summary of results from both models
-echo "Creating comparison summary for experiment: $EXPERIMENT"
-echo "Results available in:"
-echo "  - reports/GAT/$EXPERIMENT"
-echo "  - reports/PDGrapher/$EXPERIMENT"
-
-echo "=== DUAL MODEL PIPELINE COMPLETED ==="
-echo "Completion time: \$(date)"
-EOF
-)
-
-echo "Summary job submitted with ID: $SUMMARY_JOB_ID"
-
-# =============================================================================
 # Final Summary
 # =============================================================================
 echo ""
@@ -395,14 +362,13 @@ echo "  3b. PDGrapher Training:  $PDG_TRAIN_JOB_ID (after $PDG_PROC_JOB_ID)"
 echo "  3c. Baseline:            $BASELINE_JOB_ID (after $GAT_PROC_JOB_ID)"
 echo "  4a. GAT Validation:      $GAT_VAL_JOB_ID (after $GAT_TRAIN_JOB_ID)"
 echo "  4b. PDGrapher Validation:$PDG_VAL_JOB_ID (after $PDG_TRAIN_JOB_ID)"
-echo "  5. Summary Report:       $SUMMARY_JOB_ID (after both validations)"
 echo ""
 echo "Monitor all jobs with:"
 echo "  squeue -u \$USER"
-echo "  squeue -j $DATA_JOB_ID,$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID,$GAT_TRAIN_JOB_ID,$PDG_TRAIN_JOB_ID,$BASELINE_JOB_ID,$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID,$SUMMARY_JOB_ID"
+echo "  squeue -j $DATA_JOB_ID,$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID,$GAT_TRAIN_JOB_ID,$PDG_TRAIN_JOB_ID,$BASELINE_JOB_ID,$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID"
 echo ""
 echo "Cancel all jobs if needed:"
-echo "  scancel $DATA_JOB_ID $GAT_PROC_JOB_ID $PDG_PROC_JOB_ID $GAT_TRAIN_JOB_ID $PDG_TRAIN_JOB_ID $BASELINE_JOB_ID $GAT_VAL_JOB_ID $PDG_VAL_JOB_ID $SUMMARY_JOB_ID"
+echo "  scancel $DATA_JOB_ID $GAT_PROC_JOB_ID $PDG_PROC_JOB_ID $GAT_TRAIN_JOB_ID $PDG_TRAIN_JOB_ID $BASELINE_JOB_ID $GAT_VAL_JOB_ID $PDG_VAL_JOB_ID"
 echo ""
 echo "Check logs in: $SLURM_OUT_DIR"
 echo ""

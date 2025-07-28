@@ -121,7 +121,7 @@ class ModelValidator:
         splits = torch.load(const.SPLITS_PATH, weights_only=False)
         test_indices = splits["test_index_backward"]
         
-        raw_data_dir = Path("data/raw")
+        raw_data_dir = Path(const.RAW_PATH)
         raw_files = sorted(list(raw_data_dir.glob("*.pt")))
         
         raw_test_data = []
@@ -486,7 +486,7 @@ def main():
         "parameters": yaml.full_load(open("params.yaml", "r"))
     }
     
-    utils.save_metrics(metrics_dict, network)
+    utils.save_metrics(metrics_dict)
 
     print(f"Validation complete! Results saved for {model_type} model with {network} network")
 

@@ -93,10 +93,11 @@ params = get_config_from_args()
 
 # General
 MODEL = params["model"].lower()
+EXPERIMENT = params.get("experiment", "unknown")
 if MODEL not in ["gat", "pdgrapher", "gcnsi"]:
     raise ValueError(f"Invalid model type: {MODEL}. Expected one of ['gat', 'pdgrapher', 'gcnsi'].")
-MODEL_NAME = params["model_name"]
-DATA_PATH = f"data/{params["experiment"]}/" if "experiment" in params else "data/"
+MODEL_NAME = f"{params["model_name"]}_{EXPERIMENT}"
+DATA_PATH = f"data/{EXPERIMENT}"
 PROCESSED_PATH = f"{DATA_PATH}/processed/{MODEL}"
 SPLITS_PATH = f"{DATA_PATH}/splits/splits.pt"
 RAW_PATH = f"{DATA_PATH}/raw"

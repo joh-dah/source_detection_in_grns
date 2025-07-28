@@ -78,7 +78,7 @@ def get_current_time() -> str:
     return datetime.now().strftime("%m%d_%H%M")
 
 
-def save_metrics(metrics: dict, network: str):
+def save_metrics(metrics: dict):
     """
     Save dictionary with metrics as json in reports folder.
     One "latest.json" is created and named after the corresponding model.
@@ -87,7 +87,7 @@ def save_metrics(metrics: dict, network: str):
     """
     (Path(const.REPORT_PATH) / const.MODEL).mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%m%d_%H%M")
-    filename = f"{network}_{timestamp}.json"
+    filename = f"{const.EXPERIMENT}_{timestamp}.json"
     with open(
         os.path.join((Path(const.REPORT_PATH) / const.MODEL), filename), "w"
     ) as file:
@@ -184,7 +184,7 @@ def load_raw_test_data():
         splits = torch.load(const.SPLITS_PATH, weights_only=False)
         test_indices = splits["test_index_backward"]
         
-        raw_data_dir = Path("data/raw")
+        raw_data_dir = Path(const.RAW_PATH)
         raw_files = sorted(list(raw_data_dir.glob("*.pt")))
         
         raw_test_data = []

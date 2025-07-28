@@ -323,7 +323,7 @@ def main():
     print(f"Creating new processed data for {const.MODEL}...")
     
     # Model-specific processed directory
-    processed_dir = Path(f"data/processed/{const.MODEL}")
+    processed_dir = Path(const.PROCESSED_PATH)
     
     if processed_dir.exists():
         shutil.rmtree(processed_dir)

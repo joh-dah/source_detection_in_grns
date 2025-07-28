@@ -1,0 +1,7 @@
+data_creation:
+  n_samples: 5000 
+
+training:
+  epochs: 100 
+
+network: tp53

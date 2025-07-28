@@ -233,9 +233,9 @@ def main():
             report_dir = Path("reports") / f"baseline_{method_name}"
             report_dir.mkdir(parents=True, exist_ok=True)
             
-            timestamp = datetime.now().strftime("%m%d_%H%M")
-            filename = f"{const.NETWORK}_{timestamp}.json"
-            
+            timestamp = utils.get_current_time()
+            filename = f"{const.EXPERIMENT}_{timestamp}.json"
+
             # Wrap results in the expected format with "metrics" key
             output_data = {
                 "network": const.NETWORK,
