@@ -2,6 +2,12 @@ data_creation:
     n_samples: 500
     training_share: 0.6
     normalize_data: true
+    graph_noise:
+        missing_edges: 0.1
+        wrong_edges: 0.1
+        missing_nodes: 0
+        rewired_edges: 0
+
 network: custom_10
 on_cluster: false
 seed: 42

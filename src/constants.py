@@ -120,6 +120,7 @@ dc = params["data_creation"]
 NORMALIZE_DATA = dc["normalize_data"]
 N_SAMPLES = dc["n_samples"]
 TRAINING_SHARE = dc["training_share"]
+GRAPH_NOISE = dc["graph_noise"]
 
 # Training
 training = params["training"]

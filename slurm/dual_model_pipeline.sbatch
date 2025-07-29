@@ -12,7 +12,7 @@ SLURM_OUT_DIR="$BASE_DIR/slurm_out"
 EXPERIMENT=${EXPERIMENT_NAME:-testrun}
 
 # gpu configuration
-COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx21,gx24,gx25,gx26,gx27,gx28,gx29"
+COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx21,gx25,gx26,gx27,gx28,gx29"
 
 # Create output directory if it doesn't exist
 mkdir -p $SLURM_OUT_DIR

@@ -2,6 +2,11 @@ data_creation:
   n_samples: 1000
   training_share: 0.6
   normalize_data: true
+  graph_noise:
+    missing_edges: 0.1
+    wrong_edges: 0
+    missing_nodes: 0
+    rewired_edges: 0
 
 # Environment settings
 network: tiny

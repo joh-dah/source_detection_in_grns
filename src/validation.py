@@ -406,6 +406,7 @@ def data_stats(raw_data_set: list) -> dict:
     stats = {
         "graph stats": {
             "number of nodes": n_nodes,
+            "number of possible sources": data.num_possible_sources,
         },
         "infection stats": {
             "avg number of sources": round(float(np.mean(n_sources)), 3),

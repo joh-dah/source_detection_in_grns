@@ -1,8 +1,8 @@
 import torch.optim as optim
 import torch
 import src.constants as const
+import src.utils as utils
 from pathlib import Path
-from datetime import datetime
 import os
 
 from pdgrapher import Dataset, PDGrapher, Trainer
@@ -79,13 +79,12 @@ def save_best_perturbation_model(pdgrapher_model, trainer):
         pdgrapher_model: The trained PDGrapher model
         trainer: The PDGrapher trainer (may contain best model state)
     """
-    now = datetime.now()
-    timestamp = f"{now.day:02d}-{now.month:02d}_{now.hour:02d}-{now.minute:02d}"
+    timestamp = utils.get_current_time()
     
     model_save_dir = Path(const.MODEL_PATH) / const.MODEL
     model_save_dir.mkdir(parents=True, exist_ok=True)
     
-    model_filename = f"{const.MODEL_NAME}_d-{timestamp}.pt"
+    model_filename = f"{const.MODEL_NAME}_{timestamp}.pt"
     model_save_path = model_save_dir / model_filename
     
     perturbation_model = pdgrapher_model.perturbation_discovery

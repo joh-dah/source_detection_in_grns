@@ -4,6 +4,7 @@ from src import constants as const
 from src import utils
 from src.create_splits import create_data_splits
 import networkx as nx
+import numpy as np
 import os
 import shutil
 from torch_geometric.data import Data, Dataset
@@ -250,10 +251,97 @@ def store_edge_index_for_pdgrapher(edge_index: torch.Tensor):
     torch.save(edge_index, const.PROCESSED_EDGE_INDEX_PATH)
 
 
-def add_noise_to_graph(G: nx.DiGraph, noise_level: float = 0.1) -> nx.DiGraph:
-    """ PLACEHOLDER FUNCTION"""
-    # TODO: Implement actual noise addition logic
-    return G  # No changes made, just a placeholder for now
+def remove_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
+    """Remove a fraction of edges from the graph, but only if the graph remains weakly connected."""
+    num_edges = G.number_of_edges()
+    edges_to_remove = int(num_edges * fraction)
+    if edges_to_remove == 0:
+        return G
+
+    edges = list(G.edges())
+    np.random.shuffle(edges)
+    removed = 0
+
+    for u, v in edges:
+        if removed >= edges_to_remove:
+            break
+        G.remove_edge(u, v)
+        if nx.is_weakly_connected(G):
+            removed += 1
+        else:
+            G.add_edge(u, v)  # revert if disconnects
+
+    return G
+
+def add_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
+    """Add a fraction of edges to the graph, preferring sources with high out-degree and targets with high in-degree."""
+    num_edges = G.number_of_edges()
+    edges_to_add = int(num_edges * fraction)
+    nodes = list(G.nodes())
+    out_degrees = np.array([G.out_degree(n) for n in nodes], dtype=float)
+    in_degrees = np.array([G.in_degree(n) for n in nodes], dtype=float)
+    # Avoid division by zero
+    if out_degrees.sum() == 0:
+        out_probs = np.ones_like(out_degrees) / len(nodes)
+    else:
+        out_probs = out_degrees / out_degrees.sum()
+    if in_degrees.sum() == 0:
+        in_probs = np.ones_like(in_degrees) / len(nodes)
+    else:
+        in_probs = in_degrees / in_degrees.sum()
+    for _ in range(edges_to_add):
+        u = np.random.choice(nodes, p=out_probs)
+        v = np.random.choice(nodes, p=in_probs)
+        # Avoid self-loops and duplicate edges
+        tries = 0
+        while (u == v or G.has_edge(u, v)) and tries < 10:
+            u = np.random.choice(nodes, p=out_probs)
+            v = np.random.choice(nodes, p=in_probs)
+            tries += 1
+        if not G.has_edge(u, v):
+            G.add_edge(u, v)
+    return G
+
+def remove_nodes(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
+    """PLACEHOLDER: Remove a fraction of nodes from the graph."""
+    #TODO: Implement node removal logic, 
+    # be careful to adjust the node value data accordingly
+    return G
+
+def rewire_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
+    """Rewire a fraction of edges in the graph, preserving weak connectivity."""
+    num_edges = G.number_of_edges()
+    edges_to_rewire = int(num_edges * fraction)
+    edges = list(G.edges())
+    nodes = list(G.nodes())
+    for _ in range(edges_to_rewire):
+        if not edges:
+            break
+        u, v = edges[np.random.randint(len(edges))]
+        new_u, new_v = np.random.choice(nodes, 2, replace=False)
+        # Skip if the new edge already exists or is a self-loop
+        if G.has_edge(new_u, new_v) or new_u == new_v:
+            continue
+        G.remove_edge(u, v)
+        G.add_edge(new_u, new_v)
+        # Check if the graph is still weakly connected
+        if not nx.is_weakly_connected(G):
+            # Undo the change if not connected
+            G.remove_edge(new_u, new_v)
+            G.add_edge(u, v)
+        else:
+            # Only remove rewired edge from the list if rewiring succeeded
+            edges.remove((u, v))
+            edges.append((new_u, new_v))
+    return G
+
+
+def add_noise_to_graph(G: nx.DiGraph) -> nx.DiGraph:
+    G_perturbed = remove_edges(G, const.GRAPH_NOISE["missing_edges"])
+    G_perturbed = add_edges(G_perturbed, const.GRAPH_NOISE["wrong_edges"])
+    G_perturbed = remove_nodes(G_perturbed, const.GRAPH_NOISE["missing_nodes"])
+    G_perturbed = rewire_edges(G_perturbed, const.GRAPH_NOISE["rewired_edges"])
+    return G_perturbed
 
 
 def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
@@ -266,7 +354,7 @@ def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
     """
 
     G, _ = utils.get_graph_data_from_topo(Path(const.TOPO_PATH) / f"{const.NETWORK}.topo")
-    G = add_noise_to_graph(G, 0.1)
+    G = add_noise_to_graph(G)
     # create a torch geometric edge_index from the graph
     G = from_networkx(G, group_edge_attrs=['weight'])
     G.edge_attr = G.edge_attr.float()

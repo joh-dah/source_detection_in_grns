@@ -214,6 +214,7 @@ def process_gene(
     topo_file,
     og_network_name,
     perturbations_per_gene,
+    num_genes_to_perturb
 ):
     print(f"Processing gene {gene_to_perturb}. Starting time: {utils.get_current_time()}")
     subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
@@ -260,7 +261,8 @@ def process_gene(
             binary_perturbation_indicator=binary_perturbation_indicator,
             perturbed_gene=gene_to_perturb,
             gene_mapping=gene_to_idx,
-            num_nodes=len(gene_to_idx)
+            num_nodes=len(gene_to_idx),
+            num_possible_sources=num_genes_to_perturb,
         )
         local_datapoints.append(data)
 
@@ -303,6 +305,7 @@ def create_data_set(
             topo_file,
             og_network_name,
             perturbations_per_gene,
+            len(genes_with_outgoing_edges),
         )
         for gene in genes_with_outgoing_edges
     ]
