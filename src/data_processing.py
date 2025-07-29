@@ -294,12 +294,12 @@ def add_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
         v = np.random.choice(nodes, p=in_probs)
         # Avoid self-loops and duplicate edges
         tries = 0
-        while (u == v or G.has_edge(u, v)) and tries < 10:
+        while (G.has_edge(u, v)) and tries < 10:
             u = np.random.choice(nodes, p=out_probs)
             v = np.random.choice(nodes, p=in_probs)
             tries += 1
         if not G.has_edge(u, v):
-            G.add_edge(u, v)
+            G.add_edge(u, v, weight=np.random.choice([1, 2]))
     return G
 
 def remove_nodes(G: nx.DiGraph, fraction: float) -> nx.DiGraph:

@@ -17,7 +17,7 @@ training:
     alpha: 0.5
     batch_size: 64
     class_weighting: false
-    epochs: 20  #fix of by one epoch
+    epochs: 2  #fix of by one epoch
     graph_weighting: false
     hidden_size: 128
     heads: 4
