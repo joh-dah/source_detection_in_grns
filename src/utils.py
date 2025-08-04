@@ -78,22 +78,21 @@ def get_current_time() -> str:
     return datetime.now().strftime("%m%d_%H%M")
 
 
-def save_metrics(metrics: dict):
+def save_metrics(metrics: dict, method_name: str = None):
     """
     Save dictionary with metrics as json in reports folder.
     One "latest.json" is created and named after the corresponding model.
     :params metrics: dictionary containing metrics
     :params model_name: name of the corresponding model
     """
-    (Path(const.REPORT_PATH) / const.MODEL).mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%m%d_%H%M")
-    filename = f"{const.EXPERIMENT}_{timestamp}.json"
-    with open(
-        os.path.join((Path(const.REPORT_PATH) / const.MODEL), filename), "w"
-    ) as file:
+    if method_name is None:
+        method_name = const.MODEL
+    report_dir = Path(const.REPORT_PATH) / const.EXPERIMENT
+    report_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{method_name}_{timestamp}.json"
+    with open(report_dir / filename, "w") as file:
         json.dump(metrics, file, indent=4)
-    # with open(os.path.join(const.REPORT_PATH, "latest.json"), "w") as file:
-    #     json.dump(metrics, file, indent=4)
 
 
 def extract_gat_true_sources(processed_test_data):

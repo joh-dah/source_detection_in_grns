@@ -3,7 +3,7 @@ data_creation:
   training_share: 0.6
   normalize_data: true
   graph_noise:
-    missing_edges: 0.1
+    missing_edges: 0
     wrong_edges: 0
     missing_nodes: 0
     rewired_edges: 0

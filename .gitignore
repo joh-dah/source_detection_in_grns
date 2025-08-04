@@ -6,6 +6,7 @@ figures/
 models/
 src/__pycache__/
 .idea/
+/timing_logs
 /figures
 /roc
 /reports

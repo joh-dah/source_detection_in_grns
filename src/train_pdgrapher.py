@@ -106,7 +106,9 @@ def save_best_perturbation_model(pdgrapher_model, trainer):
     }
 
     torch.save(save_dict, model_save_path)
+    print(f"Best perturbation discovery model saved to {model_save_path}")
     latest_path = model_save_dir / f"{const.MODEL_NAME}_latest.pt"
+    print(f"Latest model path: {latest_path}")
     torch.save(save_dict, latest_path)
     
     return model_save_path

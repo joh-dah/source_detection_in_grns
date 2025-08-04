@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import networkx as nx
-from sklearn.metrics import roc_auc_score, roc_curve, precision_score, recall_score, f1_score
+from sklearn.metrics import roc_auc_score, precision_score, recall_score, f1_score
 from pathlib import Path
 
 import src.constants as const
@@ -262,31 +262,6 @@ class ModelValidator:
             return self._load_raw_test_data_from_indices()
 
 
-def distance_metrics(true_sources, pred_sources) -> dict:
-    """Calculate distance metrics between predicted and true sources."""
-    dists_to_source = []
-
-
-    for i, true_source in enumerate(tqdm(true_sources, desc="calculate distances", disable=const.ON_CLUSTER)):
-        pred_source = pred_sources[i]
-        if true_source == pred_source:
-            dists_to_source.append(0)
-        else:
-            # Create NetworkX graph from edge index
-            G, gene_to_idx = utils.get_graph_data_from_topo()
-            idx_to_gene = {v: k for k, v in gene_to_idx.items()}
-            true_source = idx_to_gene[true_source]
-            pred_source = idx_to_gene[pred_source]
-            
-            try:
-                dist = nx.shortest_path_length(G, source=true_source, target=pred_source)
-            except nx.NetworkXNoPath:
-                dist = float("inf")
-            dists_to_source.append(dist)
-
-    return {"avg dist to source": np.mean(dists_to_source)}
-
-
 def TP_FP_metrics(true_sources: list, pred_sources: list) -> dict:
     """Calculate true positive and false positive rates."""
     true_positive = 0
@@ -301,18 +276,22 @@ def TP_FP_metrics(true_sources: list, pred_sources: list) -> dict:
     total_instances = len(true_sources)
     true_positive_rate = true_positive / total_instances
     false_positive_rate = false_positive / total_instances
-    
+    precision = precision_score(true_sources, pred_sources, average='weighted', zero_division=0)
+    recall = recall_score(true_sources, pred_sources, average='weighted', zero_division=0)
     f1 = f1_score(true_sources, pred_sources, average='weighted')
 
     return {
         "true positive rate": true_positive_rate,
         "false positive rate": false_positive_rate,
+        "precision": precision,
+        "recall": recall,
         "f1 score": f1,
     }
 
 
 def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
     """Calculate prediction ranking and probability metrics."""
+    print("Calculating prediction ranking and probabilities ...")
     source_ranks = []
     predictions_for_source = []
     general_predictions = []
@@ -344,7 +323,6 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
 
 def node_classification_metrics(pred_label_set: list, processed_data: list = None) -> dict:
     """Calculate node-level binary classification metrics."""
-    # For GAT models, we can calculate node-level metrics
     if processed_data is None:
         return {}
     
@@ -432,12 +410,7 @@ def supervised_metrics(
 
     # Common metrics for all models
     metrics.update(prediction_metrics(pred_label_set, true_sources))
-    metrics.update(distance_metrics(true_sources, pred_sources))
     metrics.update(TP_FP_metrics(true_sources, pred_sources))
-    
-    # Node-level metrics only for GAT (since it does node classification)
-    if model_type.lower() == "gat" and processed_data is not None:
-        metrics.update(node_classification_metrics(pred_label_set, processed_data))
 
     # Round numerical values
     for key, value in metrics.items():

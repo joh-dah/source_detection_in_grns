@@ -265,11 +265,19 @@ def remove_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
     for u, v in edges:
         if removed >= edges_to_remove:
             break
+        
+        # Store edge attributes before removing
+        weight = G[u][v]
+        
         G.remove_edge(u, v)
         if nx.is_weakly_connected(G):
             removed += 1
         else:
-            G.add_edge(u, v)  # revert if disconnects
+            # Restore the edge with its original attributes
+            G.add_edge(u, v, weight=weight)
+
+    if removed < edges_to_remove:
+        print(f"Warning: Only removed {removed} out of {edges_to_remove} edges to preserve connectivity.")
 
     return G
 
@@ -322,13 +330,18 @@ def rewire_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
         # Skip if the new edge already exists or is a self-loop
         if G.has_edge(new_u, new_v) or new_u == new_v:
             continue
+            
+        # Store original edge attributes before removing
+        weight = G[u][v]
+        
         G.remove_edge(u, v)
-        G.add_edge(new_u, new_v)
+        G.add_edge(new_u, new_v, weight)  # Use original attributes
+        
         # Check if the graph is still weakly connected
         if not nx.is_weakly_connected(G):
             # Undo the change if not connected
             G.remove_edge(new_u, new_v)
-            G.add_edge(u, v)
+            G.add_edge(u, v, weight=weight)  # Restore original edge
         else:
             # Only remove rewired edge from the list if rewiring succeeded
             edges.remove((u, v))
@@ -337,10 +350,17 @@ def rewire_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
 
 
 def add_noise_to_graph(G: nx.DiGraph) -> nx.DiGraph:
+    print("Graph before noise:")
+    print(f"Number of nodes: {G.number_of_nodes()}, Number of edges: {G.number_of_edges()}")
     G_perturbed = remove_edges(G, const.GRAPH_NOISE["missing_edges"])
+    print("Graph after removing edges:")
+    print(f"Number of nodes: {G_perturbed.number_of_nodes()}, Number of edges: {G_perturbed.number_of_edges()}")
     G_perturbed = add_edges(G_perturbed, const.GRAPH_NOISE["wrong_edges"])
+    print("Graph after adding wrong edges:")
+    print(f"Number of nodes: {G_perturbed.number_of_nodes()}, Number of edges: {G_perturbed.number_of_edges()}")
     G_perturbed = remove_nodes(G_perturbed, const.GRAPH_NOISE["missing_nodes"])
     G_perturbed = rewire_edges(G_perturbed, const.GRAPH_NOISE["rewired_edges"])
+
     return G_perturbed
 
 
@@ -354,9 +374,9 @@ def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
     """
 
     G, _ = utils.get_graph_data_from_topo(Path(const.TOPO_PATH) / f"{const.NETWORK}.topo")
-    G = add_noise_to_graph(G)
+    G_perturbed = add_noise_to_graph(G)
     # create a torch geometric edge_index from the graph
-    G = from_networkx(G, group_edge_attrs=['weight'])
+    G = from_networkx(G_perturbed, group_edge_attrs=['weight'])
     G.edge_attr = G.edge_attr.float()
     
     if model_type == "pdgrapher":

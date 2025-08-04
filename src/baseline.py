@@ -1,12 +1,10 @@
 import torch
 import numpy as np
 import networkx as nx
-from pathlib import Path
 from tqdm import tqdm
 import src.constants as const
 import src.utils as utils
 import src.validation as validation
-import argparse
 from typing import List, Dict, Tuple
 
 
@@ -131,6 +129,34 @@ class RandomDetector(BaselineSourceDetector):
         probs = self.rng.random(num_nodes)
         probs = torch.from_numpy(probs).float()
         return probs / probs.sum()
+    
+
+class AdvancedRandomDetector(BaselineSourceDetector):
+    """Random baseline - uniform probability for all nodes."""
+    
+    def __init__(self, seed: int = 42):
+        super().__init__("Random")
+        self.rng = np.random.RandomState(seed)
+    
+    def predict_source_probabilities(self, data) -> torch.Tensor:
+        num_nodes = data.x.shape[0]
+        # Build NetworkX graph to check out-degrees
+        edge_list = data.edge_index.t().tolist()
+        G = nx.from_edgelist(edge_list, create_using=nx.DiGraph)
+        out_degrees = np.array([G.out_degree(n) if n in G.nodes else 0 for n in range(num_nodes)])
+        # Mask: 1 if node has outgoing edges, 0 otherwise
+        mask = (out_degrees > 0).astype(float)
+        if mask.sum() == 0:
+            # If all nodes have out-degree 0, fall back to uniform
+            probs = np.ones(num_nodes)
+        else:
+            # Random values only for nodes with out-degree > 0
+            probs = self.rng.random(num_nodes) * mask
+            # If all random values are zero (shouldn't happen), fallback
+            if probs.sum() == 0:
+                probs = mask
+        probs = torch.from_numpy(probs).float()
+        return probs / probs.sum()
 
 
 def load_test_data() -> Tuple[List, List]:
@@ -192,7 +218,8 @@ def main():
     # Define available detectors
     detectors = {
         "rumor": RumorCentralityDetector(),
-        "random": RandomDetector()
+        "random": RandomDetector(),
+        "advanced_random": AdvancedRandomDetector(),
     }
     
     # Select methods to evaluate
@@ -222,32 +249,20 @@ def main():
                     print(f"  {k}: {v}")
             else:
                 print(f"{key}: {value}")
-                    
 
-    from datetime import datetime
-    import json
     
     for method_name, results in all_results.items():
         if "error" not in results:
-            # Create reports directory structure
-            report_dir = Path("reports") / f"baseline_{method_name}"
-            report_dir.mkdir(parents=True, exist_ok=True)
-            
-            timestamp = utils.get_current_time()
-            filename = f"{const.EXPERIMENT}_{timestamp}.json"
+            method = f"baseline_{method_name}"
 
-            # Wrap results in the expected format with "metrics" key
             output_data = {
                 "network": const.NETWORK,
                 "metrics": results,
-                "method": method_name
+                "model_type": method_name
             }
-            
-            with open(report_dir / filename, "w") as f:
-                json.dump(output_data, f, indent=4)
-            
-            print(f"Results for {method_name} saved to {report_dir / filename}")
-    
+
+            utils.save_metrics(output_data, method_name=method)
+
     # Print summary comparison
     print(f"\n{'='*60}")
     print("SUMMARY COMPARISON")

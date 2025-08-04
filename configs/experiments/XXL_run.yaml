@@ -1,0 +1,7 @@
+data_creation:
+  n_samples: 10000 
+
+training:
+  epochs: 200 
+
+network: dorothea_150
