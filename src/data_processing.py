@@ -267,14 +267,14 @@ def remove_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
             break
         
         # Store edge attributes before removing
-        weight = G[u][v]
+        edge_attrs = G[u][v]
         
         G.remove_edge(u, v)
         if nx.is_weakly_connected(G):
             removed += 1
         else:
             # Restore the edge with its original attributes
-            G.add_edge(u, v, weight=weight)
+            G.add_edge(u, v, **edge_attrs)
 
     if removed < edges_to_remove:
         print(f"Warning: Only removed {removed} out of {edges_to_remove} edges to preserve connectivity.")
@@ -332,16 +332,16 @@ def rewire_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
             continue
             
         # Store original edge attributes before removing
-        weight = G[u][v]
+        edge_attrs = G[u][v]
         
         G.remove_edge(u, v)
-        G.add_edge(new_u, new_v, weight)  # Use original attributes
+        G.add_edge(new_u, new_v, **edge_attrs)  # Use original attributes
         
         # Check if the graph is still weakly connected
         if not nx.is_weakly_connected(G):
             # Undo the change if not connected
             G.remove_edge(new_u, new_v)
-            G.add_edge(u, v, weight=weight)  # Restore original edge
+            G.add_edge(u, v, **edge_attrs)  # Restore original edge
         else:
             # Only remove rewired edge from the list if rewiring succeeded
             edges.remove((u, v))
@@ -375,6 +375,7 @@ def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
 
     G, _ = utils.get_graph_data_from_topo(Path(const.TOPO_PATH) / f"{const.NETWORK}.topo")
     G_perturbed = add_noise_to_graph(G)
+    
     # create a torch geometric edge_index from the graph
     G = from_networkx(G_perturbed, group_edge_attrs=['weight'])
     G.edge_attr = G.edge_attr.float()

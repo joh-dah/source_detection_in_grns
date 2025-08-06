@@ -46,7 +46,7 @@ echo "experiment,method,stage,start_time,end_time,duration_seconds,job_id" > $TI
 echo "Submitting shared data creation job..."
 DATA_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_data_creation"
+#SBATCH --job-name="data_creation"
 #SBATCH --mem=128G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
@@ -98,7 +98,7 @@ echo "Data creation job submitted with ID: $DATA_JOB_ID"
 echo "Submitting GAT data processing job..."
 GAT_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_gat_processing"
+#SBATCH --job-name="gat_processing"
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
@@ -149,7 +149,7 @@ echo "GAT data processing job submitted with ID: $GAT_PROC_JOB_ID"
 echo "Submitting PDGrapher data processing job..."
 PDG_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_pdg_processing"
+#SBATCH --job-name="pdg_processing"
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
@@ -197,7 +197,7 @@ echo "PDGrapher data processing job submitted with ID: $PDG_PROC_JOB_ID"
 echo "Submitting GAT training job..."
 GAT_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_gat_training"
+#SBATCH --job-name="gat_training"
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -247,7 +247,7 @@ echo "GAT training job submitted with ID: $GAT_TRAIN_JOB_ID"
 echo "Submitting PDGrapher training job..."
 PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_pdg_training"
+#SBATCH --job-name="pdg_training"
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -298,7 +298,7 @@ echo "PDGrapher training job submitted with ID: $PDG_TRAIN_JOB_ID"
 echo "Submitting baseline job..."
 BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_baseline"
+#SBATCH --job-name="baseline"
 #SBATCH --mem=16G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -346,7 +346,7 @@ echo "Baseline job submitted with ID: $BASELINE_JOB_ID"
 echo "Submitting GAT validation job..."
 GAT_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_TRAIN_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_gat_validation"
+#SBATCH --job-name="gat_validation"
 #SBATCH --time=3-00:00:00
 #SBATCH --partition=gpu
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
@@ -395,7 +395,7 @@ echo "GAT validation job submitted with ID: $GAT_VAL_JOB_ID"
 echo "Submitting PDGrapher validation job..."
 PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_pdg_validation"
+#SBATCH --job-name="pdg_validation"
 #SBATCH --time=3-00:00:00
 #SBATCH --partition=gpu
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
@@ -444,7 +444,7 @@ echo "PDGrapher validation job submitted with ID: $PDG_VAL_JOB_ID"
 echo "Submitting result comparison job..."
 COMPARE_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID,$BASELINE_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_result_comparison"
+#SBATCH --job-name="result_comparison"
 #SBATCH --mem=16G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
