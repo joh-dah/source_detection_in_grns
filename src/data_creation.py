@@ -2,6 +2,7 @@
 import math
 from pathlib import Path
 import shutil
+from asyncssh import logger
 import numpy as np
 import src.constants as const
 import src.utils as utils
@@ -14,6 +15,48 @@ import torch
 from tqdm import tqdm
 import networkx as nx
 import multiprocessing as mp
+import logging
+from pathlib import Path
+import csv
+from datetime import datetime
+from pathlib import Path
+import time
+import psutil
+import os
+
+
+def log_gene_metrics(
+    gene: str,
+    experiment: str,
+    start_time: float,
+    end_time: float,
+    subnetwork_nodes: int = 0,
+    subnetwork_edges: int = 0,
+):
+    log_path = Path(const.DATA_PATH) / f"{experiment}_gene_metrics.csv"
+    duration = round(end_time - start_time, 2)
+
+    row = {
+        "timestamp": datetime.now().isoformat(),
+        "experiment": experiment,
+        "gene": gene,
+        "start_time": int(start_time),
+        "end_time": int(end_time),
+        "duration_sec": duration,
+        "subnetwork_nodes": subnetwork_nodes,
+        "subnetwork_edges": subnetwork_edges,
+    }
+
+    header = list(row.keys())
+    file_exists = log_path.exists()
+
+    with open(log_path, mode="a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=header)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
+
+
 
 
 def get_steady_state_df(dest_dir, network_name) -> pd.DataFrame:
@@ -130,8 +173,6 @@ def update_ode_file(subnetwork_dir: str, subnetwork_name: str, perturbed_gene: s
     return nodes, param_names
 
 
-
-
 def update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_subgraph, og_steady_state, perturbed_gene):
     """
     Update the files to the subgraph scope. This is done by removing all nodes and edges that are not in the subgraph.
@@ -149,12 +190,26 @@ def update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_
 
 def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_data_dir):
 
+    metadata = {}
+
     #store what parameters where used for the steady state (init_cond: param_num)
     params_per_steady_state = [[row_id+1, row["ParamNum"]] for row_id, row in og_steady_state_df.iterrows()]
 
     # Step 1 & 2: get subgraph induced by all reachable nodes
-    reachable_nodes = nx.descendants(G, gene_to_perturb) | {gene_to_perturb}
+    all_nodes = sorted(G.nodes())
+    reachable_nodes = nx.descendants(G, gene_to_perturb)
+    # if there is an edge in G from a node in reachable_nodes to gene_to_perturb, add gene_to_perturb to reachable nodes
+    for node in reachable_nodes | {gene_to_perturb}:
+        if G.has_edge(node, gene_to_perturb):
+            reachable_nodes.add(gene_to_perturb)
+            break
+    source_reachable = gene_to_perturb in reachable_nodes
+    # include the gene to perturb for the racipe computations but be aware that it is not part of the steady state 
+    reachable_nodes = sorted(reachable_nodes.union({gene_to_perturb}))
     subnetwork = G.subgraph(reachable_nodes).copy()
+
+    metadata["num_nodes_subgraph"] = len(subnetwork.nodes())
+    metadata["num_edges_subgraph"] = len(subnetwork.edges())
 
     # Step 3: perturb the subnetwork edges
     perturbed_subgraph = simulate_loss_of_function(subnetwork, gene_to_perturb)
@@ -168,10 +223,30 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
         batch_size=4000,
         predefined_combinations=params_per_steady_state, #TODO check if this is right
         normalize=False,
-        discretize=False,
+        discretize=True,
     )
-
     subnetwork_steady_state_df = get_steady_state_df(raw_data_dir, subnetwork_name)
+
+    if not source_reachable:
+        # source was only added for racipe computations and needs to be removed
+        reachable_nodes.remove(gene_to_perturb)
+    index_positions = [all_nodes.index(node) for node in reachable_nodes]
+    og_states = [str(s).replace("'", "") for s in og_steady_state_df["State"].tolist()]
+    sub_states = [str(s).replace("'", "") for s in subnetwork_steady_state_df["State"].tolist()]
+
+
+    def merge_states(og_state, sub_state):
+        og_state = list(og_state)  # Convert to list for mutability
+        for idx, pos in enumerate(index_positions):
+            og_state[pos] = sub_state[idx]
+        return "".join(og_state)
+
+    merged_states = [
+        merge_states(og_state, sub_state)
+        for og_state, sub_state in zip(og_states, sub_states)
+    ]
+    og_steady_state_df["State"] = merged_states
+    subnetwork_steady_state_df["State"] = merged_states
     # replace values in og state with subnetwork state. og_steady_state_df has more columns than subnetwork_steady_state_df
     # overwrite only the columns that are in subnetwork_steady_state_df
     perturbed_steady_state_df = og_steady_state_df.copy()
@@ -179,7 +254,7 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
         if col in perturbed_steady_state_df.columns:
             perturbed_steady_state_df[col] = subnetwork_steady_state_df[col]
 
-    return perturbed_steady_state_df
+    return perturbed_steady_state_df, metadata
 
 
 def nx_to_pyg_edges(G, gene_to_idx):
@@ -216,7 +291,8 @@ def process_gene(
     perturbations_per_gene,
     num_genes_to_perturb
 ):
-    print(f"Processing gene {gene_to_perturb}. Starting time: {utils.get_current_time()}")
+    start = time.time()
+
     subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
     num_init_conds = int(np.cbrt(perturbations_per_gene))
     num_params = perturbations_per_gene // num_init_conds
@@ -237,14 +313,24 @@ def process_gene(
         save_dir=raw_data_dir,
         batch_size=4000,
         normalize=False,
-        discretize=False,
+        discretize=True,
     )
 
+
     steady_state_df = get_steady_state_df(raw_data_dir, subnetwork_name)
+    init_steady_states = steady_state_df["State"].values
     og_steady_state_df = steady_state_df[gene_to_idx.keys()].copy()
-    perturbed_steady_state_df = perturb_graph(G, gene_to_perturb, steady_state_df, subnetwork_name, raw_data_dir)
+    perturbed_steady_state_df, subnetwork_metadata = perturb_graph(G, gene_to_perturb, steady_state_df, subnetwork_name, raw_data_dir)
+    perturbed_steady_states = perturbed_steady_state_df["State"].values
     perturbed_steady_state_df = perturbed_steady_state_df[gene_to_idx.keys()]
     difference_to_og_steady_state = perturbed_steady_state_df - og_steady_state_df
+
+    # Collect metadata to return instead of writing to file directly
+    metadata_for_return = pd.DataFrame({
+        "perturbed_gene": [gene_to_perturb] * len(init_steady_states),
+        "init_steady_state": init_steady_states,
+        "perturbed_steady_state": perturbed_steady_states,
+    })
 
     local_datapoints = []
     for row_id, diff_row in difference_to_og_steady_state.iterrows():
@@ -274,6 +360,20 @@ def process_gene(
 
     shutil.rmtree(raw_data_dir / subnetwork_name, ignore_errors=True)
 
+    end = time.time()
+    p = psutil.Process(os.getpid())
+
+    log_gene_metrics(
+        gene=gene_to_perturb,
+        experiment=const.EXPERIMENT,
+        start_time=start,
+        end_time=end,
+        subnetwork_nodes=subnetwork_metadata.get("num_nodes_subgraph"),
+        subnetwork_edges=subnetwork_metadata.get("num_edges_subgraph"),
+    )
+
+    return metadata_for_return
+
 
 def create_data_set(
     raw_data_dir: Path,
@@ -281,10 +381,6 @@ def create_data_set(
     og_network_name: str,
     desired_dataset_size: int,
 ):
-    shutil.rmtree(raw_data_dir, ignore_errors=True)
-    raw_data_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Creating data set with {desired_dataset_size} samples for {og_network_name} in {raw_data_dir}")
-
     G, gene_to_idx = utils.get_graph_data_from_topo(topo_file)
 
     genes_with_outgoing_edges = [gene for gene in G.nodes() if G.out_degree(gene) > 0]
@@ -312,7 +408,19 @@ def create_data_set(
 
     ctx = mp.get_context("spawn")  # use "spawn" instead of default "fork"
     with ctx.Pool(processes=const.N_CORES) as pool:
-        list(tqdm(pool.starmap(process_gene, args), total=len(args), desc="Processing genes"))
+        results = list(tqdm(pool.starmap(process_gene, args), total=len(args), desc="Processing genes"))
+    
+    # Collect all metadata and save to file after multiprocessing is complete
+    ss_metadata_file = Path(const.DATA_PATH) / "steady_state_metadata.csv"
+    if ss_metadata_file.exists():
+        ss_metadata_df = pd.read_csv(ss_metadata_file)
+    else:
+        ss_metadata_df = pd.DataFrame(columns=["perturbed_gene", "init_steady_state", "perturbed_steady_state"])
+    
+    # Concatenate all metadata from the processes
+    all_new_metadata = pd.concat(results, ignore_index=True)
+    ss_metadata_df = pd.concat([ss_metadata_df, all_new_metadata], ignore_index=True)
+    ss_metadata_df.to_csv(ss_metadata_file, index=False)
 
 
 def main():
@@ -323,6 +431,10 @@ def main():
     dest_dir = Path(const.RAW_PATH)
     topo_file = f"{const.TOPO_PATH}/{const.NETWORK}.topo"
     sample_count = const.N_SAMPLES
+
+    shutil.rmtree(dest_dir, ignore_errors=True)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Creating data set with {sample_count} samples for {const.NETWORK} in {dest_dir}")
 
     create_data_set(
         dest_dir,
