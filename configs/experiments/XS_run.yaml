@@ -5,3 +5,8 @@ training:
   epochs: 5
 
 network: custom_10
+
+# Gene-specific metrics configuration example
+gene_specific_metrics:
+  enabled: true
+  genes_of_interest: ["A", "B", "C", "D", "E"]  # Example genes of interest

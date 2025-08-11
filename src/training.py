@@ -32,7 +32,8 @@ class WeightedMSELoss(torch.nn.Module):
         super().__init__()
 
     def forward(self, pred, actual, weight):
-        return (weight * (pred - actual) ** 2).sum()
+        # Return mean loss instead of sum to be consistent with other loss functions
+        return (weight * (pred - actual) ** 2).mean()
 
 
 def subsampleClasses(y: torch.Tensor, y_hat: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -230,6 +231,7 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
 
             if const.CLASS_WEIGHTING or const.GRAPH_WEIGHTING:
                 loss = criterion(out, y, w)
+                # WeightedMSELoss now returns mean, so no need to normalize
             else:
                 loss = criterion(out, y)
                 
@@ -243,14 +245,16 @@ def train(model: torch.nn.Module, model_name: str, train_dataset: SDDataset, val
             agg_train_loss += loss.item()
             batch_count += 1
 
-        writer.add_scalar("Loss/train", agg_train_loss, epoch)
+        # Average the training loss across batches, just like validation
+        avg_train_loss = agg_train_loss / batch_count
+        writer.add_scalar("Loss/train", avg_train_loss, epoch)
         writer.add_scalar("LearningRate", scheduler.get_last_lr()[0], epoch)
 
         val_loss, val_acc = validate(model, val_loader, criterion, is_data_parallel)
         writer.add_scalar("Loss/val", val_loss, epoch)
         if val_acc is not None:
             writer.add_scalar("Accuracy/val", val_acc, epoch)
-        print(f"Epoch {epoch}: Train Loss = {agg_train_loss:.4f}, Val Loss = {val_loss:.4f}, Val Acc = {val_acc:.4f}")
+        print(f"Epoch {epoch}: Train Loss = {avg_train_loss:.4f}, Val Loss = {val_loss:.4f}, Val Acc = {val_acc:.4f}")
 
         if val_loss < best_loss:
             print("Saving new best model ...")

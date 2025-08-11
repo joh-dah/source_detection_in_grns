@@ -13,6 +13,11 @@ network: tiny
 on_cluster: true
 seed: 42
 
+# Gene-specific metrics
+gene_specific_metrics:
+  enabled: true
+  genes_of_interest: []  # List of gene names to track specifically, e.g., ["TP53", "MYC", "BRCA1"]
+
 # Paths
 data_path: "data"
 model_path: "models"

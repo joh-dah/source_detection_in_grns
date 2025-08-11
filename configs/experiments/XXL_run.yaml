@@ -5,3 +5,7 @@ training:
   epochs: 200 
 
 network: dorothea_150
+
+gene_specific_metrics:
+  enabled: true
+  genes_of_interest: ["IRF3", "ATF7", "SREBF2", "MYC"]  

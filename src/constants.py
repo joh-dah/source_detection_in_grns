@@ -150,3 +150,8 @@ NETWORK = params["network"]
 
 N_NODES = network_dict[NETWORK]
 GCNSI_N_FEATURES = 2
+
+# Gene-specific metrics
+gene_metrics = params.get("gene_specific_metrics", {})
+GENE_METRICS_ENABLED = gene_metrics.get("enabled", False)
+GENES_OF_INTEREST = gene_metrics.get("genes_of_interest", [])

@@ -47,7 +47,7 @@ echo "Submitting shared data creation job..."
 DATA_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="data_creation"
-#SBATCH --mem=128G
+#SBATCH --mem=256G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard

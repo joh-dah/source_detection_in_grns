@@ -1,0 +1,12 @@
+data_creation:
+  n_samples: 10000 
+
+training:
+  epochs: 200 
+
+network: dorothea_39
+
+# Gene-specific metrics configuration example
+gene_specific_metrics:
+  enabled: true
+  genes_of_interest: ["TP53", "MYC", "BRCA1", "AKT1", "STAT3"]  # Example genes of interest

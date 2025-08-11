@@ -1,0 +1,12 @@
+data_creation:
+  n_samples: 10000 
+  graph_noise:
+    missing_edges: 0.5
+    wrong_edges: 0.9
+    missing_nodes: 0
+    rewired_edges: 0
+
+training:
+  epochs: 200 
+
+network: dorothea_99

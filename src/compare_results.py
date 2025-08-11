@@ -280,12 +280,7 @@ def create_comparison_plots(df: pd.DataFrame, output_dir: str):
 
 
 def main():
-
-    const.EXPERIMENT = "XS_run"  # Example experiment name, adjust as needed
     results_dir = f"{const.REPORT_PATH}/{const.EXPERIMENT}"
-
-    results_dir = "reports/XS_run"
-    
     print(f"Loading results from: {results_dir}")
     
     # Check if input directory exists

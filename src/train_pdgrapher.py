@@ -52,7 +52,7 @@ def main():
 
     trainer = Trainer(
         fabric_kwargs={"accelerator": accelerator, "devices": 1},
-        log=True, logging_name="tuned",
+        log=True, logging_name=f"{const.EXPERIMENT}_tuned",
         use_forward_data=True, use_backward_data=True, use_supervision=True,
         use_intervention_data=True, supervision_multiplier=0.05,
         log_train=False, log_test=True
@@ -64,7 +64,7 @@ def main():
     print(model_performance)
     
     # Save training results
-    with open(f"examples/PDGrapher/multifold_final.txt", "w") as f:
+    with open(f"examples/PDGrapher/{const.EXPERIMENT}_multifold_final.txt", "w") as f:
         f.write(str(model_performance))
 
     # Save the best perturbation discovery model

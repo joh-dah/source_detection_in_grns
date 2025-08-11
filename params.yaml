@@ -12,7 +12,7 @@ network: custom_10
 on_cluster: false
 seed: 42
 model: pdgrapher
-model_name: pdgrapher_default
+model_name: pdgrapher
 training:
     alpha: 0.5
     batch_size: 64

@@ -32,6 +32,7 @@ def log_gene_metrics(
     end_time: float,
     subnetwork_nodes: int = 0,
     subnetwork_edges: int = 0,
+    biggest_hub_subnetwork: int = 0,
 ):
     log_path = Path(const.DATA_PATH) / f"{experiment}_gene_metrics.csv"
     duration = round(end_time - start_time, 2)
@@ -45,6 +46,7 @@ def log_gene_metrics(
         "duration_sec": duration,
         "subnetwork_nodes": subnetwork_nodes,
         "subnetwork_edges": subnetwork_edges,
+        "biggest_hub_subnetwork": biggest_hub_subnetwork,
     }
 
     header = list(row.keys())
@@ -55,8 +57,6 @@ def log_gene_metrics(
         if not file_exists:
             writer.writeheader()
         writer.writerow(row)
-
-
 
 
 def get_steady_state_df(dest_dir, network_name) -> pd.DataFrame:
@@ -210,6 +210,8 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
 
     metadata["num_nodes_subgraph"] = len(subnetwork.nodes())
     metadata["num_edges_subgraph"] = len(subnetwork.edges())
+    # find the biggest hub in the subnetwork
+    metadata["biggest_hub_subnetwork"] = max(dict(subnetwork.degree()).values())
 
     # Step 3: perturb the subnetwork edges
     perturbed_subgraph = simulate_loss_of_function(subnetwork, gene_to_perturb)
@@ -370,6 +372,7 @@ def process_gene(
         end_time=end,
         subnetwork_nodes=subnetwork_metadata.get("num_nodes_subgraph"),
         subnetwork_edges=subnetwork_metadata.get("num_edges_subgraph"),
+        biggest_hub_subnetwork=subnetwork_metadata.get("biggest_hub_subnetwork", 0),
     )
 
     return metadata_for_return
@@ -428,12 +431,12 @@ def main():
     Creates a data set of graphs with modeled signal propagation for training and validation.
     """
 
+    shutil.rmtree(const.DATA_PATH, ignore_errors=True)
     dest_dir = Path(const.RAW_PATH)
     topo_file = f"{const.TOPO_PATH}/{const.NETWORK}.topo"
     sample_count = const.N_SAMPLES
-
-    shutil.rmtree(dest_dir, ignore_errors=True)
     dest_dir.mkdir(parents=True, exist_ok=True)
+
     print(f"Creating data set with {sample_count} samples for {const.NETWORK} in {dest_dir}")
 
     create_data_set(
