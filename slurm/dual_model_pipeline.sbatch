@@ -15,8 +15,8 @@ EXPERIMENT=${EXPERIMENT_NAME:-testrun}
 # Create timing log directory
 mkdir -p $TIMING_LOG_DIR
 
-# gpu configuration
-COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx21,gx25,gx26,gx27,gx28,gx29"
+# gpu configuration (excluding gx26 due to GPU errors)
+COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx21,gx25,gx27,gx28,gx29"
 
 # Create output directory if it doesn't exist
 mkdir -p $SLURM_OUT_DIR

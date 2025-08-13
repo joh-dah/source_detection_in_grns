@@ -20,7 +20,7 @@ class SDDataset(Dataset):
     Handles both forward/backward modes (PDGrapher) and individual file mode (GNN).
     Always reads raw data from data/raw and writes processed data to data/processed/{model}.
     """
-    def __init__(self, model_type, processing_func, transform=None, pre_transform=None, mode="individual", raw_data_dir=const.RAW_PATH, edge_index=None, edge_attr=None):
+    def __init__(self, model_type, processing_func, transform=None, pre_transform=None, mode="individual", raw_data_dir=const.RAW_PATH, edge_index=None, edge_attr=None, node_mapping_info=None):
         """
         Args:
             model_type: Type of model (e.g., "GAT", "GCNSI", "PDGrapher")
@@ -29,6 +29,9 @@ class SDDataset(Dataset):
             pre_transform: Optional pre-transform to be applied on a sample (deprecated, use processing_func)
             mode: "individual" for GNN models, "forward"/"backward" for PDGrapher
             raw_data_dir: Directory containing the raw .pt files
+            edge_index: Pre-loaded edge index tensor (optional)
+            edge_attr: Pre-loaded edge attributes tensor (optional)
+            node_mapping_info: Information about removed nodes (optional)
         """
         self.model_type = model_type
         self.processing_func = processing_func or pre_transform  # Backward compatibility
@@ -38,21 +41,14 @@ class SDDataset(Dataset):
         self.mode = mode
         self.edge_index = edge_index
         self.edge_attr = edge_attr
+        self.node_mapping_info = node_mapping_info
 
-        
-        # Create processed data directory
         self.processed_data_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Load and sort raw file paths
         self.raw_files = sorted(self.raw_data_dir.glob("*.pt"))
         self.size = len(self.raw_files)
-        
-        if not self.raw_files:
-            raise ValueError(f"No raw .pt files found in {self.raw_data_dir}")
-        
+
         print(f"Found {len(self.raw_files)} raw data files in {self.raw_data_dir}")
-        
-        # Call parent constructor
+
         super().__init__(str(self.raw_data_dir), transform, self.processing_func, None)
 
     @property
@@ -83,28 +79,28 @@ class SDDataset(Dataset):
     def _process_as_list(self):
         """Process all files into a single list (for PDGrapher-style datasets)"""
         print(f"Processing {len(self.raw_files)} files as single list for mode: {self.mode}")
-        
-        # Ensure processed directory exists
         self.processed_data_dir.mkdir(parents=True, exist_ok=True)
         
         processed_data_list = []
         for raw_path in tqdm(self.raw_files, desc=f"Processing {self.mode} data"):
             data = torch.load(raw_path, weights_only=False)
-            processed_data = self.processing_func(data)
+            # Pass node mapping info if available
+            if hasattr(self.processing_func, '__code__') and 'node_mapping_info' in self.processing_func.__code__.co_varnames:
+                processed_data = self.processing_func(data, self.node_mapping_info)
+            else:
+                processed_data = self.processing_func(data)
             processed_data_list.append(processed_data)
         
-        # Save as single file
         output_file = self.processed_data_dir / f"data_{self.mode}.pt"
         torch.save(processed_data_list, output_file)
         print(f"Saved {len(processed_data_list)} {self.mode} data objects to {output_file}")
 
     def _process_individually(self):
         """Process each file individually with multiprocessing (for GNN-style datasets)"""
-        # Ensure processed directory exists
         self.processed_data_dir.mkdir(parents=True, exist_ok=True)
 
         params = [
-            (self.processing_func, str(self.raw_files[i]), i, str(self.processed_data_dir), self.edge_index, self.edge_attr)
+            (self.processing_func, str(self.raw_files[i]), i, str(self.processed_data_dir), self.edge_index, self.edge_attr, self.node_mapping_info)
             for i in range(self.size)
         ]
         with mp.get_context("spawn").Pool(const.N_CORES) as pool:
@@ -136,18 +132,147 @@ class SDDataset(Dataset):
     
 
 def process_single(args):
-    processing_func, raw_path, idx, processed_dir, edge_index, edge_attr = args
-    # load raw data
+    processing_func, raw_path, idx, processed_dir, edge_index, edge_attr, node_mapping_info = args
     data = torch.load(raw_path, weights_only=False)
-    # process data with pre-loaded edge_index and edge_attr
     if processing_func is not None:
         if processing_func == process_data:
-            # Pass edge_index and edge_attr to process_data function
-            data = processing_func(data, edge_index, edge_attr)
+            data = process_data_with_node_filtering(data, edge_index, edge_attr, node_mapping_info)
+        elif hasattr(processing_func, '__code__') and 'node_mapping_info' in processing_func.__code__.co_varnames:
+            data = processing_func(data, node_mapping_info)
         else:
             data = processing_func(data)
-    # save data object with numeric index
     torch.save(data, os.path.join(processed_dir, f"{idx}.pt"))
+
+
+def filter_data_arrays(data: Data, node_mapping_info: dict) -> Data:
+    """
+    Filter data arrays to remove values corresponding to removed nodes.
+    
+    Args:
+        data: Original data object with arrays corresponding to all original nodes
+        node_mapping_info: Information about removed nodes and index mappings
+        
+    Returns:
+        Modified data object with filtered arrays
+    """
+    if not node_mapping_info['removed_nodes']:
+        # No nodes were removed, return original data
+        return data
+    
+    old_to_new_idx = node_mapping_info['old_to_new_idx']
+    remaining_indices = sorted(old_to_new_idx.keys())
+    remaining_nodes = node_mapping_info['remaining_nodes']
+    filtered_data = Data()
+    
+    # Get the original gene mapping to understand the source gene
+    original_gene_mapping = data.gene_mapping
+    source_gene = data.perturbed_gene
+    
+    # Check if the source gene is still in the remaining nodes
+    if source_gene not in remaining_nodes:
+        raise ValueError(f"Source gene '{source_gene}' was removed from the graph, but source genes should be protected!")
+    
+    # Create new gene mapping for remaining nodes
+    new_gene_mapping = {gene: new_idx for new_idx, gene in enumerate(remaining_nodes)}
+    
+    for key in data.keys:
+        value = data[key]
+        
+        if key in ['original', 'perturbed', 'difference']:
+            # Filter these arrays normally
+            if isinstance(value, (list, np.ndarray)):
+                filtered_value = [value[i] for i in remaining_indices]
+                setattr(filtered_data, key, filtered_value)
+            elif hasattr(value, '__getitem__') and hasattr(value, '__len__'):
+                filtered_value = value[remaining_indices]
+                setattr(filtered_data, key, filtered_value)
+            else:
+                setattr(filtered_data, key, value)
+        elif key == 'binary_perturbation_indicator':
+            # Reconstruct the binary perturbation indicator for the remaining nodes
+            new_indicator = [1 if gene == source_gene else 0 for gene in remaining_nodes]
+            setattr(filtered_data, key, new_indicator)
+        elif key == 'gene_mapping':
+            setattr(filtered_data, key, new_gene_mapping)
+        elif key == 'num_nodes':
+            setattr(filtered_data, key, len(remaining_nodes))
+        else:
+            # Copy other attributes as-is
+            setattr(filtered_data, key, value)
+    
+    # Verify that we still have exactly one source
+    binary_indicator = getattr(filtered_data, 'binary_perturbation_indicator', [])
+    if sum(binary_indicator) != 1:
+        raise ValueError(f"After filtering, expected exactly 1 source node, but found {sum(binary_indicator)} in binary_perturbation_indicator")
+    
+    return filtered_data
+
+
+def process_data_with_node_filtering(data: Data, edge_index: torch.Tensor = None, edge_attr: torch.Tensor = None, node_mapping_info: dict = None) -> Data:
+    """
+    Enhanced version of process_data that filters out removed nodes.
+    
+    Args:
+        data: input data to be processed
+        edge_index: Pre-loaded edge index tensor (optional)
+        edge_attr: Pre-loaded edge attributes tensor (optional)
+        node_mapping_info: Information about removed nodes (optional)
+        
+    Returns:
+        processed data with expanded features and labels, filtered for remaining nodes
+    """
+    if node_mapping_info and node_mapping_info['removed_nodes']:
+        data = filter_data_arrays(data, node_mapping_info)
+
+    healthy_norm, perturbed_norm = normalize_paired_tensors(data.original, data.perturbed)
+    data.x = torch.stack([healthy_norm, perturbed_norm], dim=1).float()
+
+    data.edge_index = edge_index
+    data.edge_attr = edge_attr
+
+    data.y = torch.tensor(data.binary_perturbation_indicator, dtype=torch.float32)
+    
+    return data
+
+
+def backward_data_with_node_filtering(data: Data, node_mapping_info: dict = None) -> Data:
+    """
+    Enhanced version of backward_data that filters out removed nodes.
+    """
+    if node_mapping_info and node_mapping_info['removed_nodes']:
+        data = filter_data_arrays(data, node_mapping_info)
+
+    diseased_norm, treated_norm = normalize_paired_tensors(data.original, data.perturbed)
+    
+    return Data(
+        perturbagen_name=data.perturbed_gene,
+        diseased=diseased_norm,
+        intervention=torch.tensor(data.binary_perturbation_indicator, dtype=torch.float32),
+        treated=treated_norm,
+        gene_symbols=list(data.gene_mapping.keys()),
+        mutations=torch.zeros(data.num_nodes, dtype=torch.float32),
+        batch=torch.arange(data.num_nodes, dtype=torch.long),
+        num_nodes=data.num_nodes,
+    )
+
+
+def forward_data_with_node_filtering(data: Data, node_mapping_info: dict = None) -> Data:
+    """
+    Enhanced version of forward_data that filters out removed nodes.
+    """
+    if node_mapping_info and node_mapping_info['removed_nodes']:
+        data = filter_data_arrays(data, node_mapping_info)
+
+    healthy_norm, diseased_norm = normalize_paired_tensors(data.original, data.perturbed)
+    
+    return Data(
+        healthy=healthy_norm,
+        diseased=diseased_norm,
+        mutations=torch.tensor(data.binary_perturbation_indicator, dtype=torch.float32),
+        gene_symbols=list(data.gene_mapping.keys()),
+        batch=torch.arange(data.num_nodes, dtype=torch.long),
+        num_nodes=data.num_nodes,
+    )
 
 
 def normalize_paired_tensors(tensor1, tensor2) -> tuple[torch.Tensor, torch.Tensor]:
@@ -279,6 +404,7 @@ def remove_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
 
     return G
 
+
 def add_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
     """Add a fraction of edges to the graph, preferring sources with high out-degree and targets with high in-degree."""
     num_edges = G.number_of_edges()
@@ -308,11 +434,145 @@ def add_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
             G.add_edge(u, v, weight=np.random.choice([1, 2]))
     return G
 
-def remove_nodes(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
-    """PLACEHOLDER: Remove a fraction of nodes from the graph."""
-    #TODO: Implement node removal logic, 
-    # be careful to adjust the node value data accordingly
-    return G
+def remove_nodes(G: nx.DiGraph, fraction: float, protected_nodes: set = None) -> tuple[nx.DiGraph, dict]:
+    """
+    Remove a fraction of nodes from the graph with bias towards lower degree nodes.
+    When a node is removed, create transitive edges to preserve connectivity.
+    Source nodes (potential perturbation targets) are protected from removal.
+    
+    Args:
+        G: Directed graph
+        fraction: Fraction of nodes to remove (0.0 to 1.0)
+        protected_nodes: Set of node names that should never be removed (e.g., source nodes)
+        
+    Returns:
+        Tuple of (modified graph, node_mapping_info) where node_mapping_info contains:
+        - 'removed_nodes': set of removed node names
+        - 'remaining_nodes': list of remaining node names (in order)
+        - 'old_to_new_idx': dict mapping old indices to new indices
+    """
+    if fraction <= 0:
+        return G, {
+            'removed_nodes': set(),
+            'remaining_nodes': list(G.nodes()),
+            'old_to_new_idx': {i: i for i in range(len(G.nodes()))}
+        }
+    
+    # Create a copy to avoid modifying the original
+    G_modified = G.copy()
+    original_nodes = list(G.nodes())  # Store original node order
+    
+    # Initialize protected nodes if not provided (for backward compatibility)
+    if protected_nodes is None:
+        protected_nodes = set()
+    
+    # Calculate number of nodes to remove
+    num_nodes = G_modified.number_of_nodes()
+    nodes_to_remove_count = int(num_nodes * fraction)
+    
+    if nodes_to_remove_count == 0:
+        return G_modified, {
+            'removed_nodes': set(),
+            'remaining_nodes': original_nodes,
+            'old_to_new_idx': {i: i for i in range(len(original_nodes))}
+        }
+    
+    # Get all nodes that can be removed (excluding protected nodes)
+    removable_nodes = [node for node in G_modified.nodes() if node not in protected_nodes]
+    
+    # Ensure we don't try to remove more nodes than are available
+    max_removable = len(removable_nodes)
+    nodes_to_remove_count = min(nodes_to_remove_count, max_removable)
+    
+    if nodes_to_remove_count == 0 or max_removable == 0:
+        print(f"Warning: Cannot remove any nodes. Protected nodes: {len(protected_nodes)}, Total nodes: {num_nodes}, Removable nodes: {max_removable}")
+        return G_modified, {
+            'removed_nodes': set(),
+            'remaining_nodes': original_nodes,
+            'old_to_new_idx': {i: i for i in range(len(original_nodes))}
+        }
+    
+    # Get degrees only for removable nodes
+    degrees = np.array([G_modified.degree(node) for node in removable_nodes])
+    
+    # Create probability distribution favoring lower degree nodes
+    # Invert degrees so lower degree = higher probability
+    max_degree = degrees.max() if degrees.max() > 0 else 1
+    inverted_degrees = max_degree - degrees + 1  # +1 to avoid zero probability
+    probabilities = inverted_degrees / inverted_degrees.sum()
+    
+    # Select nodes to remove without replacement (only from removable nodes)
+    nodes_to_remove = np.random.choice(
+        removable_nodes, 
+        size=nodes_to_remove_count, 
+        replace=False, 
+        p=probabilities
+    )
+    
+    # Process each node removal
+    for node in nodes_to_remove:
+        if node not in G_modified:
+            continue  # Node might have been removed already
+            
+        # Get all incoming and outgoing edges
+        predecessors = list(G_modified.predecessors(node))
+        successors = list(G_modified.successors(node))
+        
+        # Create transitive edges for all predecessor-successor pairs
+        for pred in predecessors:
+            for succ in successors:
+                if pred != succ and not G_modified.has_edge(pred, succ):
+                    # Get edge weights
+                    pred_edge_weight = G_modified[pred][node]['weight']
+                    succ_edge_weight = G_modified[node][succ]['weight']
+                    
+                    # Validate edge weights
+                    if pred_edge_weight not in [1, 2] or succ_edge_weight not in [1, 2]:
+                        raise ValueError(f"Invalid edge weight encountered: {pred_edge_weight}, {succ_edge_weight}. Only weights 1 and 2 are allowed.")
+            
+                    if pred_edge_weight == 2 and succ_edge_weight == 2:
+                        transitive_weight = 1  # inhibition + inhibition = activation
+                    elif pred_edge_weight == 1 and succ_edge_weight == 2:
+                        transitive_weight = 2  # activation + inhibition = inhibition
+                    elif pred_edge_weight == 1 and succ_edge_weight == 1:
+                        transitive_weight = 1  # activation + activation = activation
+                    elif pred_edge_weight == 2 and succ_edge_weight == 1:
+                        transitive_weight = 2  # inhibition + activation = inhibition
+                    
+                    # Add the transitive edge
+                    G_modified.add_edge(pred, succ, weight=transitive_weight)
+        
+        # Remove the node (this also removes all its edges)
+        G_modified.remove_node(node)
+    
+    # Create mapping information for dataset processing
+    removed_nodes = set(nodes_to_remove)
+    remaining_nodes = [node for node in original_nodes if node not in removed_nodes]
+    
+    # Create mapping from old indices to new indices
+    old_to_new_idx = {}
+    new_idx = 0
+    for old_idx, node in enumerate(original_nodes):
+        if node not in removed_nodes:
+            old_to_new_idx[old_idx] = new_idx
+            new_idx += 1
+        # Removed nodes don't get a mapping (they'll be filtered out)
+    
+    node_mapping_info = {
+        'removed_nodes': removed_nodes,
+        'remaining_nodes': remaining_nodes,
+        'old_to_new_idx': old_to_new_idx
+    }
+    
+    print(f"Node removal summary:")
+    print(f"  - Original nodes: {len(original_nodes)}")
+    print(f"  - Protected nodes: {len(protected_nodes)}")
+    print(f"  - Removable nodes: {max_removable}")
+    print(f"  - Requested to remove: {int(num_nodes * fraction)} ({fraction:.1%} of total)")
+    print(f"  - Actually removed: {len(nodes_to_remove)} nodes: {sorted(removed_nodes)}")
+    print(f"  - Final graph: {G_modified.number_of_nodes()} nodes and {G_modified.number_of_edges()} edges.")
+    
+    return G_modified, node_mapping_info
 
 def rewire_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
     """Rewire a fraction of edges in the graph, preserving weak connectivity."""
@@ -347,19 +607,41 @@ def rewire_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
     return G
 
 
-def add_noise_to_graph(G: nx.DiGraph) -> nx.DiGraph:
+def add_noise_to_graph(G: nx.DiGraph) -> tuple[nx.DiGraph, dict]:
+    """
+    Add various types of noise to the graph.
+    
+    Args:
+        G: Original directed graph
+        
+    Returns:
+        Tuple of (perturbed graph, node_mapping_info) where node_mapping_info contains
+        information about removed nodes and index mappings if nodes were removed.
+    """
     print("Graph before noise:")
     print(f"Number of nodes: {G.number_of_nodes()}, Number of edges: {G.number_of_edges()}")
+
+    source_nodes = set([gene for gene in G.nodes() if G.out_degree(gene) > 0])
+    
     G_perturbed = remove_edges(G, const.GRAPH_NOISE["missing_edges"])
     print("Graph after removing edges:")
     print(f"Number of nodes: {G_perturbed.number_of_nodes()}, Number of edges: {G_perturbed.number_of_edges()}")
+    
     G_perturbed = add_edges(G_perturbed, const.GRAPH_NOISE["wrong_edges"])
     print("Graph after adding wrong edges:")
     print(f"Number of nodes: {G_perturbed.number_of_nodes()}, Number of edges: {G_perturbed.number_of_edges()}")
-    G_perturbed = remove_nodes(G_perturbed, const.GRAPH_NOISE["missing_nodes"])
+    
+    # This is the critical step - remove_nodes now returns mapping info
+    # Pass source_nodes as protected_nodes to ensure they're never removed
+    G_perturbed, node_mapping_info = remove_nodes(G_perturbed, const.GRAPH_NOISE["missing_nodes"], protected_nodes=source_nodes)
+    print("Graph after removing nodes:")
+    print(f"Number of nodes: {G_perturbed.number_of_nodes()}, Number of edges: {G_perturbed.number_of_edges()}")
+    
     G_perturbed = rewire_edges(G_perturbed, const.GRAPH_NOISE["rewired_edges"])
+    print("Graph after rewiring edges:")
+    print(f"Number of nodes: {G_perturbed.number_of_nodes()}, Number of edges: {G_perturbed.number_of_edges()}")
 
-    return G_perturbed
+    return G_perturbed, node_mapping_info
 
 
 #TODO PLACEHOLDER Double check and shorten
@@ -461,7 +743,7 @@ def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
     """
 
     G, _ = utils.get_graph_data_from_topo(Path(const.TOPO_PATH) / f"{const.NETWORK}.topo")
-    G_perturbed = add_noise_to_graph(G)
+    G_perturbed, node_mapping_info = add_noise_to_graph(G)
     
     # create a torch geometric edge_index from the graph
     G = from_networkx(G_perturbed, group_edge_attrs=['weight'])
@@ -476,17 +758,19 @@ def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
         # Create backward dataset
         backward_dataset = SDDataset(
             model_type=model_type,
-            processing_func=backward_data,
+            processing_func=backward_data_with_node_filtering,
             mode="backward",
-            raw_data_dir=raw_data_dir
+            raw_data_dir=raw_data_dir,
+            node_mapping_info=node_mapping_info
         )
         
         # Create forward dataset  
         forward_dataset = SDDataset(
             model_type=model_type,
-            processing_func=forward_data,
+            processing_func=forward_data_with_node_filtering,
             mode="forward",
-            raw_data_dir=raw_data_dir
+            raw_data_dir=raw_data_dir,
+            node_mapping_info=node_mapping_info
         )
         
         print("PDGrapher-style datasets created successfully!")
@@ -506,7 +790,8 @@ def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
             mode="individual",
             raw_data_dir=raw_data_dir,
             edge_index = G.edge_index,
-            edge_attr = G.edge_attr
+            edge_attr = G.edge_attr,
+            node_mapping_info=node_mapping_info
         )
         
         print(f"{model_type} dataset created successfully!")
