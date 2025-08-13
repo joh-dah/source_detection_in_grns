@@ -19,9 +19,18 @@ def main():
     data_processed_dir = Path(const.DATA_PATH) / "processed" / const.MODEL
     splits_path = const.SPLITS_PATH
 
-    # Check if files exist
-    if not os.path.exists(splits_path):
-        raise FileNotFoundError(f"Splits file not found at {splits_path}. Please run 'src/create_splits.py' first.")
+    # Check if all required files exist
+    required_files = [
+        splits_path,
+        f"{data_processed_dir}/data_forward.pt",
+        f"{data_processed_dir}/data_backward.pt",
+        f"{data_processed_dir}/edge_index.pt",
+        f"{data_processed_dir}/thresholds.pt"
+    ]
+    
+    for file_path in required_files:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Required file not found: {file_path}. Please run data processing first.")
 
     dataset = Dataset(
         forward_path=f"{data_processed_dir}/data_forward.pt",
@@ -29,13 +38,49 @@ def main():
         splits_path=const.SPLITS_PATH,
     )
 
+    # Load thresholds (required by PDGrapher for discretizing expression values)
+    thresholds_path = data_processed_dir / "thresholds.pt"
+    thresholds = torch.load(thresholds_path, weights_only=False)
+    print(f"Loaded thresholds: {list(thresholds.keys())}")
+    
+    # Validate thresholds have the expected structure
+    for direction in ['forward', 'backward']:
+        if direction not in thresholds:
+            raise ValueError(f"Missing {direction} thresholds")
+        if len(thresholds[direction]) != 501:  # 500 bins + 1
+            print(f"Warning: {direction} thresholds has {len(thresholds[direction])} values, expected 501")
+
     edge_index = torch.load(f"{data_processed_dir}/edge_index.pt", weights_only=False)
+
+
+# Can be removed?
+    # # Validate edge_index structure
+    # print(f"Edge index shape: {edge_index.shape}")
+    # print(f"Expected nodes: {const.N_NODES}")
+    # if edge_index.max().item() >= const.N_NODES:
+    #     print(f"Warning: Edge index contains node {edge_index.max().item()}, but only {const.N_NODES} nodes expected")
+    # # Check dataset info
+    # print(f"Dataset num_vars: {dataset.get_num_vars()}")
+    # print(f"Network nodes: {const.N_NODES}")
+    
+    # # Validate dataset loading
+    # try:
+    #     sample_data = dataset[0]  # Try to get first sample
+    #     print(f"Sample data keys: {sample_data.keys() if hasattr(sample_data, 'keys') else 'No keys (likely tensor)'}")
+    #     if hasattr(sample_data, 'x'):
+    #         print(f"Sample x shape: {sample_data.x.shape}")
+    #     if hasattr(sample_data, 'y'):
+    #         print(f"Sample y shape: {sample_data.y.shape}")
+    # except Exception as e:
+    #     print(f"Warning: Could not load sample data: {e}")
+    
+    #TODO: CHECK THOSE VALUES:
     model = PDGrapher(edge_index, model_kwargs={
         "n_layers_nn": const.LAYERS, 
         "n_layers_gnn": const.LAYERS, 
-        "positional_features_dim": 64, 
-        "embedding_layer_dim": 8,
-        "dim_gnn": 8, 
+        "positional_features_dim": 64,  # Should match expression discretization bins (500)
+        "embedding_layer_dim": 64,      # Increased from 8 for better representation
+        "dim_gnn": 64,                  # Increased from 8 for better capacity
         "num_vars": dataset.get_num_vars()
     })
     
@@ -68,16 +113,17 @@ def main():
         f.write(str(model_performance))
 
     # Save the best perturbation discovery model
-    save_best_perturbation_model(model, trainer)
+    save_best_perturbation_model(model, trainer, edge_index)
 
 
-def save_best_perturbation_model(pdgrapher_model, trainer):
+def save_best_perturbation_model(pdgrapher_model, trainer, edge_index):
     """
-    Save the best perturbation discovery model with timestamp.
+    Save the best perturbation discovery model with complete configuration.
     
     Args:
         pdgrapher_model: The trained PDGrapher model
         trainer: The PDGrapher trainer (may contain best model state)
+        edge_index: The graph edge index tensor
     """
     timestamp = utils.get_current_time()
     
@@ -91,18 +137,27 @@ def save_best_perturbation_model(pdgrapher_model, trainer):
     
     save_dict = {
         'model_state_dict': perturbation_model.state_dict(),
+        'edge_index': edge_index,
         'model_config': {
             'n_layers_nn': const.LAYERS,
             'n_layers_gnn': const.LAYERS,
             'positional_features_dim': 64,
-            'embedding_layer_dim': 8,
-            'dim_gnn': 8,
-            'num_vars': pdgrapher_model.perturbation_discovery.num_vars if hasattr(pdgrapher_model.perturbation_discovery, 'num_vars') else None
+            'embedding_layer_dim': 64,
+            'dim_gnn': 64,
+            'num_vars': perturbation_model.num_vars if hasattr(perturbation_model, 'num_vars') else None,
+            'n_nodes': const.N_NODES
+        },
+        'training_config': {
+            'experiment': const.EXPERIMENT,
+            'epochs': const.EPOCHS,
+            'learning_rate_pd': 0.0033,
+            'learning_rate_rp': 0.0075,
+            'use_supervision': True,
+            'supervision_multiplier': 0.05
         },
         'training_performance': trainer.best_performance if hasattr(trainer, 'best_performance') else None,
         'timestamp': timestamp,
-        'model_type': 'perturbation_discovery',
-        'epochs': const.EPOCHS
+        'model_type': 'perturbation_discovery'
     }
 
     torch.save(save_dict, model_save_path)

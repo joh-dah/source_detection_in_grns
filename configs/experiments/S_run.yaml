@@ -2,6 +2,6 @@ data_creation:
   n_samples: 5000 
 
 training:
-  epochs: 100 
+  epochs: 50
 
 network: tp53_30

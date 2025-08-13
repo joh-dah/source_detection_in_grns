@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import networkx as nx
+import os
 from sklearn.metrics import roc_auc_score, precision_score, recall_score, f1_score
 from pathlib import Path
 
@@ -27,14 +28,17 @@ class ModelValidator:
     
     def __init__(self, model_type: str, model_name: str = None):
         self.model_type = model_type.lower()
-        self.model_name = model_name or utils.latest_model_name()
+        self.model_name = model_name
         self.model_path = f"{const.MODEL_PATH}/{const.MODEL}/{self.model_name}_latest.pt"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         # Initialize cached true sources for PDGrapher
         self._pdgrapher_true_sources = None
         
-        print(f"Initializing validator for {self.model_type} using device: {self.device}")
+        print(f"Initializing validator for {self.model_type}")
+        print(f"Model identifier: {self.model_name}")
+        print(f"Model path: {self.model_path}")
+        print(f"Using device: {self.device}")
         
     def load_model(self):
         """Load the appropriate model based on model type."""
@@ -66,6 +70,19 @@ class ModelValidator:
         
         # Load checkpoint
         checkpoint = torch.load(self.model_path, map_location=self.device)
+        
+        # # Try to load edge_index from checkpoint, fallback to processed data
+        # if 'edge_index' in checkpoint:
+        #     edge_index = checkpoint['edge_index'].to(self.device)
+        #     print("Loaded edge_index from model checkpoint")
+        # else:
+        #     # Load from processed data directory
+        #     edge_index_path = Path(const.PROCESSED_PATH) / "edge_index.pt"
+        #     if not edge_index_path.exists():
+        #         raise FileNotFoundError(f"Edge index file not found at {edge_index_path}")
+        #     edge_index = torch.load(edge_index_path, map_location=self.device)
+        #     print("Loaded edge_index from processed data directory")
+        
         state_dict = checkpoint["model_state_dict"]
         
         # Extract model parameters from the saved weights
@@ -80,15 +97,21 @@ class ModelValidator:
         if "convs.2.bias" in state_dict:
             n_layers_gnn = 3
         
-        # Create GCNArgs with the inferred parameters
+        positional_features_dim = state_dict["positional_embeddings.weight"].shape[1]
+        
+
         args = GCNArgs(
-            positional_features_dims=16,
+            positional_features_dims=positional_features_dim,
             embedding_layer_dim=embed_dim,
             dim_gnn=dim_gnn,
             num_vars=num_vars,
             n_layers_gnn=n_layers_gnn,
-            n_layers_nn=2
+            n_layers_nn=const.LAYERS,
         )
+        
+        print(f"Model config (from saved weights): positional_features_dim={positional_features_dim}, "
+              f"embedding_layer_dim={embed_dim}, dim_gnn={dim_gnn}, num_vars={num_vars}, "
+              f"n_layers_gnn={n_layers_gnn}")
         
         # Initialize and load the model
         model = PerturbationDiscoveryModel(args, edge_index)
@@ -97,6 +120,7 @@ class ModelValidator:
         model.eval()
         
         print(f"Loaded PerturbationDiscoveryModel with {sum(p.numel() for p in model.parameters()):,} parameters")
+        print(f"Model configuration loaded from checkpoint: {checkpoint.get('model_config', 'Not available')}")
         return model
     
     def load_test_data(self):
@@ -140,7 +164,6 @@ class ModelValidator:
             backward_path=str(data_path / "data_backward.pt"),
             splits_path=str(const.SPLITS_PATH)
         )
-        
         # Get test data loader with reduced workers for cluster compatibility
         (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1, num_workers=4)
         
@@ -168,9 +191,15 @@ class ModelValidator:
     
     def _get_pdgrapher_predictions(self, model, dataset, test_loader):
         """Get predictions from PDGrapher model."""
-        # Get thresholds for model input processing
-        thresholds = get_thresholds(dataset)
-        thresholds = {k: torch.tensor(v).to(self.device) for k, v in thresholds.items()}
+        # Load thresholds directly from processed data directory
+        thresholds_path = Path(const.PROCESSED_PATH) / "thresholds.pt"
+
+        thresholds = torch.load(thresholds_path, weights_only=False)
+        # Ensure thresholds are on the correct device
+        thresholds = {k: (v.detach().clone() if isinstance(v, torch.Tensor) else torch.tensor(v)).to(self.device) 
+                     for k, v in thresholds.items()}
+        
+        print(f"Loaded thresholds with keys: {list(thresholds.keys())}")
         
         predictions = []
         true_sources = []
@@ -200,12 +229,17 @@ class ModelValidator:
                 batch = data.batch
                 mutations = data.mutations if hasattr(data, 'mutations') else None
 
-                # Predict interventions
+                # Predict interventions using the correct threshold structure for PDGrapher
+                # PDGrapher model expects threshold_input with "diseased" and "treated" keys
+                threshold_input = {
+                    "diseased": thresholds["diseased"],
+                    "treated": thresholds["treated"]
+                }
                 intervention_logits = model(
                     torch.cat([diseased, treated], dim=1),
                     batch,
                     mutilate_mutations=mutations,
-                    threshold_input=thresholds
+                    threshold_input=threshold_input
                 )
 
                 intervention_logits = intervention_logits.flatten()
@@ -311,6 +345,7 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
         in_top5.append(source_rank < 5)
 
     return {
+        "accuracy": np.mean(np.array(source_ranks) == 0),
         "avg rank of source": np.mean(source_ranks),
         "avg prediction for source": np.mean(predictions_for_source),
         "avg prediction over all nodes": np.mean(general_predictions),
@@ -396,12 +431,138 @@ def data_stats(raw_data_set: list) -> dict:
     return stats
 
 
+def gene_specific_metrics(
+    pred_label_set: list,
+    true_sources: list,
+    pred_sources: list,
+    genes_of_interest: list,
+    gene_mapping: dict = None,
+    raw_test_data: list = None
+) -> dict:
+    """Calculate metrics specifically for genes of interest."""
+    if not genes_of_interest or not gene_mapping:
+        return {}
+    
+    # Create reverse mapping from index to gene name
+    idx_to_gene = {v: k for k, v in gene_mapping.items()}
+    
+    # Filter for genes of interest that exist in the mapping
+    valid_genes = [gene for gene in genes_of_interest if gene in gene_mapping]
+    if not valid_genes:
+        print(f"Warning: None of the genes of interest {genes_of_interest} found in gene mapping")
+        return {}
+    
+    gene_metrics_dict = {}
+    
+    for gene_name in valid_genes:
+        gene_idx = gene_mapping[gene_name]
+        gene_metrics = {
+            "gene_name": gene_name,
+            "gene_index": gene_idx,
+            "total_samples": len(true_sources),
+            "times_true_source": 0,
+            "times_predicted_source": 0,
+            "correct_predictions": 0,
+            "avg_prediction_prob": 0.0,
+            "avg_rank": 0.0,
+            "prediction_probs_when_true": [],
+            "ranks_when_true": [],
+            "in_top3_count": 0,
+            "in_top5_count": 0,
+        }
+        
+        # Collect all prediction probabilities for this gene across all samples
+        all_probs_for_gene = []
+        
+        for i, (pred_probs, true_source, pred_source) in enumerate(zip(pred_label_set, true_sources, pred_sources)):
+            # Get prediction probability for this gene
+            if isinstance(pred_probs, torch.Tensor):
+                gene_prob = pred_probs[gene_idx].item()
+            else:
+                gene_prob = pred_probs[gene_idx]
+            
+            all_probs_for_gene.append(gene_prob)
+            
+            # Check if this gene was the true source
+            if true_source == gene_idx:
+                gene_metrics["times_true_source"] += 1
+                gene_metrics["prediction_probs_when_true"].append(gene_prob)
+                
+                # Calculate rank for this gene
+                if isinstance(pred_probs, torch.Tensor):
+                    ranked_predictions = utils.ranked_source_predictions(pred_probs).tolist()
+                else:
+                    # Convert to tensor for ranking function
+                    pred_tensor = torch.tensor(pred_probs)
+                    ranked_predictions = utils.ranked_source_predictions(pred_tensor).tolist()
+                
+                gene_rank = ranked_predictions.index(gene_idx)
+                gene_metrics["ranks_when_true"].append(gene_rank)
+                
+                # Check if correctly predicted
+                if pred_source == gene_idx:
+                    gene_metrics["correct_predictions"] += 1
+            
+            # Check if this gene was predicted as source
+            if pred_source == gene_idx:
+                gene_metrics["times_predicted_source"] += 1
+        
+        # Calculate aggregate metrics
+        gene_metrics["avg_prediction_prob"] = np.mean(all_probs_for_gene)
+        
+        if gene_metrics["times_true_source"] > 0:
+            gene_metrics["avg_rank_when_true"] = np.mean(gene_metrics["ranks_when_true"])
+            gene_metrics["avg_prob_when_true"] = np.mean(gene_metrics["prediction_probs_when_true"])
+            gene_metrics["in_top3_when_true"] = sum(1 for rank in gene_metrics["ranks_when_true"] if rank < 3)
+            gene_metrics["in_top5_when_true"] = sum(1 for rank in gene_metrics["ranks_when_true"] if rank < 5)
+            gene_metrics["accuracy_when_true"] = gene_metrics["correct_predictions"] / gene_metrics["times_true_source"]
+        else:
+            gene_metrics["avg_rank_when_true"] = None
+            gene_metrics["avg_prob_when_true"] = None
+            gene_metrics["in_top3_when_true"] = 0
+            gene_metrics["in_top5_when_true"] = 0
+            gene_metrics["accuracy_when_true"] = None
+        
+        # Calculate precision and recall for this gene
+        if gene_metrics["times_predicted_source"] > 0:
+            gene_metrics["precision"] = gene_metrics["correct_predictions"] / gene_metrics["times_predicted_source"]
+        else:
+            gene_metrics["precision"] = None
+        
+        if gene_metrics["times_true_source"] > 0:
+            gene_metrics["recall"] = gene_metrics["correct_predictions"] / gene_metrics["times_true_source"]
+        else:
+            gene_metrics["recall"] = None
+        
+        # Calculate F1 score
+        if gene_metrics["precision"] is not None and gene_metrics["recall"] is not None and \
+           (gene_metrics["precision"] + gene_metrics["recall"]) > 0:
+            gene_metrics["f1_score"] = 2 * (gene_metrics["precision"] * gene_metrics["recall"]) / \
+                                     (gene_metrics["precision"] + gene_metrics["recall"])
+        else:
+            gene_metrics["f1_score"] = None
+        
+        # Remove detailed lists for cleaner output (keep only aggregated metrics)
+        del gene_metrics["prediction_probs_when_true"]
+        del gene_metrics["ranks_when_true"]
+        
+        # Round numerical values
+        for key, value in gene_metrics.items():
+            if isinstance(value, float):
+                gene_metrics[key] = round(value, 3)
+        
+        gene_metrics_dict[gene_name] = gene_metrics
+    
+    return gene_metrics_dict
+
+
 def supervised_metrics(
     pred_label_set: list,
     true_sources: list,
     pred_sources: list,
     processed_data: list = None,
-    model_type: str = "gat"
+    model_type: str = "gat",
+    raw_test_data: list = None
 ) -> dict:
     """Perform supervised evaluation metrics."""
     metrics = {}
@@ -410,7 +571,28 @@ def supervised_metrics(
 
     # Common metrics for all models
     metrics.update(prediction_metrics(pred_label_set, true_sources))
-    metrics.update(TP_FP_metrics(true_sources, pred_sources))
+    # not useful for sigle source prediction
+    # metrics.update(TP_FP_metrics(true_sources, pred_sources))
+
+    # Gene-specific metrics if enabled and genes of interest are specified
+    if const.GENE_METRICS_ENABLED and const.GENES_OF_INTEREST and raw_test_data:
+        # Extract gene mapping from first raw data sample
+        gene_mapping = raw_test_data[0].gene_mapping if hasattr(raw_test_data[0], 'gene_mapping') else None
+        
+        if gene_mapping:
+            print(f"Calculating gene-specific metrics for: {const.GENES_OF_INTEREST}")
+            gene_metrics = gene_specific_metrics(
+                pred_label_set, 
+                true_sources, 
+                pred_sources, 
+                const.GENES_OF_INTEREST,
+                gene_mapping,
+                raw_test_data
+            )
+            if gene_metrics:
+                metrics["gene_specific_metrics"] = gene_metrics
+        else:
+            print("Warning: Gene mapping not found in raw data, skipping gene-specific metrics")
 
     # Round numerical values
     for key, value in metrics.items():
@@ -454,10 +636,10 @@ def main():
         "network": network,
         "model_type": model_type,
         "metrics": supervised_metrics(
-            pred_labels, true_sources, pred_sources, processed_data, model_type
+            pred_labels, true_sources, pred_sources, processed_data, model_type, raw_test_data
         ),
         "data stats": data_stats(raw_test_data),
-        "parameters": yaml.full_load(open("params.yaml", "r"))
+        "parameters": const.params  # Use the loaded parameters from constants
     }
     
     utils.save_metrics(metrics_dict)

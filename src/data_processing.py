@@ -193,7 +193,8 @@ def backward_data(data: Data) -> Data:
         intervention=torch.tensor(data.binary_perturbation_indicator, dtype=torch.float32),
         treated=treated_norm,
         gene_symbols=list(data.gene_mapping.keys()),
-        mutations=torch.tensor(data.binary_perturbation_indicator, dtype=torch.float32),
+        mutations=torch.zeros(data.num_nodes, dtype=torch.float32),  # ✅ FIXED: No background mutations
+        batch=torch.arange(data.num_nodes, dtype=torch.long),  # ✅ ADDED: Batch indices
         num_nodes=data.num_nodes,
     )
 
@@ -210,6 +211,7 @@ def forward_data(data: Data) -> Data:
         diseased=diseased_norm,
         mutations=torch.tensor(data.binary_perturbation_indicator, dtype=torch.float32),
         gene_symbols=list(data.gene_mapping.keys()),
+        batch=torch.arange(data.num_nodes, dtype=torch.long),  # ✅ ADDED: Batch indices
         num_nodes=data.num_nodes,
     )
 
@@ -265,15 +267,11 @@ def remove_edges(G: nx.DiGraph, fraction: float) -> nx.DiGraph:
     for u, v in edges:
         if removed >= edges_to_remove:
             break
-        
-        # Store edge attributes before removing
         edge_attrs = G[u][v]
-        
         G.remove_edge(u, v)
         if nx.is_weakly_connected(G):
             removed += 1
         else:
-            # Restore the edge with its original attributes
             G.add_edge(u, v, **edge_attrs)
 
     if removed < edges_to_remove:
@@ -364,6 +362,95 @@ def add_noise_to_graph(G: nx.DiGraph) -> nx.DiGraph:
     return G_perturbed
 
 
+#TODO PLACEHOLDER Double check and shorten
+# def compute_thresholds_uniform(values):
+#     min_val, max_val = min(values), max(values)
+#     return torch.linspace(min_val, max_val, 501)
+
+def compute_and_store_thresholds(datasets):
+    """
+    Compute thresholds for discretizing expression values as required by PDGrapher.
+    These thresholds convert continuous expression values to discrete categories (0-499).
+    
+    How it works:
+    1. Collect all expression values from training data
+    2. Compute percentile-based thresholds (501 values for 500 categories)
+    3. During inference: find which threshold bin an expression value falls into
+    4. Use that bin index as the discrete category for embedding lookup
+    """
+    print("Computing thresholds for PDGrapher...")
+    
+    # Collect all expression values - ONLY from training data to avoid data leakage
+    all_diseased = []
+    all_treated = []
+    all_healthy = []
+    
+    # PERFORMANCE FIX: Load data files once instead of loading for each sample
+    processed_dir = Path(const.PROCESSED_PATH)
+    
+    # Load backward data efficiently - load file once, not per sample
+    if "backward" in datasets:
+        backward_file = processed_dir / "data_backward.pt"
+        if backward_file.exists():
+            print("Loading backward data for threshold computation...")
+            backward_data_list = torch.load(backward_file, weights_only=False)
+            print(f"Processing {len(backward_data_list)} backward samples for thresholds...")
+            for data in tqdm(backward_data_list, desc="Processing backward data"):
+                all_diseased.extend(data.diseased.tolist())
+                all_treated.extend(data.treated.tolist())
+    
+    # Load forward data efficiently - load file once, not per sample  
+    if "forward" in datasets:
+        forward_file = processed_dir / "data_forward.pt"
+        if forward_file.exists():
+            print("Loading forward data for threshold computation...")
+            forward_data_list = torch.load(forward_file, weights_only=False)
+            print(f"Processing {len(forward_data_list)} forward samples for thresholds...")
+            for data in tqdm(forward_data_list, desc="Processing forward data"):
+                all_healthy.extend(data.healthy.tolist())
+    
+    # Compute percentile-based thresholds (0.2% increments as in PDGrapher)
+    # Creates 501 threshold values -> 500 discrete categories (0-499)
+    def compute_thresholds(values):
+        if not values:
+            return torch.linspace(0, 1, 501)  # Default if no data
+        values_tensor = torch.tensor(values)
+        percentiles = torch.linspace(0, 100, 501)  # 0%, 0.2%, 0.4%, ..., 100%
+        return torch.quantile(values_tensor, percentiles / 100.0)
+    
+    # Create thresholds in format expected by PDGrapher model
+    thresholds = {}
+    
+    # PDGrapher expects separate thresholds for diseased and treated states
+    if all_diseased:
+        thresholds["diseased"] = compute_thresholds(all_diseased)
+        print(f"Diseased thresholds: min={thresholds['diseased'].min():.3f}, max={thresholds['diseased'].max():.3f}")
+    
+    if all_treated:
+        thresholds["treated"] = compute_thresholds(all_treated)
+        print(f"Treated thresholds: min={thresholds['treated'].min():.3f}, max={thresholds['treated'].max():.3f}")
+    
+    # Also store combined thresholds for backward compatibility
+    if all_diseased and all_treated:
+        backward_values = all_diseased + all_treated
+        thresholds["backward"] = compute_thresholds(backward_values)
+        print(f"Backward (combined) thresholds: min={thresholds['backward'].min():.3f}, max={thresholds['backward'].max():.3f}")
+    
+    # For forward direction, combine healthy and diseased
+    if all_healthy and all_diseased:
+        forward_values = all_healthy + all_diseased 
+        thresholds["forward"] = compute_thresholds(forward_values)
+        print(f"Forward thresholds: min={thresholds['forward'].min():.3f}, max={thresholds['forward'].max():.3f}")
+    
+    # Store thresholds
+    thresholds_path = Path(const.PROCESSED_PATH) / "thresholds.pt"
+    torch.save(thresholds, thresholds_path)
+    print(f"Thresholds saved to {thresholds_path}")
+    print(f"Each threshold tensor has {501} values for {500} discrete categories")
+    
+    return thresholds
+
+
 def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
     """
     Create datasets based on model type using the unified SDDataset approach.
@@ -403,6 +490,10 @@ def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
         )
         
         print("PDGrapher-style datasets created successfully!")
+        
+        # Compute and store thresholds for PDGrapher
+        compute_and_store_thresholds({"backward": backward_dataset, "forward": forward_dataset})
+        
         return {"backward": backward_dataset, "forward": forward_dataset}
         
     elif model_type in ["gcnsi", "gat"]:

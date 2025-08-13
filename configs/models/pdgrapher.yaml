@@ -2,15 +2,15 @@ model: PDGrapher
 model_name: pdgrapher_default
 
 training:
-  epochs: 50
-  layers: 2
-  alpha: 0.5
-  batch_size: 64
-  class_weighting: false
-  graph_weighting: false
-  hidden_size: 128
-  heads: 4
-  dropout: 0.3
-  learning_rate: 1.0e-4
+  epochs: 100
+  layers: 3
+  alpha: 0.75  # Increased weight for backward task (intervention discovery)
+  batch_size: 32  # Smaller batch size for better gradient estimates
+  class_weighting: true  # Enable to handle imbalanced source detection
+  graph_weighting: true  # Enable graph-level weighting
+  hidden_size: 256  # Increased model capacity
+  heads: 8  # More attention heads
+  dropout: 0.1  # Reduced dropout to prevent over-regularization
+  learning_rate: 2.0e-4  # Higher learning rate
   subsample: false
-  weight_decay: 5.0e-4
+  weight_decay: 1.0e-4
