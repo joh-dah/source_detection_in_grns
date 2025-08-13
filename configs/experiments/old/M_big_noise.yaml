@@ -2,10 +2,9 @@ data_creation:
   n_samples: 10000 
   graph_noise:
     missing_edges: 0.3
-    wrong_edges: 0
-    missing_nodes: 0
+    wrong_edges: 0.6
+    missing_nodes: 0.3
     rewired_edges: 0
-
 
 training:
   epochs: 200 

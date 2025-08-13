@@ -1,9 +1,9 @@
 data_creation:
   n_samples: 10000 
   graph_noise:
-    missing_edges: 0.5
-    wrong_edges: 0.8
-    missing_nodes: 0
+    missing_edges: 0.6
+    wrong_edges: 0.9
+    missing_nodes: 0.4
     rewired_edges: 0
 
 training:
