@@ -2,7 +2,6 @@
 from pathlib import Path
 from src import constants as const
 from src import utils
-from src.create_splits import create_data_splits
 import networkx as nx
 import numpy as np
 import os
@@ -816,7 +815,6 @@ def main():
 
     # Create datasets using the unified approach
     datasets = create_datasets_for_model(const.MODEL)
-    create_data_splits()
 
     print(f"Data processing complete for {const.MODEL}!")
     return datasets

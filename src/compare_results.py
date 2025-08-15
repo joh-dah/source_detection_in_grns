@@ -319,7 +319,7 @@ def load_data_from_all_runs(reports_base_path: str = "reports") -> pd.DataFrame:
 
 
 def create_cross_run_comparison_plots(df: pd.DataFrame, methods: List[str], output_dir: str):
-    """Create combined bar chart comparing specified methods across different runs."""
+    """Create bar charts comparing specified methods across different runs for multiple metrics."""
     
     if df.empty:
         print("No data available for cross-run comparison")
@@ -339,84 +339,108 @@ def create_cross_run_comparison_plots(df: pd.DataFrame, methods: List[str], outp
         print(f"Available methods: {df['model_type'].unique()}")
         return
     
-    print(f"Creating combined cross-run comparison plot for methods: {methods}")
+    print(f"Creating cross-run comparison plots for methods: {methods}")
     
-    # Create a combined comparison plot
-    plt.figure(figsize=(15, 10))  # Larger figure for potentially many methods
+    # Define metrics to plot
+    metrics_config = [
+        {
+            'column': 'accuracy',
+            'title': 'Accuracy Comparison Across Different Runs',
+            'ylabel': 'Accuracy',
+            'filename': 'combined_cross_run_accuracy_comparison.png',
+            'format': '%.3f',
+            'higher_better': True
+        },
+        {
+            'column': 'avg rank of source',
+            'title': 'Average Rank of Source Comparison Across Different Runs',
+            'ylabel': 'Average Rank of Source',
+            'filename': 'combined_cross_run_avg_rank_comparison.png',
+            'format': '%.2f',
+            'higher_better': False
+        },
+        {
+            'column': 'source in top 3',
+            'title': 'Source in Top 3 Comparison Across Different Runs',
+            'ylabel': 'Source in Top 3 (%)',
+            'filename': 'combined_cross_run_top3_comparison.png',
+            'format': '%.1f',
+            'higher_better': True
+        },
+        {
+            'column': 'source in top 5',
+            'title': 'Source in Top 5 Comparison Across Different Runs',
+            'ylabel': 'Source in Top 5 (%)',
+            'filename': 'combined_cross_run_top5_comparison.png',
+            'format': '%.1f',
+            'higher_better': True
+        }
+    ]
     
-    # Prepare data for grouped bar chart
-    runs = sorted(filtered_df['run'].unique())
-    
-    if len(methods) <= 3:
-        # For few methods, use manual bar positioning
-        x = np.arange(len(runs))
-        width = 0.8 / len(methods)  # Adjust width based on number of methods
+    # Create plots for each metric
+    for metric_config in metrics_config:
+        column = metric_config['column']
         
-        colors = plt.cm.Set3(np.linspace(0, 1, len(methods)))  # Generate distinct colors
+        # Check if the column exists in the data
+        if column not in filtered_df.columns:
+            print(f"Warning: Column '{column}' not found in data. Skipping {metric_config['title']}")
+            continue
         
-        for i, method in enumerate(methods):
-            method_data = filtered_df[filtered_df['model_type'] == method]
-            method_accuracies = []
-            
-            for run in runs:
-                run_data = method_data[method_data['run'] == run]
-                method_accuracies.append(run_data['accuracy'].mean() if not run_data.empty else 0)
-            
-            offset = (i - len(methods)/2 + 0.5) * width
-            bars = plt.bar(x + offset, method_accuracies, width, 
-                          label=method, alpha=0.7, color=colors[i])
-            
-            # Add value labels for non-zero values
-            for j, v in enumerate(method_accuracies):
-                if v > 0:
-                    plt.text(j + offset, v + 0.001, f'{v:.3f}', 
-                            ha='center', va='bottom', fontweight='bold', fontsize=8)
+        # Filter out rows with missing values for this metric
+        metric_df = filtered_df.dropna(subset=[column])
         
-        plt.xticks(x, runs, rotation=45, ha='right')
-    
-    else:
-        # For many methods, use seaborn for better handling
-        plt.close()
+        if metric_df.empty:
+            print(f"Warning: No data available for metric '{column}'. Skipping plot.")
+            continue
+        
         plt.figure(figsize=(15, 10))
-        ax = sns.barplot(data=filtered_df, x='run', y='accuracy', hue='model_type', alpha=0.7)
+        ax = sns.barplot(data=metric_df, x='run', y=column, hue='model_type', alpha=0.7)
         plt.xticks(rotation=45, ha='right')
         
         # Add value labels for seaborn plot
         for container in ax.containers:
-            ax.bar_label(container, fmt='%.3f', fontsize=6, rotation=90, padding=2)
-    
-    plt.title('Accuracy Comparison Across Different Runs', fontsize=16, fontweight='bold')
-    plt.xlabel('Run', fontsize=12, fontweight='bold')
-    plt.ylabel('Accuracy', fontsize=12, fontweight='bold')
-    
-    # Adjust legend position for many methods
-    if len(methods) > 5:
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    else:
-        plt.legend()
-    
-    plt.grid(axis='y', alpha=0.3)
-    plt.tight_layout()
-    
-    # Save combined plot
-    combined_output_path = os.path.join(output_dir, 'combined_cross_run_accuracy_comparison.png')
-    plt.savefig(combined_output_path, dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    print(f"Saved combined comparison plot: {combined_output_path}")
-    
-    # Print summary statistics for all methods
-    print("\nAccuracy Summary:")
-    for method in methods:
-        method_data = filtered_df[filtered_df['model_type'] == method]
-        if not method_data.empty:
-            print(f"  {method.upper()}:")
-            print(f"    Mean: {method_data['accuracy'].mean():.3f}")
-            print(f"    Std:  {method_data['accuracy'].std():.3f}")
-            print(f"    Min:  {method_data['accuracy'].min():.3f}")
-            print(f"    Max:  {method_data['accuracy'].max():.3f}")
+            ax.bar_label(container, fmt=metric_config['format'], fontsize=6, rotation=90, padding=2)
+        
+        plt.title(metric_config['title'], fontsize=16, fontweight='bold')
+        plt.xlabel('Run', fontsize=12, fontweight='bold')
+        plt.ylabel(metric_config['ylabel'], fontsize=12, fontweight='bold')
+        
+        # Adjust legend position for many methods
+        if len(methods) > 5:
+            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         else:
-            print(f"  {method.upper()}: No data")
+            plt.legend()
+        
+        plt.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+        
+        # Save plot
+        output_path = os.path.join(output_dir, metric_config['filename'])
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved {column} comparison plot: {output_path}")
+    
+    # Print summary statistics for all methods and metrics
+    print("\nSummary Statistics:")
+    for metric_config in metrics_config:
+        column = metric_config['column']
+        if column in filtered_df.columns:
+            print(f"\n{column.upper().replace('_', ' ')}:")
+            for method in methods:
+                method_data = filtered_df[filtered_df['model_type'] == method]
+                if not method_data.empty and not method_data[column].isna().all():
+                    valid_data = method_data[column].dropna()
+                    if not valid_data.empty:
+                        print(f"  {method.upper()}:")
+                        print(f"    Mean: {valid_data.mean():.3f}")
+                        print(f"    Std:  {valid_data.std():.3f}")
+                        print(f"    Min:  {valid_data.min():.3f}")
+                        print(f"    Max:  {valid_data.max():.3f}")
+                    else:
+                        print(f"  {method.upper()}: No valid data")
+                else:
+                    print(f"  {method.upper()}: No data")
 
 
 def compare_methods_across_runs(methods: List[str] = None, output_dir: str = None):
@@ -428,8 +452,6 @@ def compare_methods_across_runs(methods: List[str] = None, output_dir: str = Non
                  or ["all"] to compare all available methods
         output_dir: Directory to save plots (defaults to reports/)
     """
-    if methods is None:
-        methods = ["pdgrapher", "overlap"]  # Default methods
     
     if output_dir is None:
         output_dir = "reports"
@@ -460,19 +482,8 @@ def compare_methods_across_runs(methods: List[str] = None, output_dir: str = Non
 def main():
     results_dir = f"{const.REPORT_PATH}/{const.EXPERIMENT}"
     print(f"Loading results from: {results_dir}")
-    
-    # Check if input directory exists
-    if not os.path.exists(results_dir):
-        print(f"Error: Input directory {results_dir} does not exist!")
-        return
-    
     # Load data
     data = load_json_files(results_dir)
-    
-    if not data:
-        print("No JSON files found or no valid data loaded!")
-        return
-    
     # Create DataFrame
     df = create_metrics_dataframe(data)
     

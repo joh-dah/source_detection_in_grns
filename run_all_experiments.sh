@@ -5,6 +5,8 @@
 
 #one liner:
 #for yaml_file in configs/experiments/*.yaml; do experiment_name=$(basename "$yaml_file" .yaml); echo "Starting $experiment_name"; EXPERIMENT_NAME="$experiment_name" srun slurm/dual_model_pipeline.sbatch; sleep 2; done
+# for yaml_file in configs/experiments/*.yaml; do experiment_name=$(basename "$yaml_file" .yaml); echo "Starting $experiment_name"; EXPERIMENT_NAME="$experiment_name" srun slurm/dual_model_training_pipeline.sbatch; sleep 2; done
+
 
 EXPERIMENTS_DIR="configs/experiments"
 SLURM_SCRIPT="slurm/dual_model_pipeline.sbatch"

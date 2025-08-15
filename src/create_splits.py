@@ -1,5 +1,4 @@
 import os
-import os.path as osp
 from sklearn.model_selection import train_test_split
 import torch
 from pathlib import Path
@@ -8,7 +7,6 @@ from src import constants as const
 def create_data_splits():
     """
     Run the data splitting process.
-    This function is intended to be called from the command line.
     """
     data_dir = Path(const.DATA_PATH)
     print(f"Creating splits for data in: {data_dir}")
@@ -20,10 +18,10 @@ def create_data_splits():
 
     indices = list(range(dataset_size))
     train_indices, temp_indices = train_test_split(
-        indices, test_size=0.4, random_state=const.SEED
+        indices, test_size=0.4,
     )
     val_indices, test_indices = train_test_split(
-        temp_indices, test_size=0.5, random_state=const.SEED
+        temp_indices, test_size=0.5
     )
 
     splits = {

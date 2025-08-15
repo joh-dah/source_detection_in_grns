@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Dual Model Pipeline Runner
-# Runs complete pipeline for both GAT and PDGrapher models
-# Data creation is shared, but processing/training/validation are separate
+# Dual Model Pipeline Runner (Data Already Present)
+# Runs training and validation for both GAT and PDGrapher models
+# Assumes data creation and processing have already been completed
 
 # Base directory
 BASE_DIR="/sc/home/johanna.dahlkemper/source_detection_in_grns"
@@ -41,161 +41,10 @@ log_timing() {
 echo "experiment,method,stage,start_time,end_time,duration_seconds,job_id" > $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 
 # =============================================================================
-# Job 1: Data Creation (shared for both models)
-# =============================================================================
-echo "Submitting shared data creation job..."
-DATA_JOB_ID=$(sbatch --parsable <<EOF
-#!/bin/bash
-#SBATCH --job-name="data_creation"
-#SBATCH --mem=256G
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
-#SBATCH --account=sci-renard
-#SBATCH --partition=cpu
-#SBATCH --time=3-00:00:00
-#SBATCH --chdir=$BASE_DIR
-#SBATCH --mail-type=FAIL
-#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_data_creation_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_data_creation_%j.err
-
-source .venv/bin/activate
-
-echo "=== STARTING SHARED DATA CREATION ==="
-echo "Job ID: \$SLURM_JOB_ID"
-echo "Start time: \$(date)"
-echo "Experiment: $EXPERIMENT"
-
-# Record start time
-START_TIME=\$(date +%s)
-
-# Use GAT config for data creation (both models use same data params)
-export EXPERIMENT_NAME=$EXPERIMENT
-# Set model type to gat for data creation
-export MODEL_TYPE=gat
-
-# Create raw data (shared between models)
-python -m src.data_creation --experiment $EXPERIMENT --model gat
-
-# Record end time and log
-END_TIME=\$(date +%s)
-echo "Data creation completed at: \$(date)"
-
-# Log timing for all methods that use this data
-echo "$EXPERIMENT,gat,data_creation,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-echo "$EXPERIMENT,baseline_rumor,data_creation,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-echo "$EXPERIMENT,baseline_random,data_creation,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-echo "$EXPERIMENT,baseline_advanced_random,data_creation,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-echo "$EXPERIMENT,pdgrapher,data_creation,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-EOF
-)
-
-echo "Data creation job submitted with ID: $DATA_JOB_ID"
-
-# =============================================================================
-# Job 2a: GAT Data Processing (depends on data creation)
-# =============================================================================
-echo "Submitting GAT data processing job..."
-GAT_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
-#!/bin/bash
-#SBATCH --job-name="gat_processing"
-#SBATCH --mem=32G
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
-#SBATCH --account=sci-renard
-#SBATCH --partition=cpu
-#SBATCH --time=3-00:00:00
-#SBATCH --chdir=$BASE_DIR
-#SBATCH --mail-type=FAIL
-#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_gat_processing_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_gat_processing_%j.err
-
-source .venv/bin/activate
-
-echo "=== STARTING GAT DATA PROCESSING ==="
-echo "Job ID: \$SLURM_JOB_ID"
-echo "Start time: \$(date)"
-echo "Experiment: $EXPERIMENT"
-echo "Depends on data job: $DATA_JOB_ID"
-
-# Record start time
-START_TIME=\$(date +%s)
-
-# Set GAT config
-export MODEL_TYPE=gat
-export EXPERIMENT_NAME=$EXPERIMENT
-
-# Process data for GAT
-python -m src.data_processing --model gat --experiment $EXPERIMENT
-
-# Record end time and log (shared with baseline methods)
-END_TIME=\$(date +%s)
-echo "GAT data processing completed at: \$(date)"
-
-# Log timing for GAT and baseline methods (they share this processing step)
-echo "$EXPERIMENT,gat,data_processing,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-echo "$EXPERIMENT,baseline_rumor,data_processing,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-echo "$EXPERIMENT,baseline_random,data_processing,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-echo "$EXPERIMENT,baseline_advanced_random,data_processing,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-EOF
-)
-
-echo "GAT data processing job submitted with ID: $GAT_PROC_JOB_ID"
-
-# =============================================================================
-# Job 2b: PDGrapher Data Processing (depends on data creation)
-# =============================================================================
-echo "Submitting PDGrapher data processing job..."
-PDG_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_JOB_ID <<EOF
-#!/bin/bash
-#SBATCH --job-name="pdg_processing"
-#SBATCH --mem=32G
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
-#SBATCH --account=sci-renard
-#SBATCH --partition=cpu
-#SBATCH --time=3-00:00:00
-#SBATCH --chdir=$BASE_DIR
-#SBATCH --mail-type=FAIL
-#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_pdg_processing_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_pdg_processing_%j.err
-
-source .venv/bin/activate
-
-echo "=== STARTING PDGRAPHER DATA PROCESSING ==="
-echo "Job ID: \$SLURM_JOB_ID"
-echo "Start time: \$(date)"
-echo "Experiment: $EXPERIMENT"
-echo "Depends on data job: $DATA_JOB_ID"
-
-# Record start time
-START_TIME=\$(date +%s)
-
-# Set PDGrapher config
-export MODEL_TYPE=pdgrapher
-export EXPERIMENT_NAME=$EXPERIMENT
-
-# Process data for PDGrapher
-python -m src.data_processing --model pdgrapher --experiment $EXPERIMENT
-
-# Record end time and log
-END_TIME=\$(date +%s)
-echo "PDGrapher data processing completed at: \$(date)"
-
-# Log timing for PDGrapher
-echo "$EXPERIMENT,pdgrapher,data_processing,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-EOF
-)
-
-echo "PDGrapher data processing job submitted with ID: $PDG_PROC_JOB_ID"
-
-# =============================================================================
-# Job 2c: Data Splitting (depends on both processing jobs)
+# Job 1: Data Splitting
 # =============================================================================
 echo "Submitting data splitting job..."
-DATA_SPLIT_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID <<EOF
+DATA_SPLIT_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="data_splitting"
 #SBATCH --mem=32G
@@ -216,8 +65,6 @@ echo "=== STARTING DATA SPLITTING ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
-echo "Depends on GAT processing job: $GAT_PROC_JOB_ID"
-echo "Depends on PDGrapher processing job: $PDG_PROC_JOB_ID"
 
 # Record start time
 START_TIME=\$(date +%s)
@@ -226,7 +73,7 @@ START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
 
 # Create data splits (shared between models)
-python -m src.create_splits --experiment $EXPERIMENT
+python -m src.create_splits --experiment $EXPERIMENT --model gat
 
 # Record end time and log
 END_TIME=\$(date +%s)
@@ -244,7 +91,7 @@ EOF
 echo "Data splitting job submitted with ID: $DATA_SPLIT_JOB_ID"
 
 # =============================================================================
-# Job 3a: GAT Training (depends on data splitting)
+# Job 2a: GAT Training (depends on data splitting)
 # =============================================================================
 echo "Submitting GAT training job..."
 GAT_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_SPLIT_JOB_ID <<EOF
@@ -294,7 +141,7 @@ EOF
 echo "GAT training job submitted with ID: $GAT_TRAIN_JOB_ID"
 
 # =============================================================================
-# Job 3b: PDGrapher Training (depends on data splitting)
+# Job 2b: PDGrapher Training (depends on data splitting)
 # =============================================================================
 echo "Submitting PDGrapher training job..."
 PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_SPLIT_JOB_ID <<EOF
@@ -345,7 +192,7 @@ echo "PDGrapher training job submitted with ID: $PDG_TRAIN_JOB_ID"
 
 
 # =============================================================================
-# Job 3c: Baseline
+# Job 2c: Baseline (depends on data splitting)
 # =============================================================================
 echo "Submitting baseline job..."
 BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$DATA_SPLIT_JOB_ID <<EOF
@@ -393,7 +240,7 @@ EOF
 echo "Baseline job submitted with ID: $BASELINE_JOB_ID"
 
 # =============================================================================
-# Job 4a: GAT Validation (depends on GAT training)
+# Job 3a: GAT Validation (depends on GAT training)
 # =============================================================================
 echo "Submitting GAT validation job..."
 GAT_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_TRAIN_JOB_ID <<EOF
@@ -442,7 +289,7 @@ EOF
 echo "GAT validation job submitted with ID: $GAT_VAL_JOB_ID"
 
 # =============================================================================
-# Job 4b: PDGrapher Validation (depends on PDGrapher training)
+# Job 3b: PDGrapher Validation (depends on PDGrapher training)
 # =============================================================================
 echo "Submitting PDGrapher validation job..."
 PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
@@ -491,7 +338,7 @@ EOF
 echo "PDGrapher validation job submitted with ID: $PDG_VAL_JOB_ID"
 
 # =============================================================================
-# 5. Result Comparison
+# Job 4: Result Comparison
 # =============================================================================
 echo "Submitting result comparison job..."
 COMPARE_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID,$BASELINE_JOB_ID <<EOF
@@ -540,22 +387,19 @@ echo "=== DUAL MODEL PIPELINE SUBMISSION SUMMARY ==="
 echo "Experiment: $EXPERIMENT"
 echo ""
 echo "Pipeline structure:"
-echo "  1. Data Creation:        $DATA_JOB_ID"
-echo "  2a. GAT Processing:      $GAT_PROC_JOB_ID (after $DATA_JOB_ID)"
-echo "  2b. PDGrapher Processing:$PDG_PROC_JOB_ID (after $DATA_JOB_ID)"
-echo "  2c. Data Splitting:      $DATA_SPLIT_JOB_ID (after $GAT_PROC_JOB_ID, $PDG_PROC_JOB_ID)"
-echo "  3a. GAT Training:        $GAT_TRAIN_JOB_ID (after $DATA_SPLIT_JOB_ID)"
-echo "  3b. PDGrapher Training:  $PDG_TRAIN_JOB_ID (after $DATA_SPLIT_JOB_ID)"
-echo "  3c. Baseline:            $BASELINE_JOB_ID (after $DATA_SPLIT_JOB_ID)"
-echo "  4a. GAT Validation:      $GAT_VAL_JOB_ID (after $GAT_TRAIN_JOB_ID)"
-echo "  4b. PDGrapher Validation:$PDG_VAL_JOB_ID (after $PDG_TRAIN_JOB_ID)"
-echo "  5. Result Comparison:    $COMPARE_JOB_ID (after $GAT_VAL_JOB_ID, $PDG_VAL_JOB_ID)"
+echo "  1. Data Splitting:       $DATA_SPLIT_JOB_ID"
+echo "  2a. GAT Training:        $GAT_TRAIN_JOB_ID (after $DATA_SPLIT_JOB_ID)"
+echo "  2b. PDGrapher Training:  $PDG_TRAIN_JOB_ID (after $DATA_SPLIT_JOB_ID)"
+echo "  2c. Baseline:            $BASELINE_JOB_ID (after $DATA_SPLIT_JOB_ID)"
+echo "  3a. GAT Validation:      $GAT_VAL_JOB_ID (after $GAT_TRAIN_JOB_ID)"
+echo "  3b. PDGrapher Validation:$PDG_VAL_JOB_ID (after $PDG_TRAIN_JOB_ID)"
+echo "  4. Result Comparison:    $COMPARE_JOB_ID (after $GAT_VAL_JOB_ID, $PDG_VAL_JOB_ID, $BASELINE_JOB_ID)"
 echo ""
 echo "Monitor all jobs with:"
 echo "  squeue -u \$USER"
-echo "  squeue -j $DATA_JOB_ID,$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID,$DATA_SPLIT_JOB_ID,$GAT_TRAIN_JOB_ID,$PDG_TRAIN_JOB_ID,$BASELINE_JOB_ID,$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID,$COMPARE_JOB_ID"
+echo "  squeue -j $DATA_SPLIT_JOB_ID,$GAT_TRAIN_JOB_ID,$PDG_TRAIN_JOB_ID,$BASELINE_JOB_ID,$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID,$COMPARE_JOB_ID"
 echo ""
 echo "Cancel all jobs if needed:"
-echo "  scancel $DATA_JOB_ID $GAT_PROC_JOB_ID $PDG_PROC_JOB_ID $DATA_SPLIT_JOB_ID $GAT_TRAIN_JOB_ID $PDG_TRAIN_JOB_ID $BASELINE_JOB_ID $GAT_VAL_JOB_ID $PDG_VAL_JOB_ID $COMPARE_JOB_ID"
+echo "  scancel $DATA_SPLIT_JOB_ID $GAT_TRAIN_JOB_ID $PDG_TRAIN_JOB_ID $BASELINE_JOB_ID $GAT_VAL_JOB_ID $PDG_VAL_JOB_ID $COMPARE_JOB_ID"
 echo ""
 echo "Check logs in: $SLURM_OUT_DIR"

@@ -29,20 +29,14 @@ from src.compare_results import compare_methods_across_runs
 
 def main():
     parser = argparse.ArgumentParser(description='Compare methods across different runs')
-    parser.add_argument('--methods', nargs='+', default=['pdgrapher', 'overlap'],
+    parser.add_argument('--methods', nargs='+', default=['all'],
                        help='Methods to compare. Use "all" to compare all available methods, '
                             'or specify individual methods like "pdgrapher overlap gat" '
-                            '(default: pdgrapher overlap)')
+                            '(default: all)')
     parser.add_argument('--output-dir', default='reports',
                        help='Output directory for plots (default: reports)')
     
     args = parser.parse_args()
-    
-    print(f"Comparing methods: {args.methods}")
-    print(f"Output directory: {args.output_dir}")
-    
-    # Run the comparison
-    compare_methods_across_runs(methods=args.methods, output_dir=args.output_dir)
     
     print(f"Comparing methods: {args.methods}")
     print(f"Output directory: {args.output_dir}")
