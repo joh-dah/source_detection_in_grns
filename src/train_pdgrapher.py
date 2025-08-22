@@ -52,27 +52,6 @@ def main():
 
     edge_index = torch.load(f"{data_processed_dir}/edge_index.pt", weights_only=False)
 
-
-# Can be removed?
-    # # Validate edge_index structure
-    # print(f"Edge index shape: {edge_index.shape}")
-    # print(f"Expected nodes: {const.N_NODES}")
-    # if edge_index.max().item() >= const.N_NODES:
-    #     print(f"Warning: Edge index contains node {edge_index.max().item()}, but only {const.N_NODES} nodes expected")
-    # # Check dataset info
-    # print(f"Dataset num_vars: {dataset.get_num_vars()}")
-    # print(f"Network nodes: {const.N_NODES}")
-    
-    # # Validate dataset loading
-    # try:
-    #     sample_data = dataset[0]  # Try to get first sample
-    #     print(f"Sample data keys: {sample_data.keys() if hasattr(sample_data, 'keys') else 'No keys (likely tensor)'}")
-    #     if hasattr(sample_data, 'x'):
-    #         print(f"Sample x shape: {sample_data.x.shape}")
-    #     if hasattr(sample_data, 'y'):
-    #         print(f"Sample y shape: {sample_data.y.shape}")
-    # except Exception as e:
-    #     print(f"Warning: Could not load sample data: {e}")
     
     #TODO: CHECK THOSE VALUES:
     model = PDGrapher(edge_index, model_kwargs={

@@ -13,14 +13,9 @@ import src.constants as const
 from src import utils
 # Model imports
 from architectures.GAT import GAT
-try:
-    from pdgrapher import Dataset
-    from pdgrapher._models import PerturbationDiscoveryModel, GCNArgs
-    from pdgrapher._utils import get_thresholds
-    PDGRAPHER_AVAILABLE = True
-except ImportError:
-    PDGRAPHER_AVAILABLE = False
-    print("Warning: PDGrapher not available. PDGrapher validation will be skipped.")
+from pdgrapher import Dataset
+from pdgrapher._models import PerturbationDiscoveryModel, GCNArgs
+from pdgrapher._utils import get_thresholds
 
 
 class ModelValidator:
@@ -63,25 +58,11 @@ class ModelValidator:
     
     def _load_pdgrapher_model(self):
         """Load PDGrapher perturbation discovery model."""
-        if not PDGRAPHER_AVAILABLE:
-            raise ImportError("PDGrapher is not available. Please install it first.")
             
         edge_index = torch.load(const.PROCESSED_EDGE_INDEX_PATH, map_location=self.device)
         
         # Load checkpoint
         checkpoint = torch.load(self.model_path, map_location=self.device)
-        
-        # # Try to load edge_index from checkpoint, fallback to processed data
-        # if 'edge_index' in checkpoint:
-        #     edge_index = checkpoint['edge_index'].to(self.device)
-        #     print("Loaded edge_index from model checkpoint")
-        # else:
-        #     # Load from processed data directory
-        #     edge_index_path = Path(const.PROCESSED_PATH) / "edge_index.pt"
-        #     if not edge_index_path.exists():
-        #         raise FileNotFoundError(f"Edge index file not found at {edge_index_path}")
-        #     edge_index = torch.load(edge_index_path, map_location=self.device)
-        #     print("Loaded edge_index from processed data directory")
         
         state_dict = checkpoint["model_state_dict"]
         
@@ -165,8 +146,8 @@ class ModelValidator:
             splits_path=str(const.SPLITS_PATH)
         )
         # Get test data loader with reduced workers for cluster compatibility
-        (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1, num_workers=4)
-        
+        (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1, num_workers=0)
+
         return dataset, test_loader_backward
     
     def get_predictions(self, model, test_data):
@@ -613,10 +594,12 @@ def main():
     
     # Initialize validator
     validator = ModelValidator(model_type, model_name)
-    
+
     # Load model and data
     model = validator.load_model()
     test_data = validator.load_test_data()
+
+
     
     # Get predictions
     pred_labels = validator.get_predictions(model, test_data)

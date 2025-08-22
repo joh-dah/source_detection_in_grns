@@ -11,6 +11,7 @@ import networkx as nx
 import networkx as nx
 import pandas as pd
 from datetime import datetime
+import pickle
 
 
 def latest_model_name():
@@ -117,6 +118,15 @@ def load_processed_data(split="train", model_type=None):
     splits_file = Path(const.SPLITS_PATH)
     splits = torch.load(splits_file, weights_only=False)
     split_indices = splits[f'{split}_index_backward']
+
+    #TODO remove debug
+    print(f"Train indices: {len(splits['train_index_backward'])}")
+    print(f"Head of train indices: {splits['train_index_backward'][:5]}")
+    print(f"Validation indices: {len(splits['val_index_backward'])}")
+    print(f"Head of validation indices: {splits['val_index_backward'][:5]}")
+    print(f"Test indices: {len(splits['test_index_backward'])}")
+    print(f"Head of test indices: {splits['test_index_backward'][:5]}")
+
     if model_type is None:
         model_type = const.MODEL.lower()
     data_path = Path(const.DATA_PATH) / f"processed/{model_type}"
@@ -150,6 +160,20 @@ def create_topo_file_from_graph(network_name, G: nx.DiGraph, dir):
         f.write("Source Target Type\n")
         for u, v, d in G.edges(data='weight'):
             f.write(f"{u} {v} {d}\n")
+
+
+def load_perturbed_graph():
+    """
+    Load the perturbed graph from the data directory stored as graph.pkl
+    """
+    graph_path = Path(const.DATA_PATH) / "graph.pkl"
+    if not graph_path.exists():
+        raise FileNotFoundError(f"Graph file not found: {graph_path}. Please run graph perturbation first.")
+    
+    with open(graph_path, "rb") as f:
+        G = pickle.load(f)
+    
+    return G
 
 
 def get_graph_data_from_topo(filepath=None):

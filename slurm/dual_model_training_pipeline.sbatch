@@ -380,6 +380,43 @@ EOF
 echo "Result Comparison job submitted with ID: $COMPARE_JOB_ID"
 
 # =============================================================================
+# Job 5: Cross Run Comparison
+# =============================================================================
+echo "Submitting cross run comparison job..."
+CROSS_RUN_ID=$(sbatch --parsable --dependency=afterok:$COMPARE_JOB_ID <<EOF
+#!/bin/bash
+#SBATCH --job-name="cross_run_comparison"
+#SBATCH --mem=16G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --account=sci-renard
+#SBATCH --partition=cpu
+#SBATCH --time=01:00:00
+#SBATCH --chdir=$BASE_DIR
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
+#SBATCH --output=$SLURM_OUT_DIR/$EXPERIMENT\_cross_run_comparison_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/$EXPERIMENT\_cross_run_comparison_%j.err
+
+source .venv/bin/activate
+
+echo "=== STARTING CROSS RUN COMPARISON ==="
+echo "Job ID: \$SLURM_JOB_ID"
+echo "Start time: \$(date)"
+echo "Experiment: $EXPERIMENT"
+echo "Depends on result comparison job: $COMPARE_JOB_ID"
+
+
+# Compare results of all methods across all runs
+python cross_run_comparison.py --methods all
+
+echo "Cross run comparison completed at: \$(date)"
+EOF
+)
+
+echo "Cross Run Comparison job submitted with ID: $CROSS_RUN_ID"
+
+# =============================================================================
 # Final Summary
 # =============================================================================
 echo ""
@@ -394,12 +431,13 @@ echo "  2c. Baseline:            $BASELINE_JOB_ID (after $DATA_SPLIT_JOB_ID)"
 echo "  3a. GAT Validation:      $GAT_VAL_JOB_ID (after $GAT_TRAIN_JOB_ID)"
 echo "  3b. PDGrapher Validation:$PDG_VAL_JOB_ID (after $PDG_TRAIN_JOB_ID)"
 echo "  4. Result Comparison:    $COMPARE_JOB_ID (after $GAT_VAL_JOB_ID, $PDG_VAL_JOB_ID, $BASELINE_JOB_ID)"
+echo "  5. Cross Run Comparison: $CROSS_RUN_ID (after $COMPARE_JOB_ID)"
 echo ""
 echo "Monitor all jobs with:"
 echo "  squeue -u \$USER"
-echo "  squeue -j $DATA_SPLIT_JOB_ID,$GAT_TRAIN_JOB_ID,$PDG_TRAIN_JOB_ID,$BASELINE_JOB_ID,$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID,$COMPARE_JOB_ID"
+echo "  squeue -j $DATA_SPLIT_JOB_ID,$GAT_TRAIN_JOB_ID,$PDG_TRAIN_JOB_ID,$BASELINE_JOB_ID,$GAT_VAL_JOB_ID,$PDG_VAL_JOB_ID,$COMPARE_JOB_ID,$CROSS_RUN_ID"
 echo ""
 echo "Cancel all jobs if needed:"
-echo "  scancel $DATA_SPLIT_JOB_ID $GAT_TRAIN_JOB_ID $PDG_TRAIN_JOB_ID $BASELINE_JOB_ID $GAT_VAL_JOB_ID $PDG_VAL_JOB_ID $COMPARE_JOB_ID"
+echo "  scancel $DATA_SPLIT_JOB_ID $GAT_TRAIN_JOB_ID $PDG_TRAIN_JOB_ID $BASELINE_JOB_ID $GAT_VAL_JOB_ID $PDG_VAL_JOB_ID $COMPARE_JOB_ID $CROSS_RUN_ID"
 echo ""
 echo "Check logs in: $SLURM_OUT_DIR"

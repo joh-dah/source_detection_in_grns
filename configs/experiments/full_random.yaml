@@ -3,8 +3,7 @@ data_creation:
   graph_noise:
     missing_edges: 0
     wrong_edges: 0
-    missing_nodes: 0.01
-    rewired_edges: 0
+  random_graph: true
 
 training:
   epochs: 200 

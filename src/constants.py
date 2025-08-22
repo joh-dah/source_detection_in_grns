@@ -121,6 +121,7 @@ NORMALIZE_DATA = dc["normalize_data"]
 N_SAMPLES = dc["n_samples"]
 TRAINING_SHARE = dc["training_share"]
 GRAPH_NOISE = dc["graph_noise"]
+RANDOM_GRAPH = dc["random_graph"]
 
 # Training
 training = params["training"]

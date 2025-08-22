@@ -5,8 +5,7 @@ data_creation:
   graph_noise:
     missing_edges: 0
     wrong_edges: 0
-    missing_nodes: 0
-    rewired_edges: 0
+  random_graph: false  # Set to true if you want to create a random graph instead of perturbing an existing one
 
 # Environment settings
 network: tiny
