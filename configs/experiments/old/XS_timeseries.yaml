@@ -1,0 +1,17 @@
+data_creation:
+  n_samples: 1000 
+  graph_noise:
+    missing_edges: 0
+    wrong_edges: 0
+  time_steps: [1]
+  
+
+training:
+  epochs: 5
+
+network: custom_10
+
+# Gene-specific metrics configuration example
+gene_specific_metrics:
+  enabled: true
+  genes_of_interest: ["A", "B", "C", "D", "E"]  # Example genes of interest

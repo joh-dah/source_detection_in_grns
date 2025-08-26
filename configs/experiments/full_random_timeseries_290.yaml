@@ -1,0 +1,18 @@
+data_creation:
+  n_samples: 10000 
+  time_steps: [0.0001]
+
+graph_perturbation:
+    random_graph: true
+    noise:
+      missing_edges: 0
+      wrong_edges: 0
+
+training:
+  epochs: 200 
+
+network: dorothea_290
+
+gene_specific_metrics:
+  enabled: true
+  genes_of_interest: ["IRF3", "ATF7", "SREBF2", "MYC"]  
