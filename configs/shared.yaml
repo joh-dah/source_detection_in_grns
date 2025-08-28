@@ -3,6 +3,7 @@ data_creation:
   time_steps: null    
   training_share: 0.6
   normalize_data: true
+  network: tiny
 
 graph_perturbation:
   random_graph: false  # Set to true if you want to create a random graph instead of perturbing an existing one
@@ -11,7 +12,6 @@ graph_perturbation:
     wrong_edges: 0
 
 # Environment settings
-network: tiny
 on_cluster: true
 seed: 42
 

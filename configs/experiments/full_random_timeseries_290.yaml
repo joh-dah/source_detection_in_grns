@@ -1,6 +1,7 @@
 data_creation:
   n_samples: 10000 
   time_steps: [0.0001]
+  network: dorothea_290
 
 graph_perturbation:
     random_graph: true
@@ -10,8 +11,6 @@ graph_perturbation:
 
 training:
   epochs: 200 
-
-network: dorothea_290
 
 gene_specific_metrics:
   enabled: true
