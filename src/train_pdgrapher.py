@@ -16,7 +16,7 @@ def main():
     torch.manual_seed(0)
     np.random.seed(0) """
 
-    data_processed_dir = Path(const.DATA_PATH) / "processed" / const.MODEL
+    data_processed_dir = Path(const.PROCESSED_PATH)  # Use the properly defined processed path
     splits_path = const.SPLITS_PATH
 
     # Check if all required files exist

@@ -4,6 +4,7 @@ import argparse
 import os
 from pathlib import Path
 from typing import Dict, Any
+from src.data_utils import get_shared_data_path, get_experiment_data_path
 
 def deep_merge(base: dict, override: dict) -> dict:
     """Deep merge two dictionaries."""
@@ -94,21 +95,45 @@ params = get_config_from_args()
 # General
 MODEL = params["model"].lower()
 EXPERIMENT = params.get("experiment", "unknown")
+dc = params["data_creation"]
+NETWORK = dc["network"]
+SEED = params["seed"]
 if MODEL not in ["gat", "pdgrapher", "gcnsi"]:
     raise ValueError(f"Invalid model type: {MODEL}. Expected one of ['gat', 'pdgrapher', 'gcnsi'].")
 MODEL_NAME = f"{params["model_name"]}_{EXPERIMENT}"
-DATA_PATH = f"data/{EXPERIMENT}"
-PROCESSED_PATH = f"{DATA_PATH}/processed/{MODEL}"
-SPLITS_PATH = f"{DATA_PATH}/splits/splits.pt"
-RAW_PATH = f"{DATA_PATH}/raw"
-RAW_EDGE_INDEX_PATH = f"{DATA_PATH}/edge_index.pt"
+
+# Path structure: shared data for same data_creation params, experiment-specific for perturbations
+SHARED_DATA_PATH = get_shared_data_path(params["data_creation"], NETWORK, SEED)
+EXPERIMENT_DATA_PATH = get_experiment_data_path(
+    params["data_creation"], 
+    params.get("graph_perturbation", {}), 
+    NETWORK, 
+    SEED, 
+    EXPERIMENT
+)
+
+# Shared paths (raw data and splits only)
+RAW_PATH = f"{SHARED_DATA_PATH}/raw"
+SPLITS_PATH = f"{SHARED_DATA_PATH}/splits/splits.pt"
+
+# Experiment-specific paths (after graph perturbation)
+EXPERIMENT_RAW_PATH = f"{EXPERIMENT_DATA_PATH}/raw"
+EXPERIMENT_PROCESSED_PATH = f"{EXPERIMENT_DATA_PATH}/processed/{MODEL}"
+EXPERIMENT_EDGE_INDEX_PATH = f"{EXPERIMENT_PROCESSED_PATH}/edge_index.pt"
+
+# Data processing is experiment-specific (uses perturbed graph)
+PROCESSED_PATH = EXPERIMENT_PROCESSED_PATH
 PROCESSED_EDGE_INDEX_PATH = f"{PROCESSED_PATH}/edge_index.pt"
+
+# Backwards compatibility: DATA_PATH points to experiment-specific path for graph perturbation
+DATA_PATH = EXPERIMENT_DATA_PATH
+
+# Other paths
 TOPO_PATH = "topos"
 MODEL_PATH = "models"
 FIGURES_PATH = "figures"
 REPORT_PATH = "reports"
 ON_CLUSTER = params["on_cluster"]
-SEED = params["seed"]
 
 if ON_CLUSTER:
     N_CORES = 32
@@ -116,12 +141,16 @@ else:
     N_CORES = 2
 
 # Data Creation
-dc = params["data_creation"]
 NORMALIZE_DATA = dc["normalize_data"]
 N_SAMPLES = dc["n_samples"]
+TIME_STEPS = dc.get("time_steps", None)
 TRAINING_SHARE = dc["training_share"]
-GRAPH_NOISE = dc["graph_noise"]
-RANDOM_GRAPH = dc["random_graph"]
+
+
+# Graph Perturbation (moved from data_creation)
+gp = params.get("graph_perturbation", {})
+GRAPH_NOISE = gp.get("noise", {"missing_edges": 0, "wrong_edges": 0})
+RANDOM_GRAPH = gp.get("random_graph", False)
 
 # Training
 training = params["training"]
@@ -146,8 +175,12 @@ network_dict = {
     "dorothea_60": 60,
     "dorothea_99": 99,
     "dorothea_150": 150,
+    "dorothea_290": 290,
+    "dorothea_882_sparse": 882,
+    "dorothea_1000": 1000,
+    "dorothea_1000_sparse": 1000,
 }
-NETWORK = params["network"]
+
 
 N_NODES = network_dict[NETWORK]
 GCNSI_N_FEATURES = 2

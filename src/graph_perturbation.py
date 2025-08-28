@@ -10,11 +10,12 @@ import pickle
 
 def store_graph(graph: nx.DiGraph, name: str = None) -> None:
     """
-    Store the graph with all information (edge atr. etc )in the data directory const.data_path.
+    Store the graph with all information (edge atr. etc) in the experiment data directory.
     :param graph: nx.DiGraph
     """
     print("Storing Graph...")
     data_dir = Path(const.DATA_PATH)
+    data_dir.mkdir(parents=True, exist_ok=True)  # Ensure experiment directory exists
 
     if name is None:
         name = "graph"

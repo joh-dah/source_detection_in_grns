@@ -34,7 +34,9 @@ def log_gene_metrics(
     subnetwork_edges: int = 0,
     biggest_hub_subnetwork: int = 0,
 ):
-    log_path = Path(const.DATA_PATH) / f"{experiment}_gene_metrics.csv"
+    # Gene metrics go in shared data path since they're part of data creation
+    log_path = Path(const.SHARED_DATA_PATH) / f"{experiment}_gene_metrics.csv"
+    log_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
     duration = round(end_time - start_time, 2)
 
     row = {
@@ -73,6 +75,22 @@ def get_steady_state_df(dest_dir, network_name) -> pd.DataFrame:
         return None
     # read the steady state file
     return pd.read_parquet(steady_state_file)
+
+
+def get_timeseries_df(dest_dir, network_name) -> pd.DataFrame:
+    """
+    Reads the time series from the racipe output file.
+    :param dest_dir: directory where the racipe output is saved
+    :param network_name: name of the network
+    :return: time series and state
+    """
+    timeseries_file = dest_dir / network_name / "001" / f'{network_name}_timeseries_solutions_001.parquet'
+    # check if file exists
+    if not timeseries_file.exists():
+        print(f"Time series file {timeseries_file} does not exist")
+        return None
+    # read the time series file
+    return pd.read_parquet(timeseries_file)
 
 
 def update_init_conds_file(
@@ -224,17 +242,21 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
         save_dir=raw_data_dir,
         batch_size=4000,
         predefined_combinations=params_per_steady_state, #TODO check if this is right
+        tsteps=const.TIME_STEPS,
         normalize=False,
         discretize=True,
     )
-    subnetwork_steady_state_df = get_steady_state_df(raw_data_dir, subnetwork_name)
+    if const.TIME_STEPS is None:
+        subnetwork_perturbed_state_df = get_steady_state_df(raw_data_dir, subnetwork_name)
+    else:
+        subnetwork_perturbed_state_df = get_timeseries_df(raw_data_dir, subnetwork_name)
 
     if not source_reachable:
         # source was only added for racipe computations and needs to be removed
         reachable_nodes.remove(gene_to_perturb)
     index_positions = [all_nodes.index(node) for node in reachable_nodes]
     og_states = [str(s).replace("'", "") for s in og_steady_state_df["State"].tolist()]
-    sub_states = [str(s).replace("'", "") for s in subnetwork_steady_state_df["State"].tolist()]
+    sub_states = [str(s).replace("'", "") for s in subnetwork_perturbed_state_df["State"].tolist()]
 
 
     def merge_states(og_state, sub_state):
@@ -248,13 +270,13 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
         for og_state, sub_state in zip(og_states, sub_states)
     ]
     og_steady_state_df["State"] = merged_states
-    subnetwork_steady_state_df["State"] = merged_states
+    subnetwork_perturbed_state_df["State"] = merged_states
     # replace values in og state with subnetwork state. og_steady_state_df has more columns than subnetwork_steady_state_df
     # overwrite only the columns that are in subnetwork_steady_state_df
     perturbed_steady_state_df = og_steady_state_df.copy()
-    for col in subnetwork_steady_state_df.columns:
+    for col in subnetwork_perturbed_state_df.columns:
         if col in perturbed_steady_state_df.columns:
-            perturbed_steady_state_df[col] = subnetwork_steady_state_df[col]
+            perturbed_steady_state_df[col] = subnetwork_perturbed_state_df[col]
 
     return perturbed_steady_state_df, metadata
 
@@ -315,7 +337,7 @@ def process_gene(
         save_dir=raw_data_dir,
         batch_size=4000,
         normalize=False,
-        discretize=True,
+        discretize=True
     )
 
 
@@ -414,7 +436,9 @@ def create_data_set(
         results = list(tqdm(pool.starmap(process_gene, args), total=len(args), desc="Processing genes"))
     
     # Collect all metadata and save to file after multiprocessing is complete
-    ss_metadata_file = Path(const.DATA_PATH) / "steady_state_metadata.csv"
+    # Steady state metadata goes in shared data path
+    ss_metadata_file = Path(const.SHARED_DATA_PATH) / "steady_state_metadata.csv"
+    ss_metadata_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
     if ss_metadata_file.exists():
         ss_metadata_df = pd.read_csv(ss_metadata_file)
     else:
@@ -429,13 +453,26 @@ def create_data_set(
 def main():
     """
     Creates a data set of graphs with modeled signal propagation for training and validation.
+    Uses shared data path so data can be reused between experiments with same data_creation config.
     """
+    from src.data_utils import data_exists
 
-    shutil.rmtree(const.DATA_PATH, ignore_errors=True)
+    # Check if shared data already exists
+    if data_exists(const.SHARED_DATA_PATH):
+        print(f"Shared data already exists at {const.SHARED_DATA_PATH}")
+        print("Skipping data creation...")
+        return
+
+    print(f"Creating new shared data at {const.SHARED_DATA_PATH}")
+    
+    # Clean and create shared data directory
     dest_dir = Path(const.RAW_PATH)
+    if dest_dir.exists():
+        shutil.rmtree(dest_dir, ignore_errors=True)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
     topo_file = f"{const.TOPO_PATH}/{const.NETWORK}.topo"
     sample_count = const.N_SAMPLES
-    dest_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Creating data set with {sample_count} samples for {const.NETWORK} in {dest_dir}")
 
@@ -445,6 +482,9 @@ def main():
         const.NETWORK,
         sample_count,
     )
+
+    print(f"Shared data creation complete! Data saved to {const.SHARED_DATA_PATH}")
+    print("This data can now be reused by experiments with the same data_creation configuration.")
 
 
 if __name__ == "__main__":

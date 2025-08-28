@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from typing import Dict, List, Any
-import src.constants as const
 
 
 def load_timing_data(experiment: str) -> pd.DataFrame:
@@ -64,6 +63,21 @@ def create_runtime_comparison_plot(timing_df: pd.DataFrame, output_dir: str):
         return
     
     print("Creating runtime comparison plot...")
+    
+    # Debug: Check for duplicates before pivoting
+    print("Timing data before pivot:")
+    print(timing_df.head(10))
+    print(f"Shape: {timing_df.shape}")
+    
+    # Check for duplicate method-stage combinations
+    duplicates = timing_df.groupby(['method', 'stage']).size()
+    duplicate_entries = duplicates[duplicates > 1]
+    if not duplicate_entries.empty:
+        print("WARNING: Found duplicate method-stage combinations:")
+        print(duplicate_entries)
+        print("Taking the maximum duration for duplicates...")
+        # Remove duplicates by taking the maximum duration for each method-stage combination
+        timing_df = timing_df.groupby(['method', 'stage']).agg({'duration_hours': 'max'}).reset_index()
     
     # Create pivot table for stacked bar chart
     pivot_df = timing_df.pivot(index='method', columns='stage', values='duration_hours')
@@ -480,6 +494,9 @@ def compare_methods_across_runs(methods: List[str] = None, output_dir: str = Non
 
 
 def main():
+    # Import constants only when needed for single experiment analysis
+    import src.constants as const
+    
     results_dir = f"{const.REPORT_PATH}/{const.EXPERIMENT}"
     print(f"Loading results from: {results_dir}")
     # Load data

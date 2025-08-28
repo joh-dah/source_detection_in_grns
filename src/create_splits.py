@@ -7,21 +7,31 @@ from src import constants as const
 def create_data_splits():
     """
     Run the data splitting process.
+    Uses shared data path so splits are reused between experiments with same data_creation config.
     """
-    data_dir = Path(const.DATA_PATH)
-    print(f"Creating splits for data in: {data_dir}")
-    outdir = data_dir / "splits"
+    print(f"Creating splits for shared data in: {const.SHARED_DATA_PATH}")
+    outdir = Path(const.SHARED_DATA_PATH) / "splits"
     os.makedirs(outdir, exist_ok=True)
+    
+    # Check if splits already exist
+    splits_file = outdir / "splits.pt"
+    if splits_file.exists():
+        print(f"Splits already exist at {splits_file}, loading existing splits")
+        return torch.load(splits_file)
     
     dataset_size = len(list(Path(const.RAW_PATH).glob("*.pt")))
     print(f"Detected  {dataset_size} individual files")
 
     indices = list(range(dataset_size))
+    
+    # Use training_share from config instead of hardcoded values
+    test_size = 1.0 - const.TRAINING_SHARE
     train_indices, temp_indices = train_test_split(
-        indices, test_size=0.4,
+        indices, test_size=test_size, random_state=const.SEED
     )
+    # Split remaining into val/test equally
     val_indices, test_indices = train_test_split(
-        temp_indices, test_size=0.5
+        temp_indices, test_size=0.5, random_state=const.SEED
     )
 
     splits = {
@@ -33,9 +43,9 @@ def create_data_splits():
         'test_index_backward': test_indices,
     }
 
-    # Save splits to file
-    torch.save(splits,const.SPLITS_PATH)
-    print(f"Created splits for {dataset_size} individual files and saved to {const.SPLITS_PATH}")
+    # Save splits to shared location
+    torch.save(splits, splits_file)
+    print(f"Created splits for {dataset_size} individual files and saved to {splits_file}")
     return splits
         
 

@@ -129,7 +129,7 @@ def load_processed_data(split="train", model_type=None):
 
     if model_type is None:
         model_type = const.MODEL.lower()
-    data_path = Path(const.DATA_PATH) / f"processed/{model_type}"
+    data_path = Path(const.PROCESSED_PATH)  # Use the properly defined processed path
 
     # Simple dataset class that loads individual processed files
     class ProcessedDataset(torch.utils.data.Dataset):
@@ -189,6 +189,19 @@ def get_graph_data_from_topo(filepath=None):
         filepath = Path(const.TOPO_PATH) / f"{const.NETWORK}.topo"
 
     df = pd.read_csv(filepath, sep=r"\s+")
+    
+    # Clean gene names using the same logic as GRiNS parse_topos function
+    # This ensures consistency with what racipe/GRiNS will actually use
+    def clean_gene_name(name):
+        # Replace non-alphanumeric characters with underscores
+        cleaned = pd.Series([name]).str.replace(r"\W", "_", regex=True)[0]
+        # Prepend "Node_" if it doesn't start with a letter
+        if not cleaned[0].isalpha():
+            cleaned = f"Node_{cleaned}"
+        return cleaned
+    
+    df["Source"] = df["Source"].apply(clean_gene_name)
+    df["Target"] = df["Target"].apply(clean_gene_name)
 
     # Create gene-to-index mapping for optional ML use
     genes = sorted(set(df['Source']).union(df['Target']))

@@ -59,7 +59,7 @@ class ModelValidator:
     def _load_pdgrapher_model(self):
         """Load PDGrapher perturbation discovery model."""
             
-        edge_index = torch.load(const.PROCESSED_EDGE_INDEX_PATH, map_location=self.device)
+        edge_index = torch.load(const.EXPERIMENT_EDGE_INDEX_PATH, map_location=self.device)
         
         # Load checkpoint
         checkpoint = torch.load(self.model_path, map_location=self.device)
