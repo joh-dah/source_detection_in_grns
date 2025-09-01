@@ -1,6 +1,5 @@
 data_creation:
-  n_samples: 10000 
-  time_steps: [0.0001]
+  n_samples: 20000 
   network: dorothea_290
 
 graph_perturbation:

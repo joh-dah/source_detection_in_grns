@@ -1,13 +1,14 @@
 data_creation:
-  n_samples: 10000 
-  graph_noise:
+  n_samples: 1000000
+  network: dorothea_99
+
+graph_perturbation:
+  noise:
     missing_edges: 0
     wrong_edges: 0
 
 training:
   epochs: 200 
-
-network: dorothea_290
 
 gene_specific_metrics:
   enabled: true

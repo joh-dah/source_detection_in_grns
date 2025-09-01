@@ -4,6 +4,7 @@ data_creation:
   training_share: 0.6
   normalize_data: true
   network: tiny
+  remove_near_duplicates: false
 
 graph_perturbation:
   random_graph: false  # Set to true if you want to create a random graph instead of perturbing an existing one
