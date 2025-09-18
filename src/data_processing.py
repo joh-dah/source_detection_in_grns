@@ -419,11 +419,47 @@ def compute_and_store_thresholds(datasets):
     # Compute percentile-based thresholds (0.2% increments as in PDGrapher)
     # Creates 501 threshold values -> 500 discrete categories (0-499)
     def compute_thresholds(values):
+        import numpy as np
+        
+        # Handle different input types
         if not values:
-            return torch.linspace(0, 1, 501)  # Default if no data
-        values_tensor = torch.tensor(values)
-        percentiles = torch.linspace(0, 100, 501)  # 0%, 0.2%, 0.4%, ..., 100%
-        return torch.quantile(values_tensor, percentiles / 100.0)
+            raise ValueError("No values provided for threshold computation")
+        
+        # If values is a list of floats (from .tolist()), convert directly
+        if isinstance(values[0], (int, float)):
+            print("Processing list of float values for threshold computation...")
+            all_values = values
+        else:
+            # If values is a list of tensors, flatten and extract
+            print("Processing list of tensors for threshold computation...")
+            all_values = []
+            for value_tensor in values:
+                if hasattr(value_tensor, 'flatten'):
+                    all_values.extend(value_tensor.flatten().tolist())
+                else:
+                    all_values.append(float(value_tensor))
+        
+        print(f"Total values: {len(all_values)}")
+        
+        # Use approximate quantiles with a fixed sample size
+        sample_size = 50_000  # Guaranteed manageable size
+        
+        if len(all_values) <= sample_size:
+            # Use all values if dataset is small enough
+            sampled_values = all_values
+            print(f"Using all {len(sampled_values)} values for quantile computation")
+        else:
+            # Randomly sample for large datasets
+            import random
+            sampled_values = random.sample(all_values, sample_size)
+            sampling_rate = sample_size / len(all_values)
+            print(f"Sampled {len(sampled_values)} values (sampling rate: {sampling_rate:.4f}) for quantile computation")
+        
+        # Compute percentile-based thresholds for PDGrapher (501 thresholds for 500 bins)
+        percentiles = np.linspace(0, 100, 501)  # 0%, 0.2%, 0.4%, ..., 99.8%, 100%
+        quantiles = np.percentile(sampled_values, percentiles)
+        
+        return torch.tensor(quantiles, dtype=torch.float32)
     
     # Create thresholds in format expected by PDGrapher model
     thresholds = {}
@@ -494,6 +530,33 @@ def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
         print("PDGrapher-style datasets created successfully!")
         
         # Compute and store thresholds for PDGrapher
+        compute_and_store_thresholds({"backward": backward_dataset, "forward": forward_dataset})
+        
+        return {"backward": backward_dataset, "forward": forward_dataset}
+        
+    elif model_type == "pdgrapher_nognn":
+        # Create both forward and backward datasets for PDGrapherNoGNN (no edge_index needed)
+        print("Creating PDGrapherNoGNN-style datasets...")
+        
+        # Create backward dataset
+        backward_dataset = SDDataset(
+            model_type=model_type,
+            processing_func=backward_data,
+            mode="backward",
+            raw_data_dir=raw_data_dir,
+        )
+        
+        # Create forward dataset  
+        forward_dataset = SDDataset(
+            model_type=model_type,
+            processing_func=forward_data,
+            mode="forward",
+            raw_data_dir=raw_data_dir,
+        )
+        
+        print("PDGrapherNoGNN-style datasets created successfully!")
+        
+        # Compute and store thresholds for PDGrapherNoGNN
         compute_and_store_thresholds({"backward": backward_dataset, "forward": forward_dataset})
         
         return {"backward": backward_dataset, "forward": forward_dataset}

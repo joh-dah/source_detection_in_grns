@@ -1,8 +1,9 @@
 data_creation:
-  n_samples: 1000000
-  network: dorothea_99
+  n_samples: 10000
+  network: dorothea_500_1000
 
 graph_perturbation:
+  random_graph: true
   noise:
     missing_edges: 0
     wrong_edges: 0
@@ -12,4 +13,4 @@ training:
 
 gene_specific_metrics:
   enabled: true
-  genes_of_interest: ["IRF3", "ATF7", "SREBF2", "MYC"]  
+  genes_of_interest: ["IRF3", "ATF7", "SREBF2", "MYC"]

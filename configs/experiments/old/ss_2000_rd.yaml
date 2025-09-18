@@ -1,6 +1,7 @@
 data_creation:
-  n_samples: 100000 
-  network: dorothea_727_sparse
+  n_samples: 10000
+  network: dorothea_2000_sparse
+  remove_near_duplicates: true
 
 graph_perturbation:
   noise:

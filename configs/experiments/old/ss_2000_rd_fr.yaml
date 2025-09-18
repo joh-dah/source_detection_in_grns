@@ -1,12 +1,13 @@
 data_creation:
-  n_samples: 10000 
-  network: dorothea_290
+  n_samples: 10000
+  network: dorothea_2000_sparse
+  remove_near_duplicates: true
 
 graph_perturbation:
-    random_graph: true
-    noise:
-      missing_edges: 0
-      wrong_edges: 0
+  random_graph: true
+  noise:
+    missing_edges: 0
+    wrong_edges: 0
 
 training:
   epochs: 200 

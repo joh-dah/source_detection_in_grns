@@ -457,6 +457,206 @@ def create_cross_run_comparison_plots(df: pd.DataFrame, methods: List[str], outp
                     print(f"  {method.upper()}: No data")
 
 
+def create_network_scaling_line_chart(output_dir: str = "reports"):
+    """
+    Create line charts showing how source_in_top_5 metric varies with edge count 
+    for different graph perturbation settings, all for networks with 500 nodes.
+    Creates separate charts for both ss_500_ and bs_500_ experiments.
+    
+    Args:
+        output_dir: Directory to save the plots (defaults to reports/)
+    """
+    print("Creating network scaling line charts for 500-node experiments...")
+    
+    # Load data from all runs
+    all_data = load_data_from_all_runs("reports")
+    
+    if all_data.empty:
+        print("No data loaded. Cannot create network scaling charts.")
+        return
+    
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Define experiment types to process
+    experiment_types = [
+        {
+            'prefix': 'ss_500_',
+            'title': 'Network Scaling: Source in Top 5 vs Edge Count\n(500 Nodes, SS Experiments, PDGrapher - Mean ± Standard Deviation)',
+            'filename': 'ss_network_scaling_500_nodes_line_chart.png',
+            'label': 'SS Experiments'
+        },
+        {
+            'prefix': 'bs_500_',
+            'title': 'Network Scaling: Source in Top 5 vs Edge Count\n(500 Nodes, BS Experiments, PDGrapher - Mean ± Standard Deviation)',
+            'filename': 'bs_network_scaling_500_nodes_line_chart.png',
+            'label': 'BS Experiments'
+        }
+    ]
+    
+    for exp_type in experiment_types:
+        print(f"\nProcessing {exp_type['label']}...")
+        
+        # Filter for PDGrapher method only and experiments starting with the specified prefix
+        pdgrapher_data = all_data[
+            (all_data['model_type'] == 'pdgrapher') & 
+            (all_data['run'].str.startswith(exp_type['prefix']))
+        ].copy()
+        
+        if pdgrapher_data.empty:
+            print(f"No PDGrapher data found for {exp_type['prefix']} experiments.")
+            continue
+        
+        # Extract edge count from run names (e.g., ss_500_600 -> 600 or bs_500_600 -> 600)
+        def extract_edge_count(run_name):
+            parts = run_name.split('_')
+            prefix_parts = exp_type['prefix'].rstrip('_').split('_')  # ['ss', '500'] or ['bs', '500']
+            if (len(parts) >= 3 and 
+                parts[0] == prefix_parts[0] and 
+                parts[1] == prefix_parts[1]):
+                try:
+                    return int(parts[2])
+                except ValueError:
+                    return None
+            return None
+        
+        pdgrapher_data['edge_count'] = pdgrapher_data['run'].apply(extract_edge_count)
+        
+        # Remove rows where edge_count couldn't be extracted
+        pdgrapher_data = pdgrapher_data.dropna(subset=['edge_count'])
+        
+        if pdgrapher_data.empty:
+            print(f"No valid edge count data found in {exp_type['prefix']} experiment names.")
+            continue
+        
+        # Create flag categories based on run names
+        def categorize_flags(run_name):
+            if run_name.endswith('_rd_fr'):
+                return 'remove_duplicates + random_graph'
+            elif run_name.endswith('_fr'):
+                return 'random_graph'
+            elif run_name.endswith('_rd'):
+                return 'remove_duplicates'
+            else:
+                return 'no_flags'
+        
+        pdgrapher_data['flag_category'] = pdgrapher_data['run'].apply(categorize_flags)
+        
+        # Check if we have the required metric
+        metric = 'source in top 5'
+        if metric not in pdgrapher_data.columns:
+            print(f"Metric '{metric}' not found in data. Available columns: {pdgrapher_data.columns.tolist()}")
+            continue
+        
+        # Remove rows with missing metric values
+        pdgrapher_data = pdgrapher_data.dropna(subset=[metric])
+        
+        if pdgrapher_data.empty:
+            print(f"No data available for metric '{metric}' in {exp_type['prefix']} experiments.")
+            continue
+        
+        # Group by edge_count and flag_category, calculating mean, std, and count
+        grouped_data = pdgrapher_data.groupby(['edge_count', 'flag_category'])[metric].agg(['mean', 'std', 'count']).reset_index()
+        grouped_data.columns = ['edge_count', 'flag_category', 'mean', 'std', 'count']
+        
+        # Calculate standard error of the mean
+        grouped_data['stderr'] = grouped_data['std'] / np.sqrt(grouped_data['count'])
+        
+        # Fill NaN values for std and stderr (when count=1)
+        grouped_data['std'] = grouped_data['std'].fillna(0)
+        grouped_data['stderr'] = grouped_data['stderr'].fillna(0)
+        
+        # Create the line plot
+        plt.figure(figsize=(12, 8))
+        
+        # Define colors and line styles for each flag category
+        style_config = {
+            'no_flags': {'color': 'blue', 'linestyle': '-', 'marker': 'o', 'label': 'No flags'},
+            'random_graph': {'color': 'red', 'linestyle': '--', 'marker': 's', 'label': 'Random graph'},
+            'remove_duplicates': {'color': 'green', 'linestyle': '-.', 'marker': '^', 'label': 'Remove duplicates'},
+            'remove_duplicates + random_graph': {'color': 'purple', 'linestyle': ':', 'marker': 'D', 'label': 'Remove duplicates + Random graph'}
+        }
+        
+        # Plot each flag category with error bars
+        for flag_category in grouped_data['flag_category'].unique():
+            category_data = grouped_data[grouped_data['flag_category'] == flag_category].sort_values('edge_count')
+            
+            if not category_data.empty:
+                style = style_config.get(flag_category, {'color': 'black', 'linestyle': '-', 'marker': 'o', 'label': flag_category})
+                
+                # Use errorbar instead of plot to show variance
+                plt.errorbar(category_data['edge_count'], category_data['mean'], 
+                            yerr=category_data['std'],  # Use standard deviation as error bars
+                            color=style['color'], 
+                            linestyle=style['linestyle'],
+                            marker=style['marker'],
+                            markersize=8,
+                            linewidth=2,
+                            capsize=5,
+                            capthick=2,
+                            elinewidth=1.5,
+                            alpha=0.8,
+                            label=style['label'])
+        
+        plt.title(exp_type['title'], fontsize=16, fontweight='bold')
+        plt.xlabel('Edge Count', fontsize=12, fontweight='bold')
+        plt.ylabel('Source in Top 5 (%)', fontsize=12, fontweight='bold')
+        plt.grid(True, alpha=0.3)
+        plt.legend(fontsize=10)
+        
+        # Format axes
+        plt.gca().set_xlim(left=min(grouped_data['edge_count']) - 50, right=max(grouped_data['edge_count']) + 50)
+        plt.gca().set_ylim(bottom=0)
+        
+        # Add value labels on points with sample size information
+        for flag_category in grouped_data['flag_category'].unique():
+            category_data = grouped_data[grouped_data['flag_category'] == flag_category].sort_values('edge_count')
+            for _, row in category_data.iterrows():
+                # Show mean ± std and sample size
+                if row['count'] > 1:
+                    label_text = f'{row["mean"]:.1f}±{row["std"]:.1f}%\n(n={int(row["count"])})'
+                else:
+                    label_text = f'{row["mean"]:.1f}%\n(n=1)'
+                
+                plt.annotate(label_text, 
+                            (row['edge_count'], row['mean']),
+                            textcoords="offset points", 
+                            xytext=(0,15), 
+                            ha='center',
+                            fontsize=7,
+                            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.7))
+        
+        plt.tight_layout()
+        
+        # Save plot
+        output_path = os.path.join(output_dir, exp_type['filename'])
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"{exp_type['label']} network scaling line chart saved: {output_path}")
+        
+        # Print detailed data summary with variance information
+        print(f"\n{exp_type['label']} - Detailed Data Summary:")
+        print("Edge Count | Flag Category | Mean | Std | Count")
+        print("-" * 50)
+        for _, row in grouped_data.iterrows():
+            print(f"{int(row['edge_count']):>10} | {row['flag_category']:<25} | {row['mean']:>5.2f} | {row['std']:>4.2f} | {int(row['count']):>5}")
+        
+        print(f"\n{exp_type['label']} - Pivot table (Mean values):")
+        mean_pivot = grouped_data.pivot(index='edge_count', columns='flag_category', values='mean')
+        print(mean_pivot.round(2))
+        
+        print(f"\n{exp_type['label']} - Pivot table (Standard Deviation):")
+        std_pivot = grouped_data.pivot(index='edge_count', columns='flag_category', values='std')
+        print(std_pivot.round(2))
+        
+        print(f"\n{exp_type['label']} - Pivot table (Sample Counts):")
+        count_pivot = grouped_data.pivot(index='edge_count', columns='flag_category', values='count')
+        print(count_pivot.fillna(0).astype(int))
+    
+    print("\nNetwork scaling line charts creation complete!")
+
+
 def compare_methods_across_runs(methods: List[str] = None, output_dir: str = None):
     """
     Compare specified methods across all available runs.

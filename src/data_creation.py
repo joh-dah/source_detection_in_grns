@@ -281,6 +281,40 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
     return perturbed_steady_state_df, metadata
 
 
+def remove_near_duplicate_combinations(metadata_df, init_states, perturbed_states, gene_name):
+    """
+    Remove near duplicate combinations of init_steady_state, perturbed_steady_state and perturbed_gene.
+    
+    :param metadata_df: DataFrame with metadata
+    :param init_states: Array of initial discrete steady states
+    :param perturbed_states: Array of perturbed discrete steady states
+    :param gene_name: Name of the perturbed gene
+    :return: Filtered indices to keep
+    """
+    original_count = len(init_states)
+    
+    # Create combinations as tuples for easy comparison
+    combinations = []
+    for i in range(len(init_states)):
+        combo = (init_states[i], perturbed_states[i], gene_name)
+        combinations.append(combo)
+    
+    # Find unique combinations and their first occurrence indices
+    seen = set()
+    indices_to_keep = []
+    
+    for i, combo in enumerate(combinations):
+        if combo not in seen:
+            seen.add(combo)
+            indices_to_keep.append(i)
+    
+    duplicates_removed = original_count - len(indices_to_keep)
+    if duplicates_removed > 0:
+        print(f"Gene {gene_name}: Removed {duplicates_removed} near-duplicate combinations out of {original_count}")
+    
+    return indices_to_keep
+
+
 def nx_to_pyg_edges(G, gene_to_idx):
     """
     Converts a NetworkX DiGraph with 'weight' attributes to PyTorch Geometric edge_index and edge_attr tensors.
@@ -318,9 +352,8 @@ def process_gene(
     start = time.time()
 
     subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
-    num_init_conds = int(np.cbrt(perturbations_per_gene))
-    num_params = perturbations_per_gene // num_init_conds
-    #TODO: make deterministic?
+    num_init_conds = int(math.sqrt(perturbations_per_gene/10))
+    num_params = num_init_conds*10
     rr.gen_topo_param_files(
         topo_file,
         topo_name=subnetwork_name,
@@ -342,19 +375,36 @@ def process_gene(
 
 
     steady_state_df = get_steady_state_df(raw_data_dir, subnetwork_name)
-    init_steady_states = steady_state_df["State"].values
+    init_discrete_steady_states = steady_state_df["State"].values
     og_steady_state_df = steady_state_df[gene_to_idx.keys()].copy()
     perturbed_steady_state_df, subnetwork_metadata = perturb_graph(G, gene_to_perturb, steady_state_df, subnetwork_name, raw_data_dir)
-    perturbed_steady_states = perturbed_steady_state_df["State"].values
+    perturbed_discrete_steady_states = perturbed_steady_state_df["State"].values
     perturbed_steady_state_df = perturbed_steady_state_df[gene_to_idx.keys()]
     difference_to_og_steady_state = perturbed_steady_state_df - og_steady_state_df
 
     # Collect metadata to return instead of writing to file directly
     metadata_for_return = pd.DataFrame({
-        "perturbed_gene": [gene_to_perturb] * len(init_steady_states),
-        "init_steady_state": init_steady_states,
-        "perturbed_steady_state": perturbed_steady_states,
+        "perturbed_gene": [gene_to_perturb] * len(init_discrete_steady_states),
+        "init_steady_state": init_discrete_steady_states,
+        "perturbed_steady_state": perturbed_discrete_steady_states,
     })
+
+    # Remove near duplicates if enabled
+    if const.REMOVE_NEAR_DUPLICATES:
+        indices_to_keep = remove_near_duplicate_combinations(
+            metadata_for_return, 
+            init_discrete_steady_states, 
+            perturbed_discrete_steady_states, 
+            gene_to_perturb
+        )
+        
+        # Filter all arrays and dataframes
+        init_discrete_steady_states = init_discrete_steady_states[indices_to_keep]
+        perturbed_discrete_steady_states = perturbed_discrete_steady_states[indices_to_keep]
+        og_steady_state_df = og_steady_state_df.iloc[indices_to_keep].reset_index(drop=True)
+        perturbed_steady_state_df = perturbed_steady_state_df.iloc[indices_to_keep].reset_index(drop=True)
+        difference_to_og_steady_state = difference_to_og_steady_state.iloc[indices_to_keep].reset_index(drop=True)
+        metadata_for_return = metadata_for_return.iloc[indices_to_keep].reset_index(drop=True)
 
     local_datapoints = []
     for row_id, diff_row in difference_to_og_steady_state.iterrows():
@@ -413,9 +463,6 @@ def create_data_set(
     
     perturbations_per_gene = math.ceil(desired_dataset_size / len(genes_with_outgoing_edges))
     print(f"Perturbations per gene: {perturbations_per_gene}")
-    
-    #### TODO: find a good way to calculate this. there are some hints in the racipe documentation on how to choose the number of init_conds add params
-    # also document well how the params and dataset size is calculated
 
     args = [
         (

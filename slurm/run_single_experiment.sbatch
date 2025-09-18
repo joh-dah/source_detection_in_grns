@@ -94,7 +94,7 @@ GAT_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$GRAPH_PERT_JOB_ID <<EO
 #SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
-#SBATCH --time=2:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -138,12 +138,12 @@ echo "Submitting PDGrapher data processing job..."
 PDG_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$GRAPH_PERT_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdg_processing_${EXPERIMENT}"
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
-#SBATCH --time=2:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -184,12 +184,12 @@ echo "Submitting baseline job..."
 BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="baseline_${EXPERIMENT}"
-#SBATCH --mem=16G
+#SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
-#SBATCH --time=1:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -239,7 +239,7 @@ GAT_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu
-#SBATCH --time=1-00:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -287,7 +287,7 @@ PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu
-#SBATCH --time=1-00:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -328,14 +328,14 @@ echo "Submitting GAT validation job..."
 GAT_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_TRAIN_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="gat_validation_${EXPERIMENT}"
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu
-#SBATCH --time=12:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -376,14 +376,14 @@ echo "Submitting PDGrapher validation job..."
 PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdg_validation_${EXPERIMENT}"
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu
-#SBATCH --time=12:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de

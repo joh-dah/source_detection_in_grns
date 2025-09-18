@@ -133,12 +133,12 @@ while IFS=':' read -r fingerprint experiments; do
     DATA_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="shared_data_${fingerprint:0:12}"
-#SBATCH --mem=256G
+#SBATCH --mem=512G
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=64
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
-#SBATCH --time=3-00:00:00
+#SBATCH --time=5-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -146,6 +146,11 @@ while IFS=':' read -r fingerprint experiments; do
 #SBATCH --error=$SLURM_OUT_DIR/shared_data_creation_%j.err
 
 source .venv/bin/activate
+
+# JAX/XLA Performance Optimizations
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+export XLA_PYTHON_CLIENT_MEM_FRACTION=0.8
+export JAX_PLATFORM_NAME=cpu
 
 echo "=== CREATING SHARED DATA ==="
 echo "Job ID: \$SLURM_JOB_ID"
