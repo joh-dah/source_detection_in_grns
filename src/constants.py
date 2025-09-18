@@ -98,8 +98,8 @@ EXPERIMENT = params.get("experiment", "unknown")
 dc = params["data_creation"]
 NETWORK = dc["network"]
 SEED = params["seed"]
-if MODEL not in ["gat", "pdgrapher", "gcnsi"]:
-    raise ValueError(f"Invalid model type: {MODEL}. Expected one of ['gat', 'pdgrapher', 'gcnsi'].")
+if MODEL not in ["gat", "pdgrapher", "gcnsi", "pdgrapher_nognn"]:
+    raise ValueError(f"Invalid model type: {MODEL}. Expected one of ['gat', 'pdgrapher', 'gcnsi', 'pdgrapher_nognn'].")
 MODEL_NAME = f"{params["model_name"]}_{EXPERIMENT}"
 
 # Path structure: shared data for same data_creation params, experiment-specific for perturbations
@@ -136,7 +136,7 @@ REPORT_PATH = "reports"
 ON_CLUSTER = params["on_cluster"]
 
 if ON_CLUSTER:
-    N_CORES = 32
+    N_CORES = 64
 else:
     N_CORES = 2
 
@@ -145,6 +145,7 @@ NORMALIZE_DATA = dc["normalize_data"]
 N_SAMPLES = dc["n_samples"]
 TIME_STEPS = dc.get("time_steps", None)
 TRAINING_SHARE = dc["training_share"]
+REMOVE_NEAR_DUPLICATES = dc["remove_near_duplicates"]
 
 
 # Graph Perturbation (moved from data_creation)
@@ -176,9 +177,16 @@ network_dict = {
     "dorothea_99": 99,
     "dorothea_150": 150,
     "dorothea_290": 290,
+    "dorothea_500_600": 500,
+    "dorothea_500_700": 500,
+    "dorothea_500_800": 500,
+    "dorothea_500_900": 500,
+    "dorothea_500_1000": 500,
+    "dorothea_727_sparse": 727,
     "dorothea_882_sparse": 882,
     "dorothea_1000": 1000,
     "dorothea_1000_sparse": 1000,
+    "dorothea_2000_sparse": 2000,
 }
 
 
