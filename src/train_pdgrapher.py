@@ -57,7 +57,7 @@ def main():
     model = PDGrapher(edge_index, model_kwargs={
         "n_layers_nn": const.LAYERS, 
         "n_layers_gnn": const.LAYERS, 
-        "positional_features_dim": 64,  # Should match expression discretization bins (500)
+        "positional_features_dims": 64,  # Should match expression discretization bins (500) - FIXED: was singular
         "embedding_layer_dim": 64,      # Increased from 8 for better representation
         "dim_gnn": 64,                  # Increased from 8 for better capacity
         "num_vars": dataset.get_num_vars()

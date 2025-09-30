@@ -534,7 +534,7 @@ def create_datasets_for_model(model_type, raw_data_dir=const.RAW_PATH):
         
         return {"backward": backward_dataset, "forward": forward_dataset}
         
-    elif model_type == "pdgrapher_nognn":
+    elif model_type == "pdgraphernognn":
         # Create both forward and backward datasets for PDGrapherNoGNN (no edge_index needed)
         print("Creating PDGrapherNoGNN-style datasets...")
         

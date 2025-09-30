@@ -70,14 +70,18 @@ def create_runtime_comparison_plot(timing_df: pd.DataFrame, output_dir: str):
     print(f"Shape: {timing_df.shape}")
     
     # Check for duplicate method-stage combinations
-    duplicates = timing_df.groupby(['method', 'stage']).size()
+    duplicates = timing_df.groupby(['method', 'stage'], observed=False).size()
     duplicate_entries = duplicates[duplicates > 1]
     if not duplicate_entries.empty:
         print("WARNING: Found duplicate method-stage combinations:")
         print(duplicate_entries)
         print("Taking the maximum duration for duplicates...")
         # Remove duplicates by taking the maximum duration for each method-stage combination
-        timing_df = timing_df.groupby(['method', 'stage']).agg({'duration_hours': 'max'}).reset_index()
+        timing_df = timing_df.groupby(['method', 'stage'], observed=False).agg({'duration_hours': 'max'}).reset_index()
+    
+    # Always deduplicate to be safe, even if no duplicates were detected
+    print("Ensuring no duplicates by aggregating...")
+    timing_df = timing_df.groupby(['method', 'stage'], observed=False).agg({'duration_hours': 'max'}).reset_index()
     
     # Create pivot table for stacked bar chart
     pivot_df = timing_df.pivot(index='method', columns='stage', values='duration_hours')
@@ -144,12 +148,24 @@ def create_runtime_comparison_plot(timing_df: pd.DataFrame, output_dir: str):
     plt.savefig(os.path.join(output_dir, 'runtime_comparison.png'), dpi=300, bbox_inches='tight')
     plt.close()
     
-    # Also create a summary table
+    # Also create a summary table with timestamp
     summary_table = pivot_df.copy()
     summary_table['Total'] = summary_table.sum(axis=1)
+    
+    # Import get_current_time function
+    from src.utils import get_current_time
+    timestamp = get_current_time()
+    
+    # Save timestamped version
+    timestamped_filename = f'runtime_summary_{timestamp}.csv'
+    summary_table.to_csv(os.path.join(output_dir, timestamped_filename))
+    
+    # Also save as latest for backward compatibility
     summary_table.to_csv(os.path.join(output_dir, 'runtime_summary.csv'))
     
     print("Runtime comparison plot saved!")
+    print(f"Runtime summary saved as: {timestamped_filename}")
+    print("Runtime summary also saved as: runtime_summary.csv (latest)")
     print("\nRuntime Summary (hours):")
     print(summary_table.round(2))
 
@@ -459,14 +475,14 @@ def create_cross_run_comparison_plots(df: pd.DataFrame, methods: List[str], outp
 
 def create_network_scaling_line_chart(output_dir: str = "reports"):
     """
-    Create line charts showing how source_in_top_5 metric varies with edge count 
+    Create line charts showing how metrics vary with edge count 
     for different graph perturbation settings, all for networks with 500 nodes.
-    Creates separate charts for both ss_500_ and bs_500_ experiments.
+    Only processes BS experiments since those are the only ones with data.
     
     Args:
         output_dir: Directory to save the plots (defaults to reports/)
     """
-    print("Creating network scaling line charts for 500-node experiments...")
+    print("Creating network scaling line charts for BS 500-node experiments...")
     
     # Load data from all runs
     all_data = load_data_from_all_runs("reports")
@@ -478,18 +494,211 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
     
+    # Filter for both PDGrapher and PDGrapherNoGNN methods and BS 500 experiments  
+    model_data = all_data[
+        (all_data['model_type'].isin(['pdgrapher', 'pdgraphernognn'])) & 
+        (all_data['run'].str.startswith('bs_500_'))
+    ].copy()
+    
+    if model_data.empty:
+        print("No PDGrapher or PDGrapherNoGNN data found for bs_500_ experiments.")
+        return
+    
+    # Extract edge count from run names (e.g., bs_500_600 -> 600)
+    def extract_edge_count(run_name):
+        parts = run_name.split('_')
+        if len(parts) >= 3 and parts[0] == 'bs' and parts[1] == '500':
+            try:
+                return int(parts[2])
+            except ValueError:
+                return None
+        return None
+    
+    model_data['edge_count'] = model_data['run'].apply(extract_edge_count)
+    model_data = model_data.dropna(subset=['edge_count'])
+    
+    if model_data.empty:
+        print("No valid edge count data found in bs_500_ experiment names.")
+        return
+    
+    # Create flag categories based on run names
+    def categorize_flags(run_name):
+        if run_name.endswith('_rd_fr'):
+            return 'remove_duplicates + random_graph'
+        elif run_name.endswith('_fr'):
+            return 'random_graph'
+        elif run_name.endswith('_rd'):
+            return 'remove_duplicates'
+        else:
+            return 'no_flags'
+    
+    model_data['flag_category'] = model_data['run'].apply(categorize_flags)
+    
+    # Define metrics to plot
+    metrics_to_plot = ['source in top 5', 'avg rank of source']
+    
+    # Check if we have the required metrics
+    available_metrics = [m for m in metrics_to_plot if m in model_data.columns]
+    if not available_metrics:
+        print(f"No required metrics found in data. Available columns: {model_data.columns.tolist()}")
+        return
+    
+    # Process each metric separately
+    for metric in available_metrics:
+        print(f"\n=== PROCESSING METRIC: {metric} ===")
+        
+        # Remove rows with missing metric values
+        metric_data = model_data.dropna(subset=[metric]).copy()
+        
+        if metric_data.empty:
+            print(f"No data available for metric '{metric}' in bs_500_ experiments.")
+            continue
+        
+        # Separate PDGrapher and PDGrapherNoGNN data for different processing
+        pdgrapher_data = metric_data[metric_data['model_type'] == 'pdgrapher'].copy()
+        pdgraphernognn_data = metric_data[metric_data['model_type'] == 'pdgraphernognn'].copy()
+        
+        # Group PDGrapher data by edge_count and flag_category
+        if not pdgrapher_data.empty:
+            grouped_data = pdgrapher_data.groupby(['edge_count', 'flag_category'])[metric].agg(['mean', 'std', 'count']).reset_index()
+            grouped_data.columns = ['edge_count', 'flag_category', 'mean', 'std', 'count']
+            grouped_data['model_type'] = 'pdgrapher'
+        else:
+            grouped_data = pd.DataFrame(columns=['edge_count', 'flag_category', 'mean', 'std', 'count', 'model_type'])
+        
+        # Process PDGrapherNoGNN data - create averaged lines for rd experiments and non-rd experiments
+        if not pdgraphernognn_data.empty:
+            def categorize_nognn_flags(flag_cat):
+                if flag_cat in ['remove_duplicates', 'remove_duplicates + random_graph']:
+                    return 'rd_experiments'
+                else:
+                    return 'non_rd_experiments'
+            
+            pdgraphernognn_data['nognn_category'] = pdgraphernognn_data['flag_category'].apply(categorize_nognn_flags)
+            nognn_grouped = pdgraphernognn_data.groupby(['edge_count', 'nognn_category'])[metric].agg(['mean', 'std', 'count']).reset_index()
+            nognn_grouped.columns = ['edge_count', 'flag_category', 'mean', 'std', 'count']
+            nognn_grouped['model_type'] = 'pdgraphernognn'
+            grouped_data = pd.concat([grouped_data, nognn_grouped], ignore_index=True)
+        
+        if grouped_data.empty:
+            print(f"No grouped data available for {metric}. Skipping plot creation.")
+            continue
+        
+        # Fill NaN values for std (when count=1)
+        grouped_data['std'] = grouped_data['std'].fillna(0)
+        
+        # Create the plot
+        plt.figure(figsize=(12, 8))
+        
+        # Define colors for flag categories
+        flag_colors = {
+            'no_flags': '#1f77b4',
+            'random_graph': '#ff7f0e', 
+            'remove_duplicates': '#2ca02c',
+            'remove_duplicates + random_graph': '#d62728',
+            'rd_experiments': '#9467bd',
+            'non_rd_experiments': '#8c564b'
+        }
+        
+        # Define line styles for model types
+        model_styles = {
+            'pdgrapher': '-',
+            'pdgraphernognn': '--'
+        }
+        
+        # Plot each combination
+        for model_type in grouped_data['model_type'].unique():
+            for flag_category in grouped_data['flag_category'].unique():
+                subset = grouped_data[
+                    (grouped_data['model_type'] == model_type) & 
+                    (grouped_data['flag_category'] == flag_category)
+                ]
+                
+                if not subset.empty:
+                    subset = subset.sort_values('edge_count')
+                    color = flag_colors.get(flag_category, '#000000')
+                    linestyle = model_styles.get(model_type, '-')
+                    
+                    # Create label
+                    model_label = model_type.replace('pdgrapher', 'PDGrapher').replace('nognn', 'NoGNN')
+                    flag_label = flag_category.replace('_', '+') if 'experiments' not in flag_category else flag_category.replace('_', ' ')
+                    label = f"{model_label} ({flag_label})"
+                    
+                    plt.errorbar(
+                        subset['edge_count'], 
+                        subset['mean'], 
+                        yerr=subset['std'],
+                        marker='o', 
+                        linestyle=linestyle,
+                        color=color,
+                        label=label,
+                        capsize=5,
+                        alpha=0.8
+                    )
+        
+        plt.xlabel('Edge Count', fontsize=12)
+        
+        # Set y-axis label and title based on metric
+        if metric == 'source in top 5':
+            plt.ylabel('Source in Top 5 (%)', fontsize=12)
+            title = 'BS Experiments - Source in Top 5 vs Edge Count\n(500 Nodes - Mean ± Standard Deviation)'
+            filename = 'bs_network_scaling_500_nodes_line_chart_source_in_top5.png'
+        else:  # avg rank of source
+            plt.ylabel('Average Rank of Source', fontsize=12)
+            title = 'BS Experiments - Average Rank of Source vs Edge Count\n(500 Nodes - Mean ± Standard Deviation)'
+            filename = 'bs_network_scaling_500_nodes_line_chart_avg_rank.png'
+        
+        plt.title(title, fontsize=14, fontweight='bold')
+        plt.legend(loc='best', fontsize=10)
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        
+        # Save the plot
+        output_path = os.path.join(output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved BS {metric} chart to: {output_path}")
+    
+    print("\nNetwork scaling line charts creation complete!")
+
+
+def create_runtime_scaling_line_chart(output_dir: str = "reports"):
+    """
+    Create line charts showing how runtime varies with edge count 
+    for different graph perturbation settings, all for networks with 500 nodes.
+    Creates separate charts for both ss_500_ and bs_500_ experiments.
+    
+    Automatically aggregates multiple runs by reading all timestamped runtime_summary files
+    (runtime_summary_MMDD_HHMM.csv) and computing mean ± standard deviation across runs.
+    Falls back to reading runtime_summary.csv if no timestamped files are found.
+    
+    Args:
+        output_dir: Directory to save the plots (defaults to reports/)
+    """
+    print("Creating runtime scaling line charts for 500-node experiments...")
+    
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Find all experiment directories
+    reports_dir = Path("reports")
+    if not reports_dir.exists():
+        print("Reports directory not found. Cannot create runtime scaling charts.")
+        return
+    
     # Define experiment types to process
     experiment_types = [
         {
             'prefix': 'ss_500_',
-            'title': 'Network Scaling: Source in Top 5 vs Edge Count\n(500 Nodes, SS Experiments, PDGrapher - Mean ± Standard Deviation)',
-            'filename': 'ss_network_scaling_500_nodes_line_chart.png',
+            'title': 'Runtime Scaling: Total Runtime vs Edge Count\n(500 Nodes, SS Experiments - Mean ± Standard Deviation)',
+            'filename': 'ss_runtime_scaling_500_nodes_line_chart.png',
             'label': 'SS Experiments'
         },
         {
             'prefix': 'bs_500_',
-            'title': 'Network Scaling: Source in Top 5 vs Edge Count\n(500 Nodes, BS Experiments, PDGrapher - Mean ± Standard Deviation)',
-            'filename': 'bs_network_scaling_500_nodes_line_chart.png',
+            'title': 'Runtime Scaling: Total Runtime vs Edge Count\n(500 Nodes, BS Experiments - Mean ± Standard Deviation)',
+            'filename': 'bs_runtime_scaling_500_nodes_line_chart.png',
             'label': 'BS Experiments'
         }
     ]
@@ -497,67 +706,135 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
     for exp_type in experiment_types:
         print(f"\nProcessing {exp_type['label']}...")
         
-        # Filter for PDGrapher method only and experiments starting with the specified prefix
-        pdgrapher_data = all_data[
-            (all_data['model_type'] == 'pdgrapher') & 
-            (all_data['run'].str.startswith(exp_type['prefix']))
-        ].copy()
+        # Collect runtime data from all matching experiments
+        runtime_data = []
         
-        if pdgrapher_data.empty:
-            print(f"No PDGrapher data found for {exp_type['prefix']} experiments.")
+        for exp_dir in reports_dir.iterdir():
+            if exp_dir.is_dir() and exp_dir.name.startswith(exp_type['prefix']):
+                # Look for both timestamped and legacy runtime summary files
+                runtime_files = []
+                
+                # Find all timestamped runtime summary files
+                timestamped_files = list(exp_dir.glob("runtime_summary_*.csv"))
+                if timestamped_files:
+                    runtime_files.extend(timestamped_files)
+                else:
+                    # Fall back to legacy runtime_summary.csv if no timestamped files exist
+                    legacy_file = exp_dir / "runtime_summary.csv"
+                    if legacy_file.exists():
+                        runtime_files.append(legacy_file)
+                
+                if not runtime_files:
+                    continue
+                
+                print(f"Found {len(runtime_files)} runtime summary files for {exp_dir.name}")
+                
+                # Process each runtime file (to aggregate multiple runs)
+                for runtime_file in runtime_files:
+                    try:
+                        df = pd.read_csv(runtime_file)
+                        
+                        # Extract timestamp from filename if available
+                        filename = runtime_file.name
+                        if filename.startswith("runtime_summary_") and filename.endswith(".csv"):
+                            timestamp = filename[16:-4]  # Extract MMDD_HHMM from "runtime_summary_MMDD_HHMM.csv"
+                        else:
+                            timestamp = "unknown"
+                        
+                        # Extract edge count from directory name
+                        def extract_edge_count(dir_name):
+                            parts = dir_name.split('_')
+                            prefix_parts = exp_type['prefix'].rstrip('_').split('_')  # ['ss', '500'] or ['bs', '500']
+                            if (len(parts) >= 3 and 
+                                parts[0] == prefix_parts[0] and 
+                                parts[1] == prefix_parts[1]):
+                                try:
+                                    return int(parts[2])
+                                except ValueError:
+                                    return None
+                            return None
+                        
+                        edge_count = extract_edge_count(exp_dir.name)
+                        if edge_count is None:
+                            continue
+                        
+                        # Create flag categories based on directory names
+                        def categorize_flags(dir_name):
+                            if dir_name.endswith('_rd_fr'):
+                                return 'remove_duplicates + random_graph'
+                            elif dir_name.endswith('_fr'):
+                                return 'random_graph'
+                            elif dir_name.endswith('_rd'):
+                                return 'remove_duplicates'
+                            else:
+                                return 'no_flags'
+                        
+                        flag_category = categorize_flags(exp_dir.name)
+                        
+                        # Add data for each method
+                        for _, row in df.iterrows():
+                            method = row['method']
+                            total_runtime = row['Total']  # Total runtime in hours
+                            
+                            # Separate PDGrapher and PDGrapherNoGNN
+                            if method == 'pdgrapher':
+                                model_type = 'pdgrapher'
+                            elif method == 'pdgrapher_nognn':
+                                model_type = 'pdgraphernognn'
+                            else:
+                                model_type = method
+                            
+                            runtime_data.append({
+                                'experiment': exp_dir.name,
+                                'edge_count': edge_count,
+                                'flag_category': flag_category,
+                                'model_type': model_type,
+                                'method': method,
+                                'total_runtime': total_runtime,
+                                'timestamp': timestamp,
+                                'run_file': runtime_file.name
+                            })
+                    
+                    except Exception as e:
+                        print(f"Error reading {runtime_file}: {e}")
+        
+        if not runtime_data:
+            print(f"No runtime data found for {exp_type['prefix']} experiments.")
             continue
         
-        # Extract edge count from run names (e.g., ss_500_600 -> 600 or bs_500_600 -> 600)
-        def extract_edge_count(run_name):
-            parts = run_name.split('_')
-            prefix_parts = exp_type['prefix'].rstrip('_').split('_')  # ['ss', '500'] or ['bs', '500']
-            if (len(parts) >= 3 and 
-                parts[0] == prefix_parts[0] and 
-                parts[1] == prefix_parts[1]):
-                try:
-                    return int(parts[2])
-                except ValueError:
-                    return None
-            return None
+        # Convert to DataFrame
+        runtime_df = pd.DataFrame(runtime_data)
         
-        pdgrapher_data['edge_count'] = pdgrapher_data['run'].apply(extract_edge_count)
+        # Separate PDGrapher and PDGrapherNoGNN data for different processing
+        pdgrapher_data = runtime_df[runtime_df['model_type'] == 'pdgrapher'].copy()
+        pdgraphernognn_data = runtime_df[runtime_df['model_type'] == 'pdgraphernognn'].copy()
         
-        # Remove rows where edge_count couldn't be extracted
-        pdgrapher_data = pdgrapher_data.dropna(subset=['edge_count'])
-        
-        if pdgrapher_data.empty:
-            print(f"No valid edge count data found in {exp_type['prefix']} experiment names.")
-            continue
-        
-        # Create flag categories based on run names
-        def categorize_flags(run_name):
-            if run_name.endswith('_rd_fr'):
-                return 'remove_duplicates + random_graph'
-            elif run_name.endswith('_fr'):
-                return 'random_graph'
-            elif run_name.endswith('_rd'):
-                return 'remove_duplicates'
-            else:
-                return 'no_flags'
-        
-        pdgrapher_data['flag_category'] = pdgrapher_data['run'].apply(categorize_flags)
-        
-        # Check if we have the required metric
-        metric = 'source in top 5'
-        if metric not in pdgrapher_data.columns:
-            print(f"Metric '{metric}' not found in data. Available columns: {pdgrapher_data.columns.tolist()}")
-            continue
-        
-        # Remove rows with missing metric values
-        pdgrapher_data = pdgrapher_data.dropna(subset=[metric])
-        
-        if pdgrapher_data.empty:
-            print(f"No data available for metric '{metric}' in {exp_type['prefix']} experiments.")
-            continue
-        
-        # Group by edge_count and flag_category, calculating mean, std, and count
-        grouped_data = pdgrapher_data.groupby(['edge_count', 'flag_category'])[metric].agg(['mean', 'std', 'count']).reset_index()
+        # Group PDGrapher data by edge_count and flag_category, calculating mean, std, and count
+        grouped_data = pdgrapher_data.groupby(['edge_count', 'flag_category'])['total_runtime'].agg(['mean', 'std', 'count']).reset_index()
         grouped_data.columns = ['edge_count', 'flag_category', 'mean', 'std', 'count']
+        grouped_data['model_type'] = 'pdgrapher'
+        
+        # Process PDGrapherNoGNN data - create averaged lines for rd experiments and non-rd experiments
+        if not pdgraphernognn_data.empty:
+            # Create two categories for PDGrapherNoGNN:
+            # 1. RD experiments (average of rd and rd_fr)
+            # 2. Non-RD experiments (average of no_flags and fr)
+            
+            def categorize_nognn_flags(flag_cat):
+                if flag_cat in ['remove_duplicates', 'remove_duplicates + random_graph']:
+                    return 'rd_experiments'
+                else:  # no_flags or random_graph
+                    return 'non_rd_experiments'
+            
+            pdgraphernognn_data['nognn_category'] = pdgraphernognn_data['flag_category'].apply(categorize_nognn_flags)
+            
+            # Group PDGrapherNoGNN data by edge_count and nognn_category
+            nognn_grouped = pdgraphernognn_data.groupby(['edge_count', 'nognn_category'])['total_runtime'].agg(['mean', 'std', 'count']).reset_index()
+            nognn_grouped.columns = ['edge_count', 'flag_category', 'mean', 'std', 'count']
+            nognn_grouped['model_type'] = 'pdgraphernognn'
+            
+            # Combine the grouped data
+            grouped_data = pd.concat([grouped_data, nognn_grouped], ignore_index=True)
         
         # Calculate standard error of the mean
         grouped_data['stderr'] = grouped_data['std'] / np.sqrt(grouped_data['count'])
@@ -571,36 +848,45 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
         
         # Define colors and line styles for each flag category
         style_config = {
-            'no_flags': {'color': 'blue', 'linestyle': '-', 'marker': 'o', 'label': 'No flags'},
-            'random_graph': {'color': 'red', 'linestyle': '--', 'marker': 's', 'label': 'Random graph'},
-            'remove_duplicates': {'color': 'green', 'linestyle': '-.', 'marker': '^', 'label': 'Remove duplicates'},
-            'remove_duplicates + random_graph': {'color': 'purple', 'linestyle': ':', 'marker': 'D', 'label': 'Remove duplicates + Random graph'}
+            # PDGrapher styles
+            'no_flags': {'color': 'blue', 'linestyle': '-', 'marker': 'o', 'label': 'PDGrapher - No flags'},
+            'random_graph': {'color': 'red', 'linestyle': '--', 'marker': 's', 'label': 'PDGrapher - Random graph'},
+            'remove_duplicates': {'color': 'green', 'linestyle': '-.', 'marker': '^', 'label': 'PDGrapher - Remove duplicates'},
+            'remove_duplicates + random_graph': {'color': 'purple', 'linestyle': ':', 'marker': 'D', 'label': 'PDGrapher - Remove duplicates + Random graph'},
+            # PDGrapherNoGNN styles  
+            'rd_experiments': {'color': 'orange', 'linestyle': '-', 'marker': 'v', 'label': 'PDGrapherNoGNN - RD experiments (avg)'},
+            'non_rd_experiments': {'color': 'brown', 'linestyle': '--', 'marker': 'h', 'label': 'PDGrapherNoGNN - Non-RD experiments (avg)'}
         }
         
-        # Plot each flag category with error bars
-        for flag_category in grouped_data['flag_category'].unique():
-            category_data = grouped_data[grouped_data['flag_category'] == flag_category].sort_values('edge_count')
+        # Plot each flag category with error bars, separating by model type
+        for model_type in grouped_data['model_type'].unique():
+            model_data_subset = grouped_data[grouped_data['model_type'] == model_type]
             
-            if not category_data.empty:
-                style = style_config.get(flag_category, {'color': 'black', 'linestyle': '-', 'marker': 'o', 'label': flag_category})
+            for flag_category in model_data_subset['flag_category'].unique():
+                category_data = model_data_subset[model_data_subset['flag_category'] == flag_category].sort_values('edge_count')
                 
-                # Use errorbar instead of plot to show variance
-                plt.errorbar(category_data['edge_count'], category_data['mean'], 
-                            yerr=category_data['std'],  # Use standard deviation as error bars
-                            color=style['color'], 
-                            linestyle=style['linestyle'],
-                            marker=style['marker'],
-                            markersize=8,
-                            linewidth=2,
-                            capsize=5,
-                            capthick=2,
-                            elinewidth=1.5,
-                            alpha=0.8,
-                            label=style['label'])
+                if not category_data.empty:
+                    # Get style based on flag category
+                    style_key = flag_category if model_type == 'pdgrapher' else flag_category
+                    style = style_config.get(style_key, {'color': 'black', 'linestyle': '-', 'marker': 'o', 'label': f'{model_type} - {flag_category}'})
+                    
+                    # Use errorbar instead of plot to show variance
+                    plt.errorbar(category_data['edge_count'], category_data['mean'], 
+                                yerr=category_data['std'],  # Use standard deviation as error bars
+                                color=style['color'], 
+                                linestyle=style['linestyle'],
+                                marker=style['marker'],
+                                markersize=8,
+                                linewidth=2,
+                                capsize=5,
+                                capthick=2,
+                                elinewidth=1.5,
+                                alpha=0.8,
+                                label=style['label'])
         
         plt.title(exp_type['title'], fontsize=16, fontweight='bold')
         plt.xlabel('Edge Count', fontsize=12, fontweight='bold')
-        plt.ylabel('Source in Top 5 (%)', fontsize=12, fontweight='bold')
+        plt.ylabel('Total Runtime (Hours)', fontsize=12, fontweight='bold')
         plt.grid(True, alpha=0.3)
         plt.legend(fontsize=10)
         
@@ -609,22 +895,25 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
         plt.gca().set_ylim(bottom=0)
         
         # Add value labels on points with sample size information
-        for flag_category in grouped_data['flag_category'].unique():
-            category_data = grouped_data[grouped_data['flag_category'] == flag_category].sort_values('edge_count')
-            for _, row in category_data.iterrows():
-                # Show mean ± std and sample size
-                if row['count'] > 1:
-                    label_text = f'{row["mean"]:.1f}±{row["std"]:.1f}%\n(n={int(row["count"])})'
-                else:
-                    label_text = f'{row["mean"]:.1f}%\n(n=1)'
-                
-                plt.annotate(label_text, 
-                            (row['edge_count'], row['mean']),
-                            textcoords="offset points", 
-                            xytext=(0,15), 
-                            ha='center',
-                            fontsize=7,
-                            bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.7))
+        for model_type in grouped_data['model_type'].unique():
+            model_data_subset = grouped_data[grouped_data['model_type'] == model_type]
+            
+            for flag_category in model_data_subset['flag_category'].unique():
+                category_data = model_data_subset[model_data_subset['flag_category'] == flag_category].sort_values('edge_count')
+                for _, row in category_data.iterrows():
+                    # Show mean ± std and sample size
+                    if row['count'] > 1:
+                        label_text = f'{row["mean"]:.2f}±{row["std"]:.2f}h\n(n={int(row["count"])})'
+                    else:
+                        label_text = f'{row["mean"]:.2f}h\n(n=1)'
+                    
+                    plt.annotate(label_text, 
+                                (row['edge_count'], row['mean']),
+                                textcoords="offset points", 
+                                xytext=(0,15), 
+                                ha='center',
+                                fontsize=7,
+                                bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.7))
         
         plt.tight_layout()
         
@@ -633,28 +922,25 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close()
         
-        print(f"{exp_type['label']} network scaling line chart saved: {output_path}")
+        print(f"{exp_type['label']} runtime scaling line chart saved: {output_path}")
         
         # Print detailed data summary with variance information
-        print(f"\n{exp_type['label']} - Detailed Data Summary:")
-        print("Edge Count | Flag Category | Mean | Std | Count")
-        print("-" * 50)
+        print(f"\n{exp_type['label']} - Detailed Runtime Data Summary:")
+        print("Model Type | Edge Count | Flag Category | Mean (h) | Std (h) | Count")
+        print("-" * 75)
         for _, row in grouped_data.iterrows():
-            print(f"{int(row['edge_count']):>10} | {row['flag_category']:<25} | {row['mean']:>5.2f} | {row['std']:>4.2f} | {int(row['count']):>5}")
+            print(f"{row['model_type']:<12} | {int(row['edge_count']):>10} | {row['flag_category']:<25} | {row['mean']:>8.3f} | {row['std']:>7.3f} | {int(row['count']):>5}")
         
-        print(f"\n{exp_type['label']} - Pivot table (Mean values):")
-        mean_pivot = grouped_data.pivot(index='edge_count', columns='flag_category', values='mean')
-        print(mean_pivot.round(2))
-        
-        print(f"\n{exp_type['label']} - Pivot table (Standard Deviation):")
-        std_pivot = grouped_data.pivot(index='edge_count', columns='flag_category', values='std')
-        print(std_pivot.round(2))
-        
-        print(f"\n{exp_type['label']} - Pivot table (Sample Counts):")
-        count_pivot = grouped_data.pivot(index='edge_count', columns='flag_category', values='count')
-        print(count_pivot.fillna(0).astype(int))
+        print(f"\n{exp_type['label']} - Pivot table (Mean Runtime in Hours):")
+        # Create separate pivot tables for each model type
+        for model_type in grouped_data['model_type'].unique():
+            model_subset = grouped_data[grouped_data['model_type'] == model_type]
+            if not model_subset.empty:
+                print(f"\n{model_type.upper()} - Mean Runtime (Hours):")
+                mean_pivot = model_subset.pivot(index='edge_count', columns='flag_category', values='mean')
+                print(mean_pivot.round(3).to_string())
     
-    print("\nNetwork scaling line charts creation complete!")
+    print("\nRuntime scaling line charts creation complete!")
 
 
 def compare_methods_across_runs(methods: List[str] = None, output_dir: str = None):
@@ -726,7 +1012,8 @@ def main():
     print("Generated files:")
     print("- all_results.csv: Raw data in CSV format")
     print("- *.png: Comparison plots")
-    print("- runtime_summary.csv: Runtime breakdown by method and stage")
+    print("- runtime_summary.csv: Latest runtime breakdown by method and stage")
+    print("- runtime_summary_MMDD_HHMM.csv: Timestamped runtime breakdown")
     print("- runtime_comparison.png: Runtime comparison plot")
 
 if __name__ == "__main__":

@@ -41,6 +41,8 @@ class ModelValidator:
             return self._load_gat_model()
         elif self.model_type == "pdgrapher":
             return self._load_pdgrapher_model()
+        elif self.model_type == "pdgraphernognn":
+            return self._load_pdgrapher_nognn_model()
         else:
             raise ValueError(f"Unsupported model type: {self.model_type}")
     
@@ -104,13 +106,55 @@ class ModelValidator:
         print(f"Model configuration loaded from checkpoint: {checkpoint.get('model_config', 'Not available')}")
         return model
     
+    def _load_pdgrapher_nognn_model(self):
+        """Load PDGrapherNoGNN perturbation discovery model."""
+        from architectures.PDGrapherNoGNN import PerturbationDiscoveryModelNoGNN, NoGNNArgs
+        
+        print(f"Loading PDGrapherNoGNN model from: {self.model_path}")
+        checkpoint = torch.load(self.model_path, map_location=self.device, weights_only=False)
+        state_dict = checkpoint["model_state_dict"]
+        
+        # Extract model configuration - handle both saved formats
+        model_config = checkpoint.get("model_config", {})
+        positional_features_dims = model_config.get("positional_features_dims", 64)
+        embed_dim = model_config.get("embedding_layer_dim", 64)
+        dim_gnn = model_config.get("dim_gnn", 64)
+        num_vars = model_config.get("num_vars", const.N_NODES)
+        n_layers_gnn = model_config.get("n_layers_gnn", const.LAYERS)
+        
+        # Create model args (no edge_index needed)
+        args = NoGNNArgs(
+            positional_features_dims=positional_features_dims,
+            embedding_layer_dim=embed_dim,
+            dim_gnn=dim_gnn,
+            num_vars=num_vars,
+            n_layers_gnn=n_layers_gnn,
+            n_layers_nn=const.LAYERS,
+        )
+        
+        print(f"Model config (from saved weights): positional_features_dims={positional_features_dims}, "
+              f"embedding_layer_dim={embed_dim}, dim_gnn={dim_gnn}, num_vars={num_vars}, "
+              f"n_layers_gnn={n_layers_gnn}")
+        
+        # Initialize and load the model (no edge_index needed)
+        model = PerturbationDiscoveryModelNoGNN(args, num_vars)
+        model.load_state_dict(state_dict)
+        model.to(self.device)
+        model.eval()
+        
+        print(f"Loaded PerturbationDiscoveryModelNoGNN with {sum(p.numel() for p in model.parameters()):,} parameters")
+        print(f"Model configuration loaded from checkpoint: {checkpoint.get('model_config', 'Not available')}")
+        return model
+    
     def load_test_data(self):
         """Load test data based on model type."""
         if self.model_type == "gat":
             return self._load_gat_test_data()
         elif self.model_type == "pdgrapher":
             return self._load_pdgrapher_test_data()
-    
+        elif self.model_type == "pdgraphernognn":
+            return self._load_pdgrapher_nognn_test_data()
+
     def _load_gat_test_data(self):
         """Load test data for GAT model."""
         # Load processed test data
@@ -150,12 +194,28 @@ class ModelValidator:
 
         return dataset, test_loader_backward
     
+    def _load_pdgrapher_nognn_test_data(self):
+        """Load test data for PDGrapherNoGNN model (same as PDGrapher but without edge dependencies)."""
+        data_path = Path(const.PROCESSED_PATH)
+        
+        dataset = Dataset(
+            forward_path=str(data_path / "data_forward.pt"),
+            backward_path=str(data_path / "data_backward.pt"),
+            splits_path=str(const.SPLITS_PATH)
+        )
+        # Get test data loader with reduced workers for cluster compatibility
+        (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1, num_workers=0)
+
+        return dataset, test_loader_backward
+    
     def get_predictions(self, model, test_data):
         """Get model predictions based on model type."""
         if self.model_type == "gat":
             return self._get_gat_predictions(model, test_data[1])  # processed_test_data
         elif self.model_type == "pdgrapher":
             return self._get_pdgrapher_predictions(model, test_data[0], test_data[1])  # dataset, test_loader
+        elif self.model_type == "pdgraphernognn":
+            return self._get_pdgrapher_nognn_predictions(model, test_data[0], test_data[1])  # dataset, test_loader
     
     def _get_gat_predictions(self, model, processed_test_data):
         """Get predictions from GAT model."""
@@ -229,12 +289,75 @@ class ModelValidator:
         self._pdgrapher_true_sources = true_sources
         return predictions
     
+    def _get_pdgrapher_nognn_predictions(self, model, dataset, test_loader):
+        """Get predictions from PDGrapherNoGNN model (same logic as PDGrapher but without edge dependencies)."""
+        predictions = []
+        true_sources = []
+        
+        # Load thresholds
+        thresholds_path = Path(const.PROCESSED_PATH) / "thresholds.pt"
+        thresholds = torch.load(thresholds_path, weights_only=False)
+        # Ensure thresholds are on the correct device
+        thresholds = {k: (v.detach().clone() if isinstance(v, torch.Tensor) else torch.tensor(v)).to(self.device) 
+                     for k, v in thresholds.items()}
+        
+        print(f"Loaded thresholds with keys: {list(thresholds.keys())}")
+        
+        # Use the same threshold structure as PDGrapher
+        if "diseased" in thresholds and "treated" in thresholds:
+            threshold_input = {"diseased": thresholds["diseased"], "treated": thresholds["treated"]}
+        else:
+            # Fallback to backward thresholds if the PDGrapher-style keys don't exist
+            threshold_input = {"diseased": thresholds["backward"], "treated": thresholds["backward"]}
+        
+        model.eval()
+        with torch.no_grad():
+            for i, data in enumerate(tqdm(test_loader, desc="PDGrapherNoGNN predictions", disable=const.ON_CLUSTER)):
+                # Extract true source for tracking (same logic as PDGrapher)
+                intervention = data.intervention
+                if intervention.device != torch.device("cpu"):
+                    intervention = intervention.cpu()
+                true_source_tensor = torch.where(intervention == 1)[0]
+                if len(true_source_tensor) > 0:
+                    true_source = int(true_source_tensor[0])
+                    true_sources.append(true_source)
+                else:
+                    print(f"WARNING: No true source found in sample {i}")
+                    true_sources.append(-1)
+                
+                # Move all relevant tensors to the correct device (no edge_index needed)
+                for attr in ['diseased', 'treated', 'batch', 'mutations', 'intervention']:
+                    if hasattr(data, attr):
+                        tensor = getattr(data, attr)
+                        if tensor is not None and isinstance(tensor, torch.Tensor):
+                            setattr(data, attr, tensor.to(self.device))
+                diseased = data.diseased.view(-1, 1)
+                treated = data.treated.view(-1, 1)
+                batch = data.batch
+                mutations = data.mutations
+                
+                # Run model inference (no edge_index passed)
+                intervention_logits = model(
+                    torch.cat([diseased, treated], dim=1),
+                    batch,
+                    mutilate_mutations=mutations,
+                    threshold_input=threshold_input
+                )
+
+                intervention_logits = intervention_logits.flatten()
+                predictions.append(intervention_logits.cpu())
+        
+        self._pdgrapher_nognn_true_sources = true_sources
+        return predictions
+    
     def extract_true_sources(self, test_data):
         """Extract true source nodes based on model type."""
         if self.model_type == "gat":
             return self._extract_gat_true_sources(test_data[1])  # processed_test_data
         elif self.model_type == "pdgrapher":
             return self._extract_pdgrapher_true_sources(test_data[1])  # test_loader
+        elif self.model_type == "pdgraphernognn":
+            return self._extract_pdgrapher_nognn_true_sources(test_data[1])  # test_loader
     
     def _extract_gat_true_sources(self, processed_test_data):
         """Extract true sources from GAT processed data."""
@@ -268,12 +391,39 @@ class ModelValidator:
                     true_sources.append(-1)
             return true_sources
     
+    def _extract_pdgrapher_nognn_true_sources(self, test_loader):
+        """Extract true sources from PDGrapherNoGNN data (same logic as PDGrapher)."""
+        # True sources were already extracted during prediction phase
+        # to ensure exact same data ordering
+        if hasattr(self, '_pdgrapher_nognn_true_sources'):
+            return self._pdgrapher_nognn_true_sources
+        else:
+            # Fallback - but this shouldn't happen with the fixed code
+            print("WARNING: True sources not found from prediction phase, falling back to separate extraction")
+            true_sources = []
+            for i, data in enumerate(test_loader):
+                # Ensure intervention is on CPU for indexing
+                intervention = data.intervention
+                if intervention.device != torch.device("cpu"):
+                    intervention = intervention.cpu()
+                true_source_tensor = torch.where(intervention == 1)[0]
+                if len(true_source_tensor) > 0:
+                    true_source = int(true_source_tensor[0])
+                    true_sources.append(true_source)
+                else:
+                    print(f"WARNING: No true source found in sample {i}")
+                    true_sources.append(-1)
+            return true_sources
+    
     def get_raw_data_for_stats(self, test_data):
         """Get raw data for statistics calculation."""
         if self.model_type == "gat":
             return test_data[0]  # raw_test_data
         elif self.model_type == "pdgrapher":
             # For PDGrapher, we need to load raw data separately
+            return self._load_raw_test_data_from_indices()
+        elif self.model_type == "pdgraphernognn":
+            # For PDGrapherNoGNN, same as PDGrapher - load raw data separately
             return self._load_raw_test_data_from_indices()
 
 

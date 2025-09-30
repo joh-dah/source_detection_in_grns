@@ -22,32 +22,21 @@ class NoGNNBase(nn.Module):
         self.num_nodes = num_nodes
         self.positional_features_dims = args.positional_features_dims
         self.embedding_layer_dim = args.embedding_layer_dim
-        self.dim_gnn = args.dim_gnn  # Keep naming for compatibility
+        self.dim_gnn = args.dim_gnn
         
-        # Feature transformation layers (replace GCN)
-        self.feature_transform = nn.ModuleList()
-        
-        input_dim = 2 * args.embedding_layer_dim + args.positional_features_dims
-        
-        # Multiple transformation layers instead of GCN layers
+        # Dense layers (replace GCN)
+        self.convs = nn.ModuleList()
         if args.n_layers_gnn > 0:
-            self.feature_transform.append(nn.Linear(input_dim, args.dim_gnn))
-            
-        for _ in range(args.n_layers_gnn - 1):
-            self.feature_transform.append(
-                nn.Linear(args.dim_gnn + 2 * args.embedding_layer_dim, args.dim_gnn)
+            self.convs.append(
+                nn.Linear(2 * args.embedding_layer_dim + args.positional_features_dims, args.dim_gnn)
             )
+        if args.n_layers_gnn > 1:
+            for _ in range(args.n_layers_gnn - 1):
+                self.convs.append(
+                    nn.Linear(args.dim_gnn + 2 * args.embedding_layer_dim, args.dim_gnn)
+                )
         
-        # Global attention mechanism (replace graph message passing)
-        if args.n_layers_gnn > 0:
-            self.attention = nn.MultiheadAttention(
-                embed_dim=args.dim_gnn + 2 * args.embedding_layer_dim,
-                num_heads=8,
-                dropout=0.1,
-                batch_first=True
-            )
-        
-        # Batch normalization layers
+        # Batch normalization layers (same structure as original)
         self.bns = nn.ModuleList()
         for _ in range(args.n_layers_gnn):
             self.bns.append(nn.BatchNorm1d(args.dim_gnn + 2 * args.embedding_layer_dim))
@@ -76,31 +65,20 @@ class NoGNNBase(nn.Module):
     
     def from_node_to_out(self, x1, x2, batch, random_dims):
         """
-        Replace graph convolutions with dense transformations and attention.
+        Replace graph convolutions with dense transformations.
+        Maintains the same layer structure as original PDGrapher.
         """
-        # Initial feature concatenation
+        # Initial node embedding (same as original)
         x = torch.cat([x1, x2, random_dims], dim=1)
         
-        # Apply feature transformations (replace GCN layers)
-        for i, (transform, bn) in enumerate(zip(self.feature_transform, self.bns)):
-            x_transformed = F.elu(transform(x))
-            
-            # Reshape for attention: (batch_size, num_nodes, features)
-            batch_size = len(torch.unique(batch))
-            x_reshaped = x_transformed.view(batch_size, self.num_nodes, -1)
-            
-            # Apply self-attention (replace graph message passing)
-            if hasattr(self, 'attention'):
-                x_attended, _ = self.attention(x_reshaped, x_reshaped, x_reshaped)
-                x_attended = x_attended.view(-1, x_attended.size(-1))
-            else:
-                x_attended = x_transformed
-            
-            # Concatenate with original embeddings and apply batch norm
-            x = torch.cat([x1, x2, x_attended], dim=1)
+        # Dense layers (replace Conv layers)
+        for conv, bn in zip(self.convs, self.bns):
+            x = F.elu(conv(x))
+            # Maintain same concatenation pattern as original
+            x = torch.cat([x1, x2, x], dim=1)
             x = bn(x)
         
-        # Apply MLP layers (same as original)
+        # MLP layers (same as original)
         if len(self.mlp) > 1:
             for layer, bn in zip(self.mlp[:-2], self.bns_mlp[:-1]):
                 x = bn(F.elu(layer(x)))
@@ -117,20 +95,16 @@ class ResponsePredictionModelNoGNN(NoGNNBase):
     def __init__(self, args, num_nodes: int):
         super().__init__(args, "response", num_nodes)
         
-        # Import EmbedLayer from PDGrapher (assuming it's available)
+        # Import EmbedLayer from PDGrapher
         try:
             from pdgrapher._embed import EmbedLayer
         except ImportError:
-            # Fallback: simple embedding layer
-            class EmbedLayer(nn.Module):
-                def __init__(self, num_vars, num_features, num_categs, hidden_dim):
-                    super().__init__()
-                    self.embedding = nn.Embedding(num_vars * num_categs, hidden_dim)
-                
-                def forward(self, x, **kwargs):
-                    return self.embedding(x.long()), x
+            raise ImportError("EmbedLayer from PDGrapher is required. Make sure PDGrapher is properly installed.")
         
         self.num_nodes = num_nodes
+        
+        # Add dummy edge_index for trainer compatibility (will be set by trainer)
+        self.edge_index = None
         self.embed_layer_pert = EmbedLayer(
             num_nodes, num_features=1, num_categs=2, 
             hidden_dim=args.embedding_layer_dim
@@ -152,11 +126,11 @@ class ResponsePredictionModelNoGNN(NoGNNBase):
     
     def _get_embeddings(self, x, batch, topK=None, binarize_intervention=False, 
                        mutilate_mutations=None, threshold_input=None):
-        # Positional encodings
+        # Positional encodings (same as original)
         pos_embeddings = self.positional_embeddings(torch.arange(self.num_nodes).to(x.device))
         random_dims = pos_embeddings.repeat(int(x.shape[0] / self.num_nodes), 1)
         
-        # Feature embedding
+        # Feature embedding (same as original)
         x_ge, _ = self.embed_layer_ge(
             x[:, 0].view(-1, 1), topK=None, binarize_intervention=False, 
             binarize_input=True, threshold_input=threshold_input
@@ -166,7 +140,7 @@ class ResponsePredictionModelNoGNN(NoGNNBase):
             binarize_input=False, threshold_input=None
         )
         
-        # Apply dense transformations instead of graph convolutions
+        # Apply dense transformations (no graph mutilation since no edges)
         x = self.from_node_to_out(x_ge, x_pert, batch, random_dims)
         
         return x, in_x_binarized
@@ -180,19 +154,16 @@ class PerturbationDiscoveryModelNoGNN(NoGNNBase):
     def __init__(self, args, num_nodes: int):
         super().__init__(args, "perturbation", num_nodes)
         
-        # Import EmbedLayer from PDGrapher (with same fallback)
+        # Import EmbedLayer from PDGrapher
         try:
             from pdgrapher._embed import EmbedLayer
         except ImportError:
-            class EmbedLayer(nn.Module):
-                def __init__(self, num_vars, num_features, num_categs, hidden_dim):
-                    super().__init__()
-                    self.embedding = nn.Embedding(num_vars * num_categs, hidden_dim)
-                
-                def forward(self, x, **kwargs):
-                    return self.embedding(x.long()), x
+            raise ImportError("EmbedLayer from PDGrapher is required. Make sure PDGrapher is properly installed.")
         
         self.num_nodes = num_nodes
+        
+        # Add dummy edge_index for trainer compatibility (will be set by trainer)
+        self.edge_index = None
         self.embed_layer_diseased = EmbedLayer(
             num_nodes, num_features=1, num_categs=500, 
             hidden_dim=args.embedding_layer_dim
@@ -210,15 +181,16 @@ class PerturbationDiscoveryModelNoGNN(NoGNNBase):
         return self.out_fun(x)
     
     def _get_embeddings(self, x, batch, topK=None, mutilate_mutations=None, threshold_input=None):
-        # Handle mutations for source detection tasks
+        # For source detection tasks without background mutations, allow None mutilate_mutations
         if mutilate_mutations is None:
+            # Set to zeros (no mutations) for source detection tasks
             mutilate_mutations = torch.zeros(x.shape[0], device=x.device)
         
-        # Positional encodings
+        # Positional encodings (same as original)
         pos_embeddings = self.positional_embeddings(torch.arange(self.num_nodes).to(x.device))
         random_dims = pos_embeddings.repeat(int(x.shape[0] / self.num_nodes), 1)
         
-        # Feature embedding
+        # Feature embedding (same as original)
         x_diseased, _ = self.embed_layer_diseased(
             x[:, 0].view(-1, 1), topK=None, binarize_input=True, 
             threshold_input=threshold_input["diseased"]
@@ -228,7 +200,7 @@ class PerturbationDiscoveryModelNoGNN(NoGNNBase):
             threshold_input=threshold_input["treated"]
         )
         
-        # Apply dense transformations instead of graph convolutions
+        # Apply dense transformations (no graph mutilation since no edges)
         x = self.from_node_to_out(x_diseased, x_treated, batch, random_dims)
         
         return x

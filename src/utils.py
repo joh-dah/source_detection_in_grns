@@ -62,7 +62,7 @@ def ranked_source_predictions(
     """
     if n_nodes is None:
         n_nodes = predictions.shape[0]
-    if const.MODEL.lower() in ["gat", "gcnsi", "pdgrapher"]:
+    if const.MODEL.lower() in ["gat", "gcnsi", "pdgrapher", "pdgraphernognn"]:
         top_nodes = torch.topk(predictions.flatten(), n_nodes).indices
     else:
         raise ValueError(f"Model {const.MODEL} not supported for ranked source predictions.")

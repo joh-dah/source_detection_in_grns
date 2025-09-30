@@ -98,8 +98,8 @@ EXPERIMENT = params.get("experiment", "unknown")
 dc = params["data_creation"]
 NETWORK = dc["network"]
 SEED = params["seed"]
-if MODEL not in ["gat", "pdgrapher", "gcnsi", "pdgrapher_nognn"]:
-    raise ValueError(f"Invalid model type: {MODEL}. Expected one of ['gat', 'pdgrapher', 'gcnsi', 'pdgrapher_nognn'].")
+if MODEL not in ["gat", "pdgrapher", "gcnsi", "pdgraphernognn"]:
+    raise ValueError(f"Invalid model type: {MODEL}. Expected one of ['gat', 'pdgrapher', 'gcnsi', 'pdgraphernognn'].")
 MODEL_NAME = f"{params["model_name"]}_{EXPERIMENT}"
 
 # Path structure: shared data for same data_creation params, experiment-specific for perturbations
@@ -177,11 +177,18 @@ network_dict = {
     "dorothea_99": 99,
     "dorothea_150": 150,
     "dorothea_290": 290,
+    "dorothea_500_550": 500,
     "dorothea_500_600": 500,
     "dorothea_500_700": 500,
     "dorothea_500_800": 500,
     "dorothea_500_900": 500,
     "dorothea_500_1000": 500,
+    "dorothea_500_1250": 500,
+    "dorothea_500_1500": 500,
+    "dorothea_500_2000": 500,
+    "dorothea_500_2500": 500,
+    "dorothea_500_3000": 500,
+    "dorothea_500_4000": 500,
     "dorothea_727_sparse": 727,
     "dorothea_882_sparse": 882,
     "dorothea_1000": 1000,

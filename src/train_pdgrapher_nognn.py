@@ -7,14 +7,7 @@ import os
 
 # Import the new PDGrapher implementation without external dependencies
 from architectures.PDGrapherNoGNN import PDGrapherNoGNN
-
-# Try to import PDGrapher dataset and trainer - adapt as needed
-try:
-    from pdgrapher import Dataset, Trainer
-except ImportError:
-    print("Warning: PDGrapher package not available, using fallback implementations")
-    # You'll need to implement fallback Dataset and Trainer classes
-    # or adapt the training loop to work with your existing data processing
+from pdgrapher import Dataset, Trainer
 
 torch.set_num_threads(5)
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -57,18 +50,27 @@ def main():
         if len(thresholds[direction]) != 501:  # 500 bins + 1
             print(f"Warning: {direction} thresholds has {len(thresholds[direction])} values, expected 501")
 
-    # Initialize PDGrapherNoGNN (no edge_index needed)
+    # Initialize PDGrapherNoGNN (no edge_index needed for computation, but trainer expects it)
+    num_nodes = dataset.get_num_vars()
+    
+    # Create dummy edge_index for trainer compatibility (self-loops for all nodes)
+    dummy_edges = torch.arange(num_nodes).unsqueeze(0).repeat(2, 1)
+    
     model = PDGrapherNoGNN(
-        num_nodes=dataset.get_num_vars(),  # Pass number of nodes instead of edge_index
+        num_nodes=num_nodes,  # Pass number of nodes instead of edge_index
         model_kwargs={
             "n_layers_nn": const.LAYERS, 
             "n_layers_gnn": const.LAYERS,  # Now represents dense layers
             "positional_features_dims": 64,
             "embedding_layer_dim": 64,
             "dim_gnn": 64,
-            "num_vars": dataset.get_num_vars()
+            "num_vars": num_nodes
         }
     )
+    
+    # Set dummy edge_index on both models for trainer compatibility
+    model.response_prediction.edge_index = dummy_edges
+    model.perturbation_discovery.edge_index = dummy_edges
     
     # Set optimizers (same as PDGrapher)
     model.set_optimizers_and_schedulers([

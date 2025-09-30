@@ -352,8 +352,9 @@ def process_gene(
     start = time.time()
 
     subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
-    num_init_conds = int(math.sqrt(perturbations_per_gene/10))
-    num_params = num_init_conds*10
+    num_init_conds = math.sqrt(perturbations_per_gene/10)
+    num_params = int(num_init_conds*10)
+    num_init_conds = int(num_init_conds)
     rr.gen_topo_param_files(
         topo_file,
         topo_name=subnetwork_name,
