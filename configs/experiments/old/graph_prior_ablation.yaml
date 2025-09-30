@@ -1,0 +1,39 @@
+# Ablation study specifically focused on the impact of graph structure
+# Tests PDGrapher vs PDGrapherNoGNN with identical training conditions
+
+model: pdgrapher_ablation  # Special value for ablation study
+model_name: graph_prior_ablation
+
+data_creation:
+  n_samples: 3000
+  time_steps: null    
+  training_share: 0.6
+  normalize_data: true
+  network: dorothea_500_700  # Different network to test generalization
+  remove_near_duplicates: true
+
+graph_perturbation:
+  random_graph: false
+  noise:
+    missing_edges: 0.1  # Slight noise to test robustness
+    wrong_edges: 0.05
+
+# Identical training configs for fair comparison
+training:
+  epochs: 100
+  layers: 3
+  alpha: 0.75
+  batch_size: 32
+  class_weighting: true
+  graph_weighting: true
+  hidden_size: 256
+  heads: 8
+  dropout: 0.1
+  learning_rate: 2.0e-4
+  subsample: false
+  weight_decay: 1.0e-4
+
+# Focus on specific metrics
+gene_specific_metrics:
+  enabled: true
+  genes_of_interest: []  # Will analyze all nodes

@@ -1,5 +1,5 @@
 data_creation:
-  n_samples: 1000
+  n_samples: 100000
   time_steps: null    
   training_share: 0.6
   normalize_data: true

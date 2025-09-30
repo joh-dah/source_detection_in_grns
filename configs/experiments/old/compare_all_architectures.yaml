@@ -1,0 +1,39 @@
+# Experiment to compare all three architectures: GAT, PDGrapher, PDGrapherNoGNN
+# This allows for direct comparison of graph-based vs non-graph-based approaches
+
+model: all  # Special value indicating this experiment runs multiple models
+model_name: compare_all_architectures
+
+data_creation:
+  n_samples: 5000  # Larger dataset for robust comparison
+  time_steps: null    
+  training_share: 0.6
+  normalize_data: true
+  network: dorothea_500_600  # Medium-sized network for comparison
+  remove_near_duplicates: true
+
+graph_perturbation:
+  random_graph: false
+  noise:
+    missing_edges: 0  # Start with clean graph
+    wrong_edges: 0
+
+# Training configs for all models
+training:
+  epochs: 150  # More epochs for thorough comparison
+  layers: 3
+  alpha: 0.75
+  batch_size: 32
+  class_weighting: true
+  graph_weighting: true
+  hidden_size: 256
+  heads: 8
+  dropout: 0.1
+  learning_rate: 2.0e-4
+  subsample: false
+  weight_decay: 1.0e-4
+
+# Gene-specific metrics for detailed analysis
+gene_specific_metrics:
+  enabled: true
+  genes_of_interest: ["TP53", "MYC", "BRCA1"]  # Well-known cancer genes if available

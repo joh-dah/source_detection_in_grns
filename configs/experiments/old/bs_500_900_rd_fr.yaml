@@ -1,5 +1,4 @@
 data_creation:
-  n_samples: 50000
   network: dorothea_500_900
   remove_near_duplicates: true
 graph_perturbation:
