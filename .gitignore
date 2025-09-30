@@ -18,5 +18,6 @@ src/__pycache__/
 /slurm_out
 /report_vis/*.csv
 /examples/PDGrapher
+/data_exploration/pdgrapher_data
 *.pyc
 *.egg-info/
