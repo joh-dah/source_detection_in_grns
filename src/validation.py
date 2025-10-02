@@ -160,25 +160,40 @@ class ModelValidator:
         # Load processed test data
         processed_test_data = utils.load_processed_data(split="test")
         
-        # Load corresponding raw data for validation metrics
-        raw_test_data = self._load_raw_test_data_from_indices()
+        # Try to load corresponding raw data for validation metrics
+        try:
+            raw_test_data = self._load_raw_test_data_from_indices()
+        except (FileNotFoundError, Exception) as e:
+            print(f"Warning: Could not load raw test data for GAT: {e}")
+            raw_test_data = None
         
         return raw_test_data, processed_test_data
     
     def _load_raw_test_data_from_indices(self):
         """Load raw test data based on split indices."""
-        splits = torch.load(const.SPLITS_PATH, weights_only=False)
-        test_indices = splits["test_index_backward"]
-        
-        raw_data_dir = Path(const.RAW_PATH)
-        raw_files = sorted(list(raw_data_dir.glob("*.pt")))
-        
-        raw_test_data = []
-        for idx in test_indices:
-            raw_data = torch.load(raw_files[idx], weights_only=False)
-            raw_test_data.append(raw_data)
-        
-        return raw_test_data
+        try:
+            splits = torch.load(const.SPLITS_PATH, weights_only=False)
+            test_indices = splits["test_index_backward"]
+            
+            raw_data_dir = Path(const.RAW_PATH)
+            if not raw_data_dir.exists():
+                raise FileNotFoundError(f"Raw data directory does not exist: {raw_data_dir}")
+                
+            raw_files = sorted(list(raw_data_dir.glob("*.pt")))
+            if not raw_files:
+                raise FileNotFoundError(f"No raw data files found in: {raw_data_dir}")
+            
+            raw_test_data = []
+            for idx in test_indices:
+                if idx >= len(raw_files):
+                    raise IndexError(f"Test index {idx} exceeds number of raw files {len(raw_files)}")
+                raw_data = torch.load(raw_files[idx], weights_only=False)
+                raw_test_data.append(raw_data)
+            
+            return raw_test_data
+        except Exception as e:
+            print(f"Error loading raw test data: {e}")
+            raise
     
     def _load_pdgrapher_test_data(self):
         """Load test data for PDGrapher model."""
@@ -253,6 +268,9 @@ class ModelValidator:
                     intervention = intervention.cpu()
                 true_source_tensor = torch.where(intervention == 1)[0]
                 if len(true_source_tensor) > 0:
+                    if len(true_source_tensor) > 1:
+                        print(f"WARNING: Multiple sources found in sample {i}: {true_source_tensor.tolist()}")
+                        print(f"Using first source: {true_source_tensor[0].item()} for single-source evaluation")
                     true_source = int(true_source_tensor[0])
                     true_sources.append(true_source)
                 else:
@@ -271,10 +289,10 @@ class ModelValidator:
                 mutations = data.mutations if hasattr(data, 'mutations') else None
 
                 # Predict interventions using the correct threshold structure for PDGrapher
-                # PDGrapher model expects threshold_input with "diseased" and "treated" keys
+                # PDGrapher model expects threshold_input with forward/backward keys 
                 threshold_input = {
-                    "diseased": thresholds["diseased"],
-                    "treated": thresholds["treated"]
+                    "diseased": thresholds["forward"],   # Use forward thresholds for diseased samples
+                    "treated": thresholds["backward"]    # Use backward thresholds for treated samples
                 }
                 intervention_logits = model(
                     torch.cat([diseased, treated], dim=1),
@@ -304,10 +322,10 @@ class ModelValidator:
         print(f"Loaded thresholds with keys: {list(thresholds.keys())}")
         
         # Use the same threshold structure as PDGrapher
-        if "diseased" in thresholds and "treated" in thresholds:
-            threshold_input = {"diseased": thresholds["diseased"], "treated": thresholds["treated"]}
+        if "forward" in thresholds and "backward" in thresholds:
+            threshold_input = {"diseased": thresholds["forward"], "treated": thresholds["backward"]}
         else:
-            # Fallback to backward thresholds if the PDGrapher-style keys don't exist
+            # Fallback to backward thresholds if the standard keys don't exist
             threshold_input = {"diseased": thresholds["backward"], "treated": thresholds["backward"]}
         
         model.eval()
@@ -319,6 +337,9 @@ class ModelValidator:
                     intervention = intervention.cpu()
                 true_source_tensor = torch.where(intervention == 1)[0]
                 if len(true_source_tensor) > 0:
+                    if len(true_source_tensor) > 1:
+                        print(f"WARNING: Multiple sources found in sample {i}: {true_source_tensor.tolist()}")
+                        print(f"Using first source: {true_source_tensor[0].item()} for single-source evaluation")
                     true_source = int(true_source_tensor[0])
                     true_sources.append(true_source)
                 else:
@@ -419,12 +440,13 @@ class ModelValidator:
         """Get raw data for statistics calculation."""
         if self.model_type == "gat":
             return test_data[0]  # raw_test_data
-        elif self.model_type == "pdgrapher":
-            # For PDGrapher, we need to load raw data separately
-            return self._load_raw_test_data_from_indices()
-        elif self.model_type == "pdgraphernognn":
-            # For PDGrapherNoGNN, same as PDGrapher - load raw data separately
-            return self._load_raw_test_data_from_indices()
+        elif self.model_type == "pdgrapher" or self.model_type == "pdgraphernognn":
+            # For PDGrapher/PDGrapherNoGNN, try to load raw data but handle failure gracefully
+            try:
+                return self._load_raw_test_data_from_indices()
+            except (FileNotFoundError, Exception) as e:
+                print(f"Warning: Could not load raw data for stats: {e}")
+                return None
 
 
 def TP_FP_metrics(true_sources: list, pred_sources: list) -> dict:
@@ -487,6 +509,86 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
     }
 
 
+def multi_source_prediction_metrics(pred_label_set: list, test_data_loader) -> dict:
+    """
+    Calculate prediction metrics that can handle multiple true sources per sample.
+    Returns metrics for multi-source scenarios.
+    """
+    print("Calculating multi-source prediction metrics...")
+    
+    multi_source_samples = 0
+    all_source_ranks = []
+    all_predictions_for_sources = []
+    multi_source_accuracy = []  # How many sources we get right per sample
+    
+    for i, (pred_labels, data) in enumerate(zip(pred_label_set, test_data_loader)):
+        # Extract all true sources for this sample
+        intervention = data.intervention
+        if intervention.device != torch.device("cpu"):
+            intervention = intervention.cpu()
+        true_source_indices = torch.where(intervention == 1)[0].tolist()
+        
+        if len(true_source_indices) > 1:
+            multi_source_samples += 1
+            
+            # Get rankings for all nodes
+            ranked_predictions = utils.ranked_source_predictions(pred_labels).tolist()
+            
+            # Calculate metrics for each true source
+            sample_ranks = []
+            sample_predictions = []
+            correct_in_top_k = {"top1": 0, "top3": 0, "top5": 0}
+            
+            for true_source in true_source_indices:
+                rank = ranked_predictions.index(true_source)
+                sample_ranks.append(rank)
+                sample_predictions.append(pred_labels[true_source].item())
+                
+                # Count how many sources are correctly identified in top-k
+                if rank == 0:
+                    correct_in_top_k["top1"] += 1
+                if rank < 3:
+                    correct_in_top_k["top3"] += 1
+                if rank < 5:
+                    correct_in_top_k["top5"] += 1
+            
+            all_source_ranks.extend(sample_ranks)
+            all_predictions_for_sources.extend(sample_predictions)
+            
+            # Calculate accuracy as fraction of sources correctly identified
+            total_sources = len(true_source_indices)
+            multi_source_accuracy.append({
+                "sample_id": i,
+                "total_sources": total_sources,
+                "correct_top1": correct_in_top_k["top1"],
+                "correct_top3": correct_in_top_k["top3"], 
+                "correct_top5": correct_in_top_k["top5"],
+                "accuracy_top1": correct_in_top_k["top1"] / total_sources,
+                "accuracy_top3": correct_in_top_k["top3"] / total_sources,
+                "accuracy_top5": correct_in_top_k["top5"] / total_sources,
+            })
+    
+    if multi_source_samples == 0:
+        return {"multi_source_metrics": "No multi-source samples found"}
+    
+    # Calculate aggregate metrics
+    avg_accuracy_top1 = np.mean([sample["accuracy_top1"] for sample in multi_source_accuracy])
+    avg_accuracy_top3 = np.mean([sample["accuracy_top3"] for sample in multi_source_accuracy])
+    avg_accuracy_top5 = np.mean([sample["accuracy_top5"] for sample in multi_source_accuracy])
+    
+    return {
+        "multi_source_samples": multi_source_samples,
+        "avg_rank_of_sources": np.mean(all_source_ranks),
+        "avg_prediction_for_sources": np.mean(all_predictions_for_sources),
+        "avg_source_accuracy_top1": avg_accuracy_top1,
+        "avg_source_accuracy_top3": avg_accuracy_top3,
+        "avg_source_accuracy_top5": avg_accuracy_top5,
+        "perfect_samples_top1": sum(1 for s in multi_source_accuracy if s["accuracy_top1"] == 1.0),
+        "perfect_samples_top3": sum(1 for s in multi_source_accuracy if s["accuracy_top3"] == 1.0),
+        "perfect_samples_top5": sum(1 for s in multi_source_accuracy if s["accuracy_top5"] == 1.0),
+    }
+
+
 def node_classification_metrics(pred_label_set: list, processed_data: list = None) -> dict:
     """Calculate node-level binary classification metrics."""
     if processed_data is None:
@@ -533,6 +635,20 @@ def node_classification_metrics(pred_label_set: list, processed_data: list = Non
 
 def data_stats(raw_data_set: list) -> dict:
     """Calculate data statistics."""
+    if raw_data_set is None or len(raw_data_set) == 0:
+        print("Warning: No raw data available for statistics calculation")
+        return {
+            "graph stats": {
+                "number of nodes": const.N_NODES,
+                "number of possible sources": "N/A (no raw data)",
+            },
+            "infection stats": {
+                "avg number of sources": "N/A (no raw data)",
+                "avg portion of affected nodes": "N/A (no raw data)", 
+                "std portion of affected nodes": "N/A (no raw data)",
+            },
+        }
+    
     n_nodes = []
     n_sources = []
     n_nodes_affected = []
@@ -693,20 +809,33 @@ def supervised_metrics(
     pred_sources: list,
     processed_data: list = None,
     model_type: str = "gat",
-    raw_test_data: list = None
+    raw_test_data: list = None,
+    test_data_loader = None
 ) -> dict:
     """Perform supervised evaluation metrics."""
     metrics = {}
 
     print("Evaluating Model ...")
 
-    # Common metrics for all models
+    # Common metrics for all models (single-source evaluation)
     metrics.update(prediction_metrics(pred_label_set, true_sources))
+    
+    # Multi-source metrics if we have access to the test data loader
+    if test_data_loader is not None and model_type in ["pdgrapher", "pdgraphernognn"]:
+        multi_metrics = multi_source_prediction_metrics(pred_label_set, test_data_loader)
+        if "multi_source_metrics" not in multi_metrics:  # Only if we found multi-source samples
+            metrics["multi_source_metrics"] = multi_metrics
+    
     # not useful for sigle source prediction
     # metrics.update(TP_FP_metrics(true_sources, pred_sources))
 
     # Gene-specific metrics if enabled and genes of interest are specified
-    if const.GENE_METRICS_ENABLED and const.GENES_OF_INTEREST and raw_test_data:
+    if (const.GENE_METRICS_ENABLED and 
+        hasattr(const, 'GENES_OF_INTEREST') and 
+        const.GENES_OF_INTEREST and 
+        raw_test_data is not None and 
+        len(raw_test_data) > 0):
+        
         # Extract gene mapping from first raw data sample
         gene_mapping = raw_test_data[0].gene_mapping if hasattr(raw_test_data[0], 'gene_mapping') else None
         
@@ -724,6 +853,13 @@ def supervised_metrics(
                 metrics["gene_specific_metrics"] = gene_metrics
         else:
             print("Warning: Gene mapping not found in raw data, skipping gene-specific metrics")
+    else:
+        if not hasattr(const, 'GENE_METRICS_ENABLED') or not const.GENE_METRICS_ENABLED:
+            print("Gene-specific metrics disabled in configuration")
+        elif not hasattr(const, 'GENES_OF_INTEREST') or not const.GENES_OF_INTEREST:
+            print("No genes of interest specified, skipping gene-specific metrics")
+        elif raw_test_data is None:
+            print("No raw data available, skipping gene-specific metrics")
 
     # Round numerical values
     for key, value in metrics.items():
@@ -764,16 +900,24 @@ def main():
     # Determine processed data for node-level metrics (GAT only)
     processed_data = test_data[1] if model_type == "gat" else None
     
+    # Get test_data_loader for multi-source metrics (PDGrapher models only)
+    test_data_loader = test_data[1] if model_type in ["pdgrapher", "pdgraphernognn"] else None
+    
     # Calculate metrics
     metrics_dict = {
         "network": network,
         "model_type": model_type,
         "metrics": supervised_metrics(
-            pred_labels, true_sources, pred_sources, processed_data, model_type, raw_test_data
+            pred_labels, true_sources, pred_sources, processed_data, model_type, raw_test_data, test_data_loader
         ),
-        "data stats": data_stats(raw_test_data),
         "parameters": const.params  # Use the loaded parameters from constants
     }
+    
+    # Only include data stats if raw data is available
+    if raw_test_data is not None:
+        metrics_dict["data stats"] = data_stats(raw_test_data)
+    else:
+        print("Raw data not available, skipping data statistics")
     
     utils.save_metrics(metrics_dict)
 

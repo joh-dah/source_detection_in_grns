@@ -194,6 +194,8 @@ network_dict = {
     "dorothea_1000": 1000,
     "dorothea_1000_sparse": 1000,
     "dorothea_2000_sparse": 2000,
+    "pdgrapher_grn": 10716,
+    "random_10716_300000": 10716,
 }
 
 

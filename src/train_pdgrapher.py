@@ -38,7 +38,7 @@ def main():
         splits_path=const.SPLITS_PATH,
     )
 
-    # Load thresholds (required by PDGrapher for discretizing expression values)
+    # Load pre-computed thresholds (ensures consistency between training and validation)
     thresholds_path = data_processed_dir / "thresholds.pt"
     thresholds = torch.load(thresholds_path, weights_only=False)
     print(f"Loaded thresholds: {list(thresholds.keys())}")

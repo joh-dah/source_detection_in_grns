@@ -215,6 +215,36 @@ def get_graph_data_from_topo(filepath=None):
     return G, gene_to_idx
 
 
+def get_edge_index_from_topo(filepath=None, undirected=True):
+    """
+    Create PyTorch Geometric edge_index tensor from a topo file.
+    
+    :param filepath: path to the topology file
+    :param undirected: if True, convert directed graph to undirected
+    :return: edge_index (torch.Tensor), gene_to_idx (dict), num_nodes (int)
+    """
+    G, gene_to_idx = get_graph_data_from_topo(filepath)
+    
+    # Convert to undirected if requested (common for GNNs)
+    if undirected:
+        G = G.to_undirected()
+    
+    # Create edge_index tensor
+    edges = list(G.edges())
+    if len(edges) == 0:
+        # Handle empty graph case
+        num_nodes = len(gene_to_idx)
+        edge_index = torch.empty((2, 0), dtype=torch.long)
+    else:
+        # Convert gene names to indices
+        edge_list = [(gene_to_idx[u], gene_to_idx[v]) for u, v in edges]
+        edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
+    
+    num_nodes = len(gene_to_idx)
+    
+    return edge_index, gene_to_idx, num_nodes
+
+
 def load_raw_test_data():
         """Load raw test data based on split indices."""
         splits = torch.load(const.SPLITS_PATH, weights_only=False)
