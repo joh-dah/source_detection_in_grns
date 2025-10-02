@@ -1,0 +1,16 @@
+data_creation:
+  network: pdgrapher_grn  # ÄNDERE DAS basierend auf analyze_downloaded_data.py
+  normalize_data: true
+  remove_near_duplicates: false
+
+graph_perturbation:
+  noise:
+    missing_edges: 0
+    wrong_edges: 0
+
+training:
+  epochs: 200
+  batch_size: 8 
+
+gene_specific_metrics:
+  enabled: false  # Deaktiviert da keine raw data
