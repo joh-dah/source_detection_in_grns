@@ -1,11 +1,11 @@
 data_creation:
-  network: dorothea_500_550
+  network: dorothea_500_2500
 
 graph_perturbation:
-  remove_near_duplicates: true
   noise:
     missing_edges: 0
     wrong_edges: 0
+  self_loop_graph: true
 
 training:
   epochs: 200 

@@ -1,8 +1,8 @@
 data_creation:
-  network: dorothea_500_550
+  network: dorothea_500_1000
 
 graph_perturbation:
-  random_graph: true
+  random_graph: false
   noise:
     missing_edges: 0
     wrong_edges: 0
