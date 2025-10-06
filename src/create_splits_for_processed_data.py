@@ -4,61 +4,61 @@ Create splits.pt for pre-processed PDGrapher data.
 This script creates train/validation/test splits for your downloaded processed data.
 """
 import torch
-import yaml
 from sklearn.model_selection import train_test_split
-from pathlib import Path
-import os
+import src.constants as const
 
 def create_splits_for_processed_data():
     """
     Create splits for pre-processed PDGrapher data.
     """
     # Load configuration using the same merging logic as constants system (without importing constants)
-    from pathlib import Path
-    import yaml
+    # from pathlib import Path
+    # import yaml
     
-    def deep_merge(base: dict, override: dict) -> dict:
-        """Deep merge two dictionaries."""
-        result = base.copy()
-        for key, value in override.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                result[key] = deep_merge(result[key], value)
-            else:
-                result[key] = value
-        return result
+    # def deep_merge(base: dict, override: dict) -> dict:
+    #     """Deep merge two dictionaries."""
+    #     result = base.copy()
+    #     for key, value in override.items():
+    #         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+    #             result[key] = deep_merge(result[key], value)
+    #         else:
+    #             result[key] = value
+    #     return result
     
-    # Load configs like constants system
-    config_dir = Path("configs")
+    # # Load configs like constants system
+    # config_dir = Path("configs")
     
-    # 1. Load shared config
-    shared_config = yaml.safe_load(open(config_dir / "shared.yaml"))
+    # # 1. Load shared config
+    # shared_config = yaml.safe_load(open(config_dir / "shared.yaml"))
     
-    # 2. Load model config
-    model_config = yaml.safe_load(open(config_dir / "models" / "pdgrapher.yaml"))
-    config = deep_merge(shared_config, model_config)
+    # # 2. Load model config
+    # model_config = yaml.safe_load(open(config_dir / "models" / "pdgrapher.yaml"))
+    # config = deep_merge(shared_config, model_config)
     
-    # 3. Load experiment config
-    exp_config = yaml.safe_load(open(config_dir / "experiments" / "og_pdgrapher_data.yaml"))
-    exp_config["experiment"] = "og_pdgrapher_data"
-    config = deep_merge(config, exp_config)
+    # # 3. Load experiment config
+    # exp_config = yaml.safe_load(open(config_dir / "experiments" / "og_pdgrapher_data.yaml"))
+    # exp_config["experiment"] = "og_pdgrapher_data"
+    # config = deep_merge(config, exp_config)
     
-    # Use data_utils functions for consistent path calculation
-    from src.data_utils import get_data_fingerprint, get_graph_perturbation_fingerprint
+    # # Use data_utils functions for consistent path calculation
+    # from src.data_utils import get_data_fingerprint, get_graph_perturbation_fingerprint
     
-    # Get parameters from merged config
-    data_creation = config["data_creation"]
-    graph_perturbation = config["graph_perturbation"]
-    network = data_creation["network"]
-    seed = config.get("seed", 42)
-    experiment_name = "og_pdgrapher_data"
+    # # Get parameters from merged config
+    # data_creation = config["data_creation"]
+    # graph_perturbation = config["graph_perturbation"]
+    # network = data_creation["network"]
+    # seed = config.get("seed", 42)
+    # experiment_name = "og_pdgrapher_data"
     
-    # Calculate hashes using data_utils functions
-    shared_hash = get_data_fingerprint(data_creation, network, seed)
-    experiment_hash = get_graph_perturbation_fingerprint(graph_perturbation)
+    # # Calculate hashes using data_utils functions
+    # shared_hash = get_data_fingerprint(data_creation, network, seed)
+    # experiment_hash = get_graph_perturbation_fingerprint(graph_perturbation)
     
-    # Build the correct experiment data path
-    processed_path = Path(f"data/experiments/{shared_hash}/{experiment_hash}/{experiment_name}/processed/pdgrapher")
+    # # Build the correct experiment data path
+    # processed_path = Path(f"data/experiments/{shared_hash}/{experiment_hash}/{experiment_name}/processed/pdgrapher")
     
+    processed_path = const.PROCESSED_PATH
+    seed = const.SEED
     print(f"Creating splits for processed data in: {processed_path}")
     
     # Load the processed data to get sample counts

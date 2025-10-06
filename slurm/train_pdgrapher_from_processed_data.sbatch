@@ -71,93 +71,93 @@ if [ ! -f "$EXPERIMENT_CONFIG" ]; then
     exit 1
 fi
 
-# Calculate the correct path using the same config merging as constants system (avoiding import issues)
-PROCESSED_DIR=$(python3 -c "
-import yaml
-import json
-import hashlib
-from pathlib import Path
+# # Calculate the correct path using the same config merging as constants system (avoiding import issues)
+# PROCESSED_DIR=$(python3 -c "
+# import yaml
+# import json
+# import hashlib
+# from pathlib import Path
 
-def deep_merge(base, override):
-    result = base.copy()
-    for key, value in override.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = deep_merge(result[key], value)
-        else:
-            result[key] = value
-    return result
+# def deep_merge(base, override):
+#     result = base.copy()
+#     for key, value in override.items():
+#         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+#             result[key] = deep_merge(result[key], value)
+#         else:
+#             result[key] = value
+#     return result
 
-def get_data_fingerprint(data_creation_params, network, seed):
-    fingerprint_data = {
-        'data_creation': data_creation_params,
-        'network': network,
-        'seed': seed
-    }
-    canonical_json = json.dumps(fingerprint_data, sort_keys=True, separators=(',', ':'))
-    hash_object = hashlib.sha256(canonical_json.encode('utf-8'))
-    return hash_object.hexdigest()[:12]
+# def get_data_fingerprint(data_creation_params, network, seed):
+#     fingerprint_data = {
+#         'data_creation': data_creation_params,
+#         'network': network,
+#         'seed': seed
+#     }
+#     canonical_json = json.dumps(fingerprint_data, sort_keys=True, separators=(',', ':'))
+#     hash_object = hashlib.sha256(canonical_json.encode('utf-8'))
+#     return hash_object.hexdigest()[:12]
 
-def get_graph_perturbation_fingerprint(graph_perturbation_params):
-    canonical_json = json.dumps(graph_perturbation_params, sort_keys=True, separators=(',', ':'))
-    hash_object = hashlib.sha256(canonical_json.encode('utf-8'))
-    return hash_object.hexdigest()[:12]
+# def get_graph_perturbation_fingerprint(graph_perturbation_params):
+#     canonical_json = json.dumps(graph_perturbation_params, sort_keys=True, separators=(',', ':'))
+#     hash_object = hashlib.sha256(canonical_json.encode('utf-8'))
+#     return hash_object.hexdigest()[:12]
 
-# Load configs like constants system
-config_dir = Path('configs')
+# # Load configs like constants system
+# config_dir = Path('configs')
 
-# 1. Load shared config
-shared_config = yaml.safe_load(open(config_dir / 'shared.yaml'))
+# # 1. Load shared config
+# shared_config = yaml.safe_load(open(config_dir / 'shared.yaml'))
 
-# 2. Load model config
-model_config = yaml.safe_load(open(config_dir / 'models' / 'pdgrapher.yaml'))
-config = deep_merge(shared_config, model_config)
+# # 2. Load model config
+# model_config = yaml.safe_load(open(config_dir / 'models' / 'pdgrapher.yaml'))
+# config = deep_merge(shared_config, model_config)
 
-# 3. Load experiment config
-exp_config = yaml.safe_load(open(config_dir / 'experiments' / 'og_pdgrapher_data.yaml'))
-exp_config['experiment'] = 'og_pdgrapher_data'
-config = deep_merge(config, exp_config)
+# # 3. Load experiment config
+# exp_config = yaml.safe_load(open(config_dir / 'experiments' / 'og_pdgrapher_data.yaml'))
+# exp_config['experiment'] = 'og_pdgrapher_data'
+# config = deep_merge(config, exp_config)
 
-# Get parameters from merged config
-data_creation = config['data_creation']
-graph_perturbation = config['graph_perturbation']
-network = data_creation['network']
-seed = config.get('seed', 42)
-experiment_name = 'og_pdgrapher_data'
+# # Get parameters from merged config
+# data_creation = config['data_creation']
+# graph_perturbation = config['graph_perturbation']
+# network = data_creation['network']
+# seed = config.get('seed', 42)
+# experiment_name = 'og_pdgrapher_data'
 
-# Calculate hashes
-shared_hash = get_data_fingerprint(data_creation, network, seed)
-experiment_hash = get_graph_perturbation_fingerprint(graph_perturbation)
+# # Calculate hashes
+# shared_hash = get_data_fingerprint(data_creation, network, seed)
+# experiment_hash = get_graph_perturbation_fingerprint(graph_perturbation)
 
-# Print the correct experiment data path
-print(f'data/experiments/{shared_hash}/{experiment_hash}/{experiment_name}/processed/pdgrapher')
-")
+# # Print the correct experiment data path
+# print(f'data/experiments/{shared_hash}/{experiment_hash}/{experiment_name}/processed/pdgrapher')
+# ")
 
-SPLITS_PATH="$PROCESSED_DIR/splits.pt"
+# SPLITS_PATH="$PROCESSED_DIR/splits.pt"
 
-echo "Using constants system paths:"
-echo "Processed data directory: $PROCESSED_DIR"
-echo "Splits file path: $SPLITS_PATH"
+# echo "Using constants system paths:"
+# echo "Processed data directory: $PROCESSED_DIR"
+# echo "Splits file path: $SPLITS_PATH"
 
-# Verify required processed files exist
-REQUIRED_FILES=("data_forward.pt" "data_backward.pt" "edge_index.pt")
-for file in "${REQUIRED_FILES[@]}"; do
-    if [ ! -f "$PROCESSED_DIR/$file" ]; then
-        echo "ERROR: Required file not found: $PROCESSED_DIR/$file"
-        echo "Please ensure you have downloaded the processed data files:"
-        echo "  - data_forward.pt"
-        echo "  - data_backward.pt" 
-        echo "  - edge_index.pt"
-        echo ""
-        echo "Expected directory structure:"
-        echo "  $PROCESSED_DIR/"
-        echo "  ├── data_forward.pt"
-        echo "  ├── data_backward.pt"
-        echo "  ├── edge_index.pt"
-        echo "  └── thresholds.pt  (will be created)"
-        exit 1
-    fi
-    echo "✓ Found: $PROCESSED_DIR/$file"
-done
+# # Verify required processed files exist
+# REQUIRED_FILES=("data_forward.pt" "data_backward.pt" "edge_index.pt")
+# for file in "${REQUIRED_FILES[@]}"; do
+#     if [ ! -f "$PROCESSED_DIR/$file" ]; then
+#         echo "ERROR: Required file not found: $PROCESSED_DIR/$file"
+#         echo "Please ensure you have downloaded the processed data files:"
+#         echo "  - data_forward.pt"
+#         echo "  - data_backward.pt" 
+#         echo "  - edge_index.pt"
+#         echo ""
+#         echo "Expected directory structure:"
+#         echo "  $PROCESSED_DIR/"
+#         echo "  ├── data_forward.pt"
+#         echo "  ├── data_backward.pt"
+#         echo "  ├── edge_index.pt"
+#         echo "  └── thresholds.pt  (will be created)"
+#         exit 1
+#     fi
+#     echo "✓ Found: $PROCESSED_DIR/$file"
+# done
 
 # =============================================================================
 # Stage 1: Data Splitting (if missing)
@@ -178,7 +178,7 @@ else
     mkdir -p "$(dirname "$SPLITS_PATH")"
     
     # Run data splitting for processed data
-    python create_splits_for_processed_data.py
+    python -m src.create_splits --experiment $EXPERIMENT --model pdgrapher
     
     if [ $? -ne 0 ]; then
         echo "ERROR: Data splitting failed!"
@@ -210,9 +210,9 @@ else
     # Set environment variables for compute_thresholds.py
     export EXPERIMENT_NAME=$EXPERIMENT
     export MODEL=pdgrapher
-    
-    python compute_thresholds.py --experiment $EXPERIMENT
-    
+
+    python -m src.compute_thresholds --experiment $EXPERIMENT --model pdgrapher
+
     if [ $? -ne 0 ]; then
         echo "ERROR: Threshold computation failed!"
         exit 1
