@@ -9,6 +9,14 @@ def create_data_splits():
     Run the data splitting process.
     Uses shared data path so splits are reused between experiments with same data_creation config.
     """
+    # first check, whether processed data is available
+    if not Path(const.PROCESSED_PATH).exists():
+        raise FileNotFoundError(f"Processed data path {const.PROCESSED_PATH} does not exist. Please run data processing first.")
+    # check what files are in the processed data path
+    processed_files = list(Path(const.PROCESSED_PATH).glob("*.pt"))
+    if len(processed_files) == 0:
+        raise FileNotFoundError(f"No processed data files found in {const.PROCESSED_PATH}. Please run data processing first.")
+
     print(f"Creating splits for shared data in: {const.SHARED_DATA_PATH}")
     outdir = Path(const.SHARED_DATA_PATH) / "splits"
     os.makedirs(outdir, exist_ok=True)

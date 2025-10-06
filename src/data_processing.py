@@ -2,8 +2,6 @@
 from pathlib import Path
 from src import constants as const
 from src import utils
-import networkx as nx
-import numpy as np
 import os
 import shutil
 from torch_geometric.data import Data, Dataset
@@ -12,8 +10,7 @@ import multiprocessing as mp
 from tqdm import tqdm
 from torch_geometric.utils import add_remaining_self_loops, to_undirected, from_networkx
 
-# Import threshold computation logic
-from compute_thresholds import compute_and_store_thresholds
+from src.compute_thresholds import compute_and_store_thresholds
 
 
 class SDDataset(Dataset):
@@ -357,9 +354,7 @@ def main():
         print("Computing thresholds from existing processed data...")
         
         # Import and run threshold computation for existing data
-        from compute_thresholds import compute_thresholds_for_existing_data
-        compute_thresholds_for_existing_data()
-        
+        compute_and_store_thresholds()
         # Return datasets for consistency
         datasets = create_datasets_for_model(const.MODEL)
         return datasets

@@ -164,8 +164,17 @@ def apply_graph_noise(G: nx.DiGraph, missing_edges_fraction: float, wrong_edges_
     return G_perturbed
 
 
-def add_noise_to_graph(G: nx.DiGraph, random_graph=False) -> nx.DiGraph:
+def add_noise_to_graph(G: nx.DiGraph, random_graph=False, self_loop_graph=False) -> nx.DiGraph:
     if random_graph:
+        # create a random graph with the same number of nodes and edges
+        G_random = nx.barabasi_albert_graph(G.number_of_nodes(), G.number_of_edges() // G.number_of_nodes())
+        G_random = nx.DiGraph(G_random)  # Convert to directed graph
+        # Assign random weight (1 or 2) to each edge
+        for u, v in G_random.edges():
+            G_random[u][v]['weight'] = np.random.choice([1, 2])
+        print("Random graph created.")
+        return G_random
+    elif self_loop_graph:
         print("Creating random graph...")
         # create a graph with G.number_of_nodes() and only self loops with weight 1 or 2
         G_random = nx.DiGraph()
@@ -174,16 +183,8 @@ def add_noise_to_graph(G: nx.DiGraph, random_graph=False) -> nx.DiGraph:
             G_random.add_edge(node, node, weight=np.random.choice([1, 2]))
         print("Random graph created.")
         return G_random
-        # # create a random graph with the same number of nodes and edges
-        # G_random = nx.barabasi_albert_graph(G.number_of_nodes(), G.number_of_edges() // G.number_of_nodes())
-        # G_random = nx.DiGraph(G_random)  # Convert to directed graph
-        # # Assign random weight (1 or 2) to each edge
-        # for u, v in G_random.edges():
-        #     G_random[u][v]['weight'] = np.random.choice([1, 2])
-        # print("Random graph created.")
-        # return G_random
-    
-    return apply_graph_noise(G, const.GRAPH_NOISE["missing_edges"], const.GRAPH_NOISE["wrong_edges"])
+    else:
+        return apply_graph_noise(G, const.GRAPH_NOISE["missing_edges"], const.GRAPH_NOISE["wrong_edges"])
 
 
 def main():
@@ -197,7 +198,7 @@ def main():
     store_graph(G_original_pyg, name="original")
     
     # Apply perturbations
-    G_perturbed = add_noise_to_graph(G, const.RANDOM_GRAPH)
+    G_perturbed = add_noise_to_graph(G, const.RANDOM_GRAPH, const.SELF_LOOP_GRAPH)
 
     # Store perturbed graph in PyTorch Geometric format
     G_perturbed_pyg = from_networkx(G_perturbed, group_edge_attrs=['weight'])

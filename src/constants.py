@@ -152,6 +152,7 @@ REMOVE_NEAR_DUPLICATES = dc["remove_near_duplicates"]
 gp = params.get("graph_perturbation", {})
 GRAPH_NOISE = gp.get("noise", {"missing_edges": 0, "wrong_edges": 0})
 RANDOM_GRAPH = gp.get("random_graph", False)
+SELF_LOOP_GRAHP = gp.get("self_loop_graph", False)
 
 # Training
 training = params["training"]
@@ -196,6 +197,10 @@ network_dict = {
     "dorothea_2000_sparse": 2000,
     "pdgrapher_grn": 10716,
     "random_10716_300000": 10716,
+    "10716_not_connected_100": 10716,
+    "10716_self_loops": 10716,
+    "10716_weakly_connected_10": 10716,
+    "10716_weakly_connected_100": 10716,
 }
 
 
