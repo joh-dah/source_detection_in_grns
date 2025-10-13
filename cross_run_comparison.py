@@ -24,6 +24,9 @@ Usage Examples:
     
     # Create both network and runtime scaling charts
     python cross_run_comparison.py --network-scaling --runtime-scaling
+    
+    # Create network scaling chart with merged _rd and non-_rd experiments
+    python cross_run_comparison.py --network-scaling --merge-rd
 """
 
 import argparse
@@ -48,12 +51,14 @@ def main():
                        help='Create network scaling line chart for 500-node experiments (PDGrapher & PDGrapherNoGNN)')
     parser.add_argument('--runtime-scaling', action='store_true',
                        help='Create runtime scaling line chart for 500-node experiments (PDGrapher & PDGrapherNoGNN)')
+    parser.add_argument('--merge-rd', action='store_true',
+                       help='Merge metrics from _rd experiments with their non-_rd counterparts for averaging')
     
     args = parser.parse_args()
     
     if args.network_scaling:
         print("Creating network scaling line chart...")
-        create_network_scaling_line_chart(args.output_dir)
+        create_network_scaling_line_chart(args.output_dir, merge_rd=args.merge_rd)
     
     if args.runtime_scaling:
         print("Creating runtime scaling line chart...")
