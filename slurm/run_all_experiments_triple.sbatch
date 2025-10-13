@@ -67,6 +67,9 @@ import hashlib
 import json
 from pathlib import Path
 
+# Set a dummy experiment to avoid constants.py errors
+os.environ['EXPERIMENT_NAME'] = 'dummy'
+
 # Add src to path
 sys.path.append('/sc/home/johanna.dahlkemper/source_detection_in_grns/src')
 from data_utils import get_data_fingerprint
@@ -79,6 +82,9 @@ fingerprint_groups = {}
 
 for config_file in sorted(Path(config_dir).glob("*.yaml")):
     experiment_name = config_file.stem
+    
+    # Set experiment context before each fingerprint calculation
+    os.environ['EXPERIMENT_NAME'] = experiment_name
     
     try:
         with open(config_file, 'r') as f:
@@ -135,9 +141,9 @@ while IFS=':' read -r fingerprint experiments; do
     DATA_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="shared_data_${fingerprint:0:12}"
-#SBATCH --mem=512G
+#SBATCH --mem=600G
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=64
+#SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu
 #SBATCH --time=5-00:00:00
@@ -149,9 +155,12 @@ while IFS=':' read -r fingerprint experiments; do
 
 source .venv/bin/activate
 
-# JAX/XLA Performance Optimizations
+# JAX/XLA Performance Optimizations - Fix compilation slowdown and memory issues
+export XLA_FLAGS="--xla_cpu_multi_thread_eigen=false"
+export JAX_PLATFORMS=cpu
+export XLA_ENABLE_X64=false
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
-export XLA_PYTHON_CLIENT_MEM_FRACTION=0.8
+export XLA_PYTHON_CLIENT_MEM_FRACTION=0.7
 export JAX_PLATFORM_NAME=cpu
 
 echo "=== CREATING SHARED DATA ==="

@@ -238,15 +238,8 @@ echo ""
 
 echo "Starting PDGrapher training with computed thresholds..."
 
-# Start background GPU monitoring
-python gpu_monitor.py > "gpu_memory_log_${SLURM_JOB_ID}.txt" 2>&1 &
-GPU_MONITOR_PID=$!
-
 python -m src.train_pdgrapher --experiment $EXPERIMENT --model pdgrapher
 training_exit_code=$?
-
-# Stop GPU monitoring
-kill $GPU_MONITOR_PID 2>/dev/null
 
 echo ""
 echo "📊 Post-training GPU memory:"
