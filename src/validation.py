@@ -6,7 +6,8 @@ import torch
 from tqdm import tqdm
 import networkx as nx
 import os
-from sklearn.metrics import roc_auc_score, precision_score, recall_score, f1_score
+from sklearn.metrics import roc_auc_score, precision_score, recall_score, f1_score, mean_absolute_error, mean_squared_error
+from scipy.stats import pearsonr, spearmanr, linregress
 from pathlib import Path
 
 import src.constants as const
@@ -482,30 +483,66 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
     source_ranks = []
     predictions_for_source = []
     general_predictions = []
-    in_top3 = []
     in_top5 = []
+    in_top20 = []
+    in_top40 = []
+    in_top80 = []
 
     for i, pred_labels in enumerate(tqdm(pred_label_set, desc="evaluate model", disable=const.ON_CLUSTER)):
-        true_source = true_sources[i]
+        # Handle both single and multiple sources
+        if isinstance(true_sources[i], (list, tuple)):
+            # Multiple sources case
+            true_source_list = true_sources[i]
+        else:
+            # Single source case
+            true_source_list = [true_sources[i]]
+        
         ranked_predictions = utils.ranked_source_predictions(pred_labels).tolist()
 
-        source_rank = ranked_predictions.index(true_source)
-        source_ranks.append(source_rank)
-        predictions_for_source.append(pred_labels[true_source].item())
-        general_predictions += pred_labels.tolist()
-
-        in_top3.append(source_rank < 3)
-        in_top5.append(source_rank < 5)
+        # Calculate metrics for each true source and take the best/average
+        sample_ranks = []
+        sample_predictions = []
+        sample_in_top5 = []
+        sample_in_top20 = []
+        sample_in_top40 = []
+        sample_in_top80 = []
+        
+        for true_source in true_source_list:
+            if true_source == -1:  # Skip invalid sources
+                continue
+                
+            source_rank = ranked_predictions.index(true_source)
+            sample_ranks.append(source_rank)
+            sample_predictions.append(pred_labels[true_source].item())
+            
+            sample_in_top5.append(source_rank < 5)
+            sample_in_top20.append(source_rank < 20)
+            sample_in_top40.append(source_rank < 40)
+            sample_in_top80.append(source_rank < 80)
+        
+        if sample_ranks:  # Only add if we have valid sources
+            # For multi-source: use best rank (most optimistic) or average
+            source_ranks.append(min(sample_ranks))  # Best rank among true sources
+            predictions_for_source.extend(sample_predictions)
+            general_predictions += pred_labels.tolist()
+            
+            # For top-k: sample is successful if ANY true source is in top-k
+            in_top5.append(any(sample_in_top5))
+            in_top20.append(any(sample_in_top20))
+            in_top40.append(any(sample_in_top40))
+            in_top80.append(any(sample_in_top80))
 
     return {
         "accuracy": np.mean(np.array(source_ranks) == 0),
         "avg rank of source": np.mean(source_ranks),
         "avg prediction for source": np.mean(predictions_for_source),
         "avg prediction over all nodes": np.mean(general_predictions),
-        "min prediction over all nodes": min(general_predictions),
-        "max prediction over all nodes": max(general_predictions),
-        "source in top 3": np.mean(in_top3),
+        "min prediction over all nodes": min(general_predictions) if general_predictions else 0,
+        "max prediction over all nodes": max(general_predictions) if general_predictions else 0,
         "source in top 5": np.mean(in_top5),
+        "source in top 20": np.mean(in_top20),
+        "source in top 40": np.mean(in_top40),
+        "source in top 80": np.mean(in_top80),
     }
 
 
@@ -537,7 +574,7 @@ def multi_source_prediction_metrics(pred_label_set: list, test_data_loader) -> d
             # Calculate metrics for each true source
             sample_ranks = []
             sample_predictions = []
-            correct_in_top_k = {"top1": 0, "top3": 0, "top5": 0}
+            correct_in_top_k = {"top1": 0, "top5": 0, "top20": 0, "top40": 0, "top80": 0}
             
             for true_source in true_source_indices:
                 rank = ranked_predictions.index(true_source)
@@ -547,10 +584,14 @@ def multi_source_prediction_metrics(pred_label_set: list, test_data_loader) -> d
                 # Count how many sources are correctly identified in top-k
                 if rank == 0:
                     correct_in_top_k["top1"] += 1
-                if rank < 3:
-                    correct_in_top_k["top3"] += 1
                 if rank < 5:
                     correct_in_top_k["top5"] += 1
+                if rank < 20:
+                    correct_in_top_k["top20"] += 1
+                if rank < 40:
+                    correct_in_top_k["top40"] += 1
+                if rank < 80:
+                    correct_in_top_k["top80"] += 1
             
             all_source_ranks.extend(sample_ranks)
             all_predictions_for_sources.extend(sample_predictions)
@@ -561,11 +602,15 @@ def multi_source_prediction_metrics(pred_label_set: list, test_data_loader) -> d
                 "sample_id": i,
                 "total_sources": total_sources,
                 "correct_top1": correct_in_top_k["top1"],
-                "correct_top3": correct_in_top_k["top3"], 
                 "correct_top5": correct_in_top_k["top5"],
+                "correct_top20": correct_in_top_k["top20"], 
+                "correct_top40": correct_in_top_k["top40"],
+                "correct_top80": correct_in_top_k["top80"],
                 "accuracy_top1": correct_in_top_k["top1"] / total_sources,
-                "accuracy_top3": correct_in_top_k["top3"] / total_sources,
                 "accuracy_top5": correct_in_top_k["top5"] / total_sources,
+                "accuracy_top20": correct_in_top_k["top20"] / total_sources,
+                "accuracy_top40": correct_in_top_k["top40"] / total_sources,
+                "accuracy_top80": correct_in_top_k["top80"] / total_sources,
             })
     
     if multi_source_samples == 0:
@@ -573,19 +618,22 @@ def multi_source_prediction_metrics(pred_label_set: list, test_data_loader) -> d
     
     # Calculate aggregate metrics
     avg_accuracy_top1 = np.mean([sample["accuracy_top1"] for sample in multi_source_accuracy])
-    avg_accuracy_top3 = np.mean([sample["accuracy_top3"] for sample in multi_source_accuracy])
-    avg_accuracy_top5 = np.mean([sample["accuracy_top5"] for sample in multi_source_accuracy])
+    avg_accuracy_top20 = np.mean([sample["accuracy_top20"] for sample in multi_source_accuracy])
+    avg_accuracy_top40 = np.mean([sample["accuracy_top40"] for sample in multi_source_accuracy])
+    avg_accuracy_top80 = np.mean([sample["accuracy_top80"] for sample in multi_source_accuracy])
     
     return {
         "multi_source_samples": multi_source_samples,
         "avg_rank_of_sources": np.mean(all_source_ranks),
         "avg_prediction_for_sources": np.mean(all_predictions_for_sources),
         "avg_source_accuracy_top1": avg_accuracy_top1,
-        "avg_source_accuracy_top3": avg_accuracy_top3,
-        "avg_source_accuracy_top5": avg_accuracy_top5,
+        "avg_source_accuracy_top20": avg_accuracy_top20,
+        "avg_source_accuracy_top40": avg_accuracy_top40,
+        "avg_source_accuracy_top80": avg_accuracy_top80,
         "perfect_samples_top1": sum(1 for s in multi_source_accuracy if s["accuracy_top1"] == 1.0),
-        "perfect_samples_top3": sum(1 for s in multi_source_accuracy if s["accuracy_top3"] == 1.0),
-        "perfect_samples_top5": sum(1 for s in multi_source_accuracy if s["accuracy_top5"] == 1.0),
+        "perfect_samples_top20": sum(1 for s in multi_source_accuracy if s["accuracy_top20"] == 1.0),
+        "perfect_samples_top40": sum(1 for s in multi_source_accuracy if s["accuracy_top40"] == 1.0),
+        "perfect_samples_top80": sum(1 for s in multi_source_accuracy if s["accuracy_top80"] == 1.0),
     }
 
 
@@ -678,6 +726,172 @@ def data_stats(raw_data_set: list) -> dict:
     return stats
 
 
+def compute_idcg(num_correct: int, num_nodes: int) -> float:
+    """
+    Computes the Ideal Discounted Cumulative Gain (IDCG) for the given
+    number of correct interventions and total number of nodes.
+    Exact implementation from PDGrapher compute_pd_accuracy.py
+    """
+    idcg = 0
+    for rank in range(1, num_correct + 1):  # Ideal ranking: 1 to num_correct
+        gain = 1 - (rank / num_nodes)  # Gain function
+        discount = 1 / np.log2(rank + 1)  # Logarithmic discount
+        idcg += gain * discount
+    return idcg
+
+
+def pdgrapher_perturbation_discovery_metrics(pred_label_set: list, test_data_loader) -> dict:
+    """
+    Calculate PDGrapher-style perturbation discovery metrics.
+    Implements exact calculations from compute_pd_accuracy.py and test_new_cell_line.py
+    """
+    print("Calculating PDGrapher perturbation discovery metrics...")
+    
+    all_recall_at_1 = []
+    all_recall_at_10 = []
+    all_recall_at_100 = []
+    all_recall_at_1000 = []
+    all_perc_partially_accurate_predictions = []
+    all_rankings = []
+    all_rankings_dcg = []
+    
+    # Get actual num_nodes from the first data sample
+    first_data = next(iter(test_data_loader))
+    num_nodes = int(first_data.num_nodes / len(torch.unique(first_data.batch)))
+    
+    for i, (pred_labels, data) in enumerate(zip(pred_label_set, test_data_loader)):
+        # Extract intervention information
+        intervention = data.intervention
+        if intervention.device != torch.device("cpu"):
+            intervention = intervention.cpu()
+        
+        # Get true interventions
+        correct_interventions = set(torch.where(intervention.view(-1, num_nodes))[1].tolist())
+        
+        if len(correct_interventions) == 0:
+            print(f"Warning: No true interventions found in sample {i}")
+            continue
+        
+        # Get predicted interventions ranked by score
+        if isinstance(pred_labels, torch.Tensor):
+            if pred_labels.dim() > 1:
+                pred_scores = pred_labels.view(-1)
+            else:
+                pred_scores = pred_labels
+        else:
+            pred_scores = torch.tensor(pred_labels)
+        
+        # Ensure we have the right number of scores
+        if len(pred_scores) != num_nodes:
+            print(f"Warning: Prediction length {len(pred_scores)} != num_nodes {num_nodes} in sample {i}")
+            continue
+            
+        predicted_interventions = torch.argsort(pred_scores, descending=True).tolist()
+        
+        # Calculate ranking score for each correct intervention
+        sample_rankings = []
+        for ci in list(correct_interventions):
+            rank_pos = predicted_interventions.index(ci)
+            ranking_score = 1 - (rank_pos / num_nodes)
+            sample_rankings.append(ranking_score)
+        
+        # Calculate DCG (Discounted Cumulative Gain)
+        dcg = 0
+        for ci in list(correct_interventions):
+            rank = predicted_interventions.index(ci) + 1  # 1-based indexing for DCG
+            gain = 1 - (rank / num_nodes)
+            discount = 1 / np.log2(rank + 1)
+            dcg += gain * discount
+        
+        # Calculate NDCG (Normalized DCG)
+        idcg = compute_idcg(len(correct_interventions), num_nodes)
+        ndcg = dcg / idcg if idcg > 0 else 0
+        
+        # Calculate Recall@K metrics
+        recall_at_1 = len(set(predicted_interventions[:1]).intersection(correct_interventions)) / len(correct_interventions)
+        recall_at_10 = len(set(predicted_interventions[:10]).intersection(correct_interventions)) / len(correct_interventions)
+        recall_at_100 = len(set(predicted_interventions[:100]).intersection(correct_interventions)) / len(correct_interventions)
+        recall_at_1000 = len(set(predicted_interventions[:1000]).intersection(correct_interventions)) / len(correct_interventions)
+        
+        # Calculate Jaccard similarity for partial accuracy
+        jaccards = len(correct_interventions.intersection(set(predicted_interventions[:len(correct_interventions)]))) / len(correct_interventions.union(set(predicted_interventions[:len(correct_interventions)])))
+        
+        # Store sample-level metrics
+        all_recall_at_1.append(recall_at_1)
+        all_recall_at_10.append(recall_at_10)
+        all_recall_at_100.append(recall_at_100)
+        all_recall_at_1000.append(recall_at_1000)
+        all_rankings.extend(sample_rankings)  # Individual ranking scores
+        all_rankings_dcg.append(ndcg)
+        all_perc_partially_accurate_predictions.append(1 if jaccards != 0 else 0)
+    
+    if len(all_recall_at_1) == 0:
+        print("Warning: No valid samples found for PDGrapher metrics calculation")
+        return {}
+    
+    # Calculate aggregate metrics
+    metrics = {
+        "recall@1": round(np.mean(all_recall_at_1), 4),
+        "recall@10": round(np.mean(all_recall_at_10), 4),
+        "recall@100": round(np.mean(all_recall_at_100), 4),
+        "recall@1000": round(np.mean(all_recall_at_1000), 4),
+        "ranking_score": round(np.mean(all_rankings), 4),
+        "ranking_score_dcg": round(np.mean(all_rankings_dcg), 4),
+        "perc_partially_accurate_predictions": round(100 * np.mean(all_perc_partially_accurate_predictions), 2),
+        
+        # Standard deviations for statistical reporting
+        "recall@1_std": round(np.std(all_recall_at_1), 4),
+        "recall@10_std": round(np.std(all_recall_at_10), 4),
+        "recall@100_std": round(np.std(all_recall_at_100), 4),
+        "recall@1000_std": round(np.std(all_recall_at_1000), 4),
+        "ranking_score_std": round(np.std(all_rankings), 4),
+        "ranking_score_dcg_std": round(np.std(all_rankings_dcg), 4),
+        "perc_partially_accurate_predictions_std": round(100 * np.std(all_perc_partially_accurate_predictions), 2),
+        
+        # Additional useful metrics
+        "total_samples": len(all_recall_at_1),
+        "avg_topk": round(np.mean([r * num_nodes for r in all_rankings]), 4),  # Average rank position
+    }
+    
+    return metrics
+
+
+def pdgrapher_response_prediction_metrics(pred_label_set: list, true_labels: list, test_data_loader=None) -> dict:
+    """
+    Calculate PDGrapher-style response prediction metrics.
+    Implements exact calculations from train.py _test_one_pass method.
+    Note: This requires actual expression data, not just source predictions.
+    """
+    print("Calculating PDGrapher response prediction metrics...")
+    
+    if test_data_loader is None:
+        print("Warning: No test data loader provided for response prediction metrics")
+        return {}
+    
+    # Extract predicted and true expression values
+    all_pred_expression = []
+    all_true_expression = []
+    
+    # This would need to be adapted based on your specific data structure
+    # Since we're focusing on perturbation discovery, we'll return placeholder values
+    print("Note: Response prediction metrics require expression prediction data")
+    print("Currently only implementing perturbation discovery metrics")
+    
+    return {
+        "forward_mae": -1,
+        "forward_mse": -1,
+        "forward_r2": -1,
+        "forward_r2_scgen": -1,
+        "forward_spearman": -1,
+        "backward_mae": -1,
+        "backward_mse": -1,
+        "backward_r2": -1,
+        "backward_r2_scgen": -1,
+        "backward_spearman": -1,
+        "backward_avg_topk": -1
+    }
+
+
 def gene_specific_metrics(
     pred_label_set: list,
     true_sources: list,
@@ -714,8 +928,9 @@ def gene_specific_metrics(
             "avg_rank": 0.0,
             "prediction_probs_when_true": [],
             "ranks_when_true": [],
-            "in_top3_count": 0,
-            "in_top5_count": 0,
+            "in_top20_count": 0,
+            "in_top40_count": 0,
+            "in_top80_count": 0,
         }
         
         # Collect all prediction probabilities for this gene across all samples
@@ -760,14 +975,16 @@ def gene_specific_metrics(
         if gene_metrics["times_true_source"] > 0:
             gene_metrics["avg_rank_when_true"] = np.mean(gene_metrics["ranks_when_true"])
             gene_metrics["avg_prob_when_true"] = np.mean(gene_metrics["prediction_probs_when_true"])
-            gene_metrics["in_top3_when_true"] = sum(1 for rank in gene_metrics["ranks_when_true"] if rank < 3)
-            gene_metrics["in_top5_when_true"] = sum(1 for rank in gene_metrics["ranks_when_true"] if rank < 5)
+            gene_metrics["in_top20_when_true"] = sum(1 for rank in gene_metrics["ranks_when_true"] if rank < 20)
+            gene_metrics["in_top40_when_true"] = sum(1 for rank in gene_metrics["ranks_when_true"] if rank < 40)
+            gene_metrics["in_top80_when_true"] = sum(1 for rank in gene_metrics["ranks_when_true"] if rank < 80)
             gene_metrics["accuracy_when_true"] = gene_metrics["correct_predictions"] / gene_metrics["times_true_source"]
         else:
             gene_metrics["avg_rank_when_true"] = None
             gene_metrics["avg_prob_when_true"] = None
-            gene_metrics["in_top3_when_true"] = 0
-            gene_metrics["in_top5_when_true"] = 0
+            gene_metrics["in_top20_when_true"] = 0
+            gene_metrics["in_top40_when_true"] = 0
+            gene_metrics["in_top80_when_true"] = 0
             gene_metrics["accuracy_when_true"] = None
         
         # Calculate precision and recall for this gene
@@ -825,6 +1042,16 @@ def supervised_metrics(
         multi_metrics = multi_source_prediction_metrics(pred_label_set, test_data_loader)
         if "multi_source_metrics" not in multi_metrics:  # Only if we found multi-source samples
             metrics["multi_source_metrics"] = multi_metrics
+    
+    # PDGrapher-specific perturbation discovery metrics
+    if test_data_loader is not None and model_type in ["pdgrapher", "pdgraphernognn"]:
+        print("Computing PDGrapher-style perturbation discovery metrics...")
+        pdgrapher_pd_metrics = pdgrapher_perturbation_discovery_metrics(pred_label_set, test_data_loader)
+        metrics["pdgrapher_perturbation_discovery"] = pdgrapher_pd_metrics
+        
+        # Also compute response prediction metrics structure (placeholder for now)
+        pdgrapher_rp_metrics = pdgrapher_response_prediction_metrics(pred_label_set, true_sources, test_data_loader)
+        metrics["pdgrapher_response_prediction"] = pdgrapher_rp_metrics
     
     # not useful for sigle source prediction
     # metrics.update(TP_FP_metrics(true_sources, pred_sources))

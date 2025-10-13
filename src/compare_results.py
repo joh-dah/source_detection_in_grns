@@ -473,7 +473,7 @@ def create_cross_run_comparison_plots(df: pd.DataFrame, methods: List[str], outp
                     print(f"  {method.upper()}: No data")
 
 
-def create_network_scaling_line_chart(output_dir: str = "reports"):
+def create_network_scaling_line_chart(output_dir: str = "reports", merge_rd: bool = False):
     """
     Create line charts showing how metrics vary with edge count 
     for different graph perturbation settings, all for networks with 500 nodes.
@@ -481,6 +481,8 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
     
     Args:
         output_dir: Directory to save the plots (defaults to reports/)
+        merge_rd: If True, merge metrics from _rd experiments with their non-_rd counterparts
+                 for averaging (e.g., bs_500_1000 and bs_500_1000_rd are averaged together)
     """
     print("Creating network scaling line charts for BS 500-node experiments...")
     
@@ -523,19 +525,35 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
     
     # Create flag categories based on run names
     def categorize_flags(run_name):
-        if run_name.endswith('_rd_fr'):
-            return 'remove_duplicates + random_graph'
-        elif run_name.endswith('_fr'):
-            return 'random_graph'
-        elif run_name.endswith('_rd'):
-            return 'remove_duplicates'
+        if merge_rd:
+            # When merging _rd experiments, treat _rd and non-_rd as the same category
+            if run_name.endswith('_rd_fr'):
+                return 'random_graph'  # Merge with _fr experiments
+            elif run_name.endswith('_fr'):
+                return 'random_graph'
+            elif run_name.endswith('_rd'):
+                return 'no_flags'  # Merge with no-flag experiments
+            elif run_name.endswith('_sl'):
+                return 'self_loops'
+            else:
+                return 'no_flags'
         else:
-            return 'no_flags'
+            # Original categorization (keep _rd separate)
+            if run_name.endswith('_rd_fr'):
+                return 'remove_duplicates + random_graph'
+            elif run_name.endswith('_fr'):
+                return 'random_graph'
+            elif run_name.endswith('_rd'):
+                return 'remove_duplicates'
+            elif run_name.endswith('_sl'):
+                return 'self_loops'
+            else:
+                return 'no_flags'
     
     model_data['flag_category'] = model_data['run'].apply(categorize_flags)
     
     # Define metrics to plot
-    metrics_to_plot = ['source in top 5', 'avg rank of source']
+    metrics_to_plot = ['source in top 5', 'avg rank of source', 'source in top 20']
     
     # Check if we have the required metrics
     available_metrics = [m for m in metrics_to_plot if m in model_data.columns]
@@ -569,10 +587,17 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
         # Process PDGrapherNoGNN data - create averaged lines for rd experiments and non-rd experiments
         if not pdgraphernognn_data.empty:
             def categorize_nognn_flags(flag_cat):
-                if flag_cat in ['remove_duplicates', 'remove_duplicates + random_graph']:
-                    return 'rd_experiments'
+                if merge_rd:
+                    # When merging _rd, don't separate rd/non-rd experiments
+                    # Include self_loops with all other experiments
+                    return 'all_experiments'  # Merge rd, non-rd, and self_loops together
                 else:
-                    return 'non_rd_experiments'
+                    # Original categorization (keep rd separate, but include self_loops with non-rd)
+                    if flag_cat in ['remove_duplicates', 'remove_duplicates + random_graph']:
+                        return 'rd_experiments'
+                    else:
+                        # Include self_loops with no_flags and random_graph experiments
+                        return 'non_rd_experiments'
             
             pdgraphernognn_data['nognn_category'] = pdgraphernognn_data['flag_category'].apply(categorize_nognn_flags)
             nognn_grouped = pdgraphernognn_data.groupby(['edge_count', 'nognn_category'])[metric].agg(['mean', 'std', 'count']).reset_index()
@@ -596,8 +621,10 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
             'random_graph': '#ff7f0e', 
             'remove_duplicates': '#2ca02c',
             'remove_duplicates + random_graph': '#d62728',
+            'self_loops': '#e377c2',
             'rd_experiments': '#9467bd',
-            'non_rd_experiments': '#8c564b'
+            'non_rd_experiments': '#8c564b',
+            'all_experiments': '#9467bd'  # Same color as rd_experiments for consistency
         }
         
         # Define line styles for model types
@@ -621,7 +648,14 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
                     
                     # Create label
                     model_label = model_type.replace('pdgrapher', 'PDGrapher').replace('nognn', 'NoGNN')
-                    flag_label = flag_category.replace('_', '+') if 'experiments' not in flag_category else flag_category.replace('_', ' ')
+                    if flag_category == 'all_experiments':
+                        flag_label = 'all experiments'
+                    elif 'experiments' in flag_category:
+                        flag_label = flag_category.replace('_', ' ')
+                    elif flag_category == 'self_loops':
+                        flag_label = 'self loops'
+                    else:
+                        flag_label = flag_category.replace('_', '+')
                     label = f"{model_label} ({flag_label})"
                     
                     plt.errorbar(
@@ -643,6 +677,10 @@ def create_network_scaling_line_chart(output_dir: str = "reports"):
             plt.ylabel('Source in Top 5 (%)', fontsize=12)
             title = 'BS Experiments - Source in Top 5 vs Edge Count\n(500 Nodes - Mean ± Standard Deviation)'
             filename = 'bs_network_scaling_500_nodes_line_chart_source_in_top5.png'
+        elif metric == 'source in top 20':
+            plt.ylabel('Source in Top 20 (%)', fontsize=12)
+            title = 'BS Experiments - Source in Top 20 vs Edge Count\n(500 Nodes - Mean ± Standard Deviation)'
+            filename = 'bs_network_scaling_500_nodes_line_chart_source_in_top20.png'
         else:  # avg rank of source
             plt.ylabel('Average Rank of Source', fontsize=12)
             title = 'BS Experiments - Average Rank of Source vs Edge Count\n(500 Nodes - Mean ± Standard Deviation)'

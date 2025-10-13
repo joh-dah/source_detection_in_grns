@@ -291,6 +291,7 @@ def remove_near_duplicate_combinations(metadata_df, init_states, perturbed_state
     :param gene_name: Name of the perturbed gene
     :return: Filtered indices to keep
     """
+    print("Removing near duplicate combinations...")
     original_count = len(init_states)
     
     # Create combinations as tuples for easy comparison
@@ -353,8 +354,8 @@ def process_gene(
 
     subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
     num_init_conds = math.sqrt(perturbations_per_gene/10)
-    num_params = int(num_init_conds*10)
-    num_init_conds = int(num_init_conds)
+    num_params = math.ceil(num_init_conds*10)
+    num_init_conds = math.ceil(num_init_conds)
     rr.gen_topo_param_files(
         topo_file,
         topo_name=subnetwork_name,
@@ -506,7 +507,7 @@ def main():
     from src.data_utils import data_exists
 
     # Check if shared data already exists
-    if data_exists(const.SHARED_DATA_PATH):
+    if data_exists(const.SHARED_DATA_PATH, const.N_SAMPLES):
         print(f"Shared data already exists at {const.SHARED_DATA_PATH}")
         print("Skipping data creation...")
         return

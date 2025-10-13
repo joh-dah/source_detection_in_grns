@@ -5,6 +5,7 @@ Implements content-addressable storage for sharing data between experiments with
 import hashlib
 import json
 from pathlib import Path
+import shutil
 from typing import Dict, Any
 
 
@@ -90,7 +91,7 @@ def get_experiment_data_path(data_creation_params: Dict[Any, Any], graph_perturb
     return f"data/experiments/{shared_fingerprint}/{graph_fingerprint}/{experiment}"
 
 
-def data_exists(data_path: str) -> bool:
+def data_exists(data_path: str, n_samples: int) -> bool:
     """
     Check if data already exists at the given path.
     
@@ -106,7 +107,13 @@ def data_exists(data_path: str) -> bool:
     
     # Check if raw directory contains .pt files
     raw_files = list(raw_path.glob("*.pt"))
-    return len(raw_files) > 0
+    print(f"Found {len(raw_files)} raw .pt files. Expected at least {n_samples}.")
+    if len(raw_files) < n_samples:
+        print("Not enough raw data files found.")
+        print("Deleting incomplete data directory...")
+        shutil.rmtree(raw_path)
+        return False
+    return True
 
 
 def splits_exist(data_path: str) -> bool:
