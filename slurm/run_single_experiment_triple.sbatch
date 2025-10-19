@@ -15,16 +15,23 @@ COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx1
 # Get experiment name and shared data job dependency
 EXPERIMENT=${EXPERIMENT_NAME}
 SHARED_DATA_DEPENDENCY=${SHARED_DATA_JOB_ID}
+FINGERPRINT=${DATA_FINGERPRINT}
 
 if [ -z "$EXPERIMENT" ]; then
     echo "ERROR: EXPERIMENT_NAME must be provided"
-    echo "Usage: SHARED_DATA_JOB_ID=12345 EXPERIMENT_NAME=my_experiment bash slurm/run_single_experiment_triple.sbatch"
+    echo "Usage: SHARED_DATA_JOB_ID=12345 DATA_FINGERPRINT=abc123 EXPERIMENT_NAME=my_experiment bash slurm/run_single_experiment_triple.sbatch"
     exit 1
 fi
 
 if [ -z "$SHARED_DATA_DEPENDENCY" ]; then
     echo "ERROR: SHARED_DATA_JOB_ID must be provided"
-    echo "Usage: SHARED_DATA_JOB_ID=12345 EXPERIMENT_NAME=my_experiment bash slurm/run_single_experiment_triple.sbatch"
+    echo "Usage: SHARED_DATA_JOB_ID=12345 DATA_FINGERPRINT=abc123 EXPERIMENT_NAME=my_experiment bash slurm/run_single_experiment_triple.sbatch"
+    exit 1
+fi
+
+if [ -z "$FINGERPRINT" ]; then
+    echo "ERROR: DATA_FINGERPRINT must be provided"
+    echo "Usage: SHARED_DATA_JOB_ID=12345 DATA_FINGERPRINT=abc123 EXPERIMENT_NAME=my_experiment bash slurm/run_single_experiment_triple.sbatch"
     exit 1
 fi
 
@@ -70,6 +77,7 @@ echo "Depends on shared data job: $SHARED_DATA_DEPENDENCY"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Apply graph perturbations for this specific experiment
 python -m src.graph_perturbation --experiment $EXPERIMENT --model gat
@@ -116,6 +124,7 @@ echo "Depends on graph perturbation job: $GRAPH_PERT_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Process data for GAT
 python -m src.data_processing --experiment $EXPERIMENT --model gat
@@ -154,6 +163,7 @@ echo "Depends on graph perturbation job: $GRAPH_PERT_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Process data for PDGrapher
 python -m src.data_processing --experiment $EXPERIMENT --model pdgrapher
@@ -192,6 +202,7 @@ echo "Depends on graph perturbation job: $GRAPH_PERT_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 export MODEL=pdgrapher_nognn
 
 # Process data for PDGrapherNoGNN
@@ -237,6 +248,7 @@ echo "Depends on GAT processing job: $GAT_PROC_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Train GAT model
 python -m src.training --experiment $EXPERIMENT --model gat
@@ -277,6 +289,7 @@ echo "Depends on PDGrapher processing job: $PDG_PROC_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Train PDGrapher model
 python -m src.train_pdgrapher --experiment $EXPERIMENT --model pdgrapher
@@ -318,6 +331,7 @@ echo "Depends on PDGrapherNoGNN processing job: $PDGNN_PROC_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Train PDGrapherNoGNN model
 python -m src.train_pdgrapher_nognn --experiment $EXPERIMENT --model pdgrapher_nognn
@@ -358,6 +372,7 @@ echo "Depends on GAT processing job: $GAT_PROC_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Compute baseline metrics
 python -m src.baseline --experiment $EXPERIMENT --model gat
@@ -402,6 +417,7 @@ echo "Depends on GAT training job: $GAT_TRAIN_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Validate GAT model
 python -m src.validation --experiment $EXPERIMENT --model gat
@@ -442,6 +458,7 @@ echo "Depends on PDGrapher training job: $PDG_TRAIN_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Validate PDGrapher model
 python -m src.validation --experiment $EXPERIMENT --model pdgrapher
@@ -483,6 +500,7 @@ echo "Depends on PDGrapherNoGNN training job: $PDGNN_TRAIN_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Validate PDGrapherNoGNN model
 python -m src.validation --experiment $EXPERIMENT --model pdgrapher_nognn
@@ -526,6 +544,7 @@ echo "Depends on baseline job: $BASELINE_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
 
 # Run triple model comparison for this experiment
 python -m src.compare_results --model gat --exp_id $EXPERIMENT

@@ -43,7 +43,7 @@ def load_pdgrapher_data_from_experiments(reports_base_path: str = "reports") -> 
         print(f"Loading PDGrapher data from {exp_path}...")
         
         # Find all PDGrapher JSON files in this experiment
-        pdgrapher_files = glob.glob(os.path.join(exp_path, "pdgrapher*.json"))
+        pdgrapher_files = glob.glob(os.path.join(exp_path, "pdgrapher_*.json"))
         
         if not pdgrapher_files:
             print(f"  No PDGrapher files found in {exp_path}")

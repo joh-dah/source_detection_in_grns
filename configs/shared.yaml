@@ -1,10 +1,12 @@
 data_creation:
-  n_samples: 10000
+  n_samples: 100000
   time_steps: null    
   training_share: 0.6
   normalize_data: true
   network: tiny
   remove_near_duplicates: false
+  signal_propagation: racipe  # Options: 'racipe' (complex ODE) or 'si' (simple susceptible-infected)
+  si_max_infection_percentage: 0.3  # For SI propagation: stop when this % of nodes are infected (0.0-1.0)
 
 graph_perturbation:
   random_graph: false  # Set to true if you want to create a random graph instead of perturbing an existing one

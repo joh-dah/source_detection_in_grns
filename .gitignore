@@ -4,6 +4,7 @@ venv/
 data/
 figures/
 configs/
+experiment_documentation/
 models/
 src/__pycache__/
 .idea/

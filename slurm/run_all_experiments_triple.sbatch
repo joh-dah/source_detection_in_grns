@@ -171,6 +171,7 @@ echo "Representative experiment: $representative_experiment"
 echo "Will be used by: $experiments"
 
 export EXPERIMENT_NAME=$representative_experiment
+export DATA_FINGERPRINT=$fingerprint
 
 # === 1. Data Creation ===
 echo "--- Step 1: Data Creation ---"
@@ -207,7 +208,7 @@ echo "This shared data is now ready for parallel experiment execution!"
 echo "Experiments will handle their own graph perturbation and data processing."
 
 echo "Shared data creation completed at: \$(date)"
-echo "Data stored in: data/shared/$fingerprint/"
+echo "Data stored in: data/shared/\$DATA_FINGERPRINT/"
 EOF
 )
     
@@ -228,7 +229,7 @@ while IFS=':' read -r fingerprint data_job_id experiments; do
         echo "  Submitting triple model experiment: $experiment (depends on shared data job: $data_job_id)"
         
         # Submit triple model experiment job with dependency on shared data creation
-        EXP_JOB_ID=$(SHARED_DATA_JOB_ID=$data_job_id EXPERIMENT_NAME=$experiment bash slurm/run_single_experiment_triple.sbatch 2>/dev/null | grep "Job ID:" | grep -o '[0-9]\+' | head -1 || echo "ERROR")
+        EXP_JOB_ID=$(SHARED_DATA_JOB_ID=$data_job_id DATA_FINGERPRINT=$fingerprint EXPERIMENT_NAME=$experiment bash slurm/run_single_experiment_triple.sbatch 2>/dev/null | grep "Job ID:" | grep -o '[0-9]\+' | head -1 || echo "ERROR")
         
         if [ "$EXP_JOB_ID" = "ERROR" ]; then
             echo "    ERROR: Failed to submit triple model experiment $experiment"
