@@ -91,7 +91,7 @@ def get_experiment_data_path(data_creation_params: Dict[Any, Any], graph_perturb
     return f"data/experiments/{shared_fingerprint}/{graph_fingerprint}/{experiment}"
 
 
-def data_exists(data_path: str, n_samples: int) -> bool:
+def data_exists(data_path: str, n_samples: int, remove_duplicates: bool = False) -> bool:
     """
     Check if data already exists at the given path.
     
@@ -107,8 +107,10 @@ def data_exists(data_path: str, n_samples: int) -> bool:
     
     # Check if raw directory contains .pt files
     raw_files = list(raw_path.glob("*.pt"))
-    print(f"Found {len(raw_files)} raw .pt files. Expected at least {n_samples}.")
-    if len(raw_files) < n_samples:
+    print(f"Remove Duplicate is {remove_duplicates}")
+    expected_count = 1 if remove_duplicates else n_samples
+    print(f"Found {len(raw_files)} raw .pt files. Expected at least {expected_count}.")
+    if len(raw_files) < expected_count:
         print("Not enough raw data files found.")
         print("Deleting incomplete data directory...")
         shutil.rmtree(raw_path)

@@ -48,6 +48,53 @@ for config in $EXPERIMENT_CONFIGS; do
 done
 echo ""
 
+# Allow a TRAIN_ONLY mode to skip data creation/processing and only submit training+validation
+TRAIN_ONLY=${TRAIN_ONLY:-0}
+if [ "$TRAIN_ONLY" = "1" ] || [ "$TRAIN_ONLY" = "true" ]; then
+    echo "TRAIN_ONLY mode detected: computing per-experiment data fingerprint and submitting training+validation jobs only."
+    echo "This ensures training/validation use the correct processed shared data."
+
+    for config in $EXPERIMENT_CONFIGS; do
+        experiment_name=$(basename "$config" .yaml)
+        echo "  Submitting train-only pipeline for: $experiment_name"
+
+        # Compute data fingerprint for this experiment using the same helper as the main flow.
+        fingerprint=$(python3 - <<PY
+import sys, os, yaml
+sys.path.append("$BASE_DIR/src")
+from pathlib import Path
+from data_utils import get_data_fingerprint
+
+config_path = Path("$config")
+with open(config_path, "r") as f:
+    cfg = yaml.safe_load(f)
+data_creation_params = cfg["data_creation"]
+network = data_creation_params.get("network")
+seed = cfg.get("seed", 42)
+# Ensure EXPERIMENT_NAME is set for any helper that expects it
+os.environ["EXPERIMENT_NAME"] = config_path.stem
+print(get_data_fingerprint(data_creation_params, network, seed))
+PY
+)
+
+        if [ -z "$fingerprint" ]; then
+            echo "    ERROR: Failed to compute DATA_FINGERPRINT for $experiment_name"
+            continue
+        fi
+
+        # Submit the per-experiment pipeline with the computed fingerprint
+        EXP_JOB_ID=$(TRAIN_ONLY=1 DATA_FINGERPRINT=$fingerprint EXPERIMENT_NAME=$experiment_name bash slurm/run_single_experiment_triple.sbatch 2>/dev/null | grep "Job ID:" | grep -o '[0-9]\+' | head -1 || echo "ERROR")
+        if [ "$EXP_JOB_ID" = "ERROR" ]; then
+            echo "    ERROR: Failed to submit train-only pipeline for $experiment_name"
+            continue
+        fi
+        echo "    Submitted train-only pipeline for $experiment_name, first job ID: $EXP_JOB_ID"
+    done
+
+    echo "All train-only pipelines submitted. Exiting."
+    exit 0
+fi
+
 # Create temporary files for tracking
 SHARED_DATA_JOBS_FILE=$(mktemp)
 EXPERIMENT_JOBS_FILE=$(mktemp)

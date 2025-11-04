@@ -194,7 +194,7 @@ def main():
     
     # Store original graph in PyTorch Geometric format
     G_original_pyg = from_networkx(G, group_edge_attrs=['weight'])
-    G_original_pyg.edge_attr = G_original_pyg.edge_attr.float()
+    G_original_pyg.edge_attr = G_original_pyg.edge_attr.float().unsqueeze(-1)
     store_graph(G_original_pyg, name="original")
     
     # Apply perturbations
@@ -202,7 +202,7 @@ def main():
 
     # Store perturbed graph in PyTorch Geometric format
     G_perturbed_pyg = from_networkx(G_perturbed, group_edge_attrs=['weight'])
-    G_perturbed_pyg.edge_attr = G_perturbed_pyg.edge_attr.float()
+    G_perturbed_pyg.edge_attr = G_perturbed_pyg.edge_attr.float().unsqueeze(-1)
     store_graph(G_perturbed_pyg, name="graph")
 
 

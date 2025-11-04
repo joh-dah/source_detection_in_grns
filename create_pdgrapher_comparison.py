@@ -24,8 +24,13 @@ from typing import Dict, List, Any
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 
-def load_pdgrapher_data_from_experiments(reports_base_path: str = "reports") -> pd.DataFrame:
-    """Load PDGrapher data from all experiment folders and combine into a single DataFrame."""
+def load_model_data_from_experiments(reports_base_path: str = "reports", model_prefix: str = "pdgrapher") -> pd.DataFrame:
+    """Load model data (files with prefix) from all experiment folders and combine into a single DataFrame.
+
+    Args:
+        reports_base_path: top-level reports directory containing experiment subfolders
+        model_prefix: filename prefix to look for (e.g. 'pdgrapher', 'pdgrapher_nognn', 'gat')
+    """
     all_data = []
     
     if not os.path.exists(reports_base_path):
@@ -40,19 +45,20 @@ def load_pdgrapher_data_from_experiments(reports_base_path: str = "reports") -> 
     
     for exp_dir in experiment_dirs:
         exp_path = os.path.join(reports_base_path, exp_dir)
-        print(f"Loading PDGrapher data from {exp_path}...")
-        
-        # Find all PDGrapher JSON files in this experiment
-        pdgrapher_files = glob.glob(os.path.join(exp_path, "pdgrapher_*.json"))
-        
-        if not pdgrapher_files:
-            print(f"  No PDGrapher files found in {exp_path}")
+        print(f"Loading data for prefix '{model_prefix}_' from {exp_path}...")
+
+        # Find all JSON files for the requested model prefix in this experiment
+        pattern = os.path.join(exp_path, f"{model_prefix}_*.json")
+        model_files = glob.glob(pattern)
+
+        if not model_files:
+            print(f"  No files with prefix '{model_prefix}_' found in {exp_path}")
             continue
-        
-        print(f"  Found {len(pdgrapher_files)} PDGrapher files")
-        
-        # Load data from all PDGrapher files in this experiment
-        for file_path in pdgrapher_files:
+
+        print(f"  Found {len(model_files)} files for prefix '{model_prefix}_'")
+
+        # Load data from all files for this model in this experiment
+        for file_path in model_files:
             try:
                 with open(file_path, 'r') as f:
                     content = json.load(f)
@@ -69,7 +75,7 @@ def load_pdgrapher_data_from_experiments(reports_base_path: str = "reports") -> 
                     'file': Path(file_path).name,
                     'file_path': file_path,
                     'network': content.get('network', 'unknown'),
-                    'model_type': content.get('model_type', 'pdgrapher')
+                    'model_type': content.get('model_type', model_prefix)
                 }
                 
                 # Add all top-level metrics
@@ -88,125 +94,77 @@ def load_pdgrapher_data_from_experiments(reports_base_path: str = "reports") -> 
                 print(f"    Error loading {file_path}: {e}")
     
     if not all_data:
-        print("No PDGrapher data found in any experiments!")
+        print(f"No data with prefix '{model_prefix}_' found in any experiments!")
         return pd.DataFrame()
     
     # Create DataFrame
     df = pd.DataFrame(all_data)
-    print(f"Loaded {len(df)} PDGrapher records from {len(experiment_dirs)} experiments")
+    print(f"Loaded {len(df)} records (prefix '{model_prefix}_') from {len(experiment_dirs)} experiments")
     
     return df
 
 
-def create_pdgrapher_comparison_plots(df: pd.DataFrame, output_dir: str):
-    """Create bar plots comparing PDGrapher performance across experiments."""
-    
+def create_model_comparison_plots(df: pd.DataFrame, output_dir: str, model_prefix: str = "pdgrapher"):
+    """Create bar plots comparing a model's performance across experiments.
+
+    Args:
+        df: combined DataFrame with records
+        output_dir: where to save plots
+        model_prefix: prefix used to select files (used for titles and filenames)
+    """
+
     if df.empty:
         print("No data available for comparison")
         return
-    
-    # Define metrics to plot
+
+    model_label = model_prefix.replace('_', ' ').title()
+
     metrics_config = [
-        {
-            'column': 'accuracy',
-            'title': 'PDGrapher Accuracy Comparison Across Experiments',
-            'ylabel': 'Accuracy',
-            'filename': 'pdgrapher_accuracy_comparison.png',
-            'higher_better': True
-        },
-        {
-            'column': 'avg rank of source',
-            'title': 'PDGrapher Average Rank of Source Comparison Across Experiments',
-            'ylabel': 'Average Rank of Source',
-            'filename': 'pdgrapher_avg_rank_comparison.png',
-            'higher_better': False
-        },
-        {
-            'column': 'source in top 5',
-            'title': 'PDGrapher Source in Top 5 Comparison Across Experiments',
-            'ylabel': 'Source in Top 5 (%)',
-            'filename': 'pdgrapher_source_in_top5_comparison.png',
-            'higher_better': True
-        },
-        {
-            'column': 'source in top 20',
-            'title': 'PDGrapher Source in Top 20 Comparison Across Experiments',
-            'ylabel': 'Source in Top 20 (%)',
-            'filename': 'pdgrapher_source_in_top20_comparison.png',
-            'higher_better': True
-        },
-        {
-            'column': 'ranking_score_dcg',
-            'title': 'PDGrapher Ranking Score DCG Comparison Across Experiments',
-            'ylabel': 'Ranking Score DCG',
-            'filename': 'pdgrapher_ranking_score_dcg_comparison.png',
-            'higher_better': True
-        }
+        ("accuracy", f"{model_label} Accuracy Comparison Across Experiments", "Accuracy", f"{model_prefix}_accuracy_comparison.png", True),
+        ("avg rank of source", f"{model_label} Average Rank of Source Comparison Across Experiments", "Average Rank of Source", f"{model_prefix}_avg_rank_comparison.png", False),
+        ("source in top 5", f"{model_label} Source in Top 5 Comparison Across Experiments", "Source in Top 5 (%)", f"{model_prefix}_source_in_top5_comparison.png", True),
+        ("source in top 20", f"{model_label} Source in Top 20 Comparison Across Experiments", "Source in Top 20 (%)", f"{model_prefix}_source_in_top20_comparison.png", True),
+        ("ranking_score_dcg", f"{model_label} Ranking Score DCG Comparison Across Experiments", "Ranking Score DCG", f"{model_prefix}_ranking_score_dcg_comparison.png", True),
     ]
-    
-    # Create plots for each metric
-    for metric_config in metrics_config:
-        column = metric_config['column']
-        
-        # Check if the column exists in the data
+
+    for column, title, ylabel, filename, higher_better in metrics_config:
         if column not in df.columns:
-            print(f"Warning: Column '{column}' not found in data. Skipping {metric_config['title']}")
+            print(f"Warning: Column '{column}' not found in data. Skipping {title}")
             continue
-        
-        # Filter out rows with missing values for this metric
+
         metric_df = df.dropna(subset=[column])
-        
         if metric_df.empty:
             print(f"Warning: No data available for metric '{column}'. Skipping plot.")
             continue
-        
-        # Calculate mean and std for each experiment
+
         stats_df = metric_df.groupby('experiment')[column].agg(['mean', 'std', 'count']).reset_index()
-        stats_df['std'] = stats_df['std'].fillna(0)  # Fill NaN std (when count=1) with 0
-        
-        # Sort experiments by mean value for better visualization
-        if metric_config['higher_better']:
-            stats_df = stats_df.sort_values('mean', ascending=False)
-        else:
-            stats_df = stats_df.sort_values('mean', ascending=True)
-        
-        # Create the plot
+        stats_df['std'] = stats_df['std'].fillna(0)
+
+        stats_df = stats_df.sort_values('mean', ascending=not higher_better)
+
         plt.figure(figsize=(15, 8))
-        
-        # Create bar plot with error bars
-        bars = plt.bar(range(len(stats_df)), stats_df['mean'], 
-                      yerr=stats_df['std'], capsize=5, 
-                      alpha=0.7, color='steelblue', 
+        bars = plt.bar(range(len(stats_df)), stats_df['mean'],
+                      yerr=stats_df['std'], capsize=5,
+                      alpha=0.7, color='steelblue',
                       error_kw={'color': 'black', 'capthick': 2})
-        
-        # Customize the plot
-        plt.title(metric_config['title'], fontsize=16, fontweight='bold')
+
+        plt.title(title, fontsize=16, fontweight='bold')
         plt.xlabel('Experiment', fontsize=12, fontweight='bold')
-        plt.ylabel(metric_config['ylabel'], fontsize=12, fontweight='bold')
-        
-        # Set x-axis labels
+        plt.ylabel(ylabel, fontsize=12, fontweight='bold')
         plt.xticks(range(len(stats_df)), stats_df['experiment'], rotation=45, ha='right')
-        
-        # Add value labels on top of bars
+
         for i, (mean_val, std_val, count) in enumerate(zip(stats_df['mean'], stats_df['std'], stats_df['count'])):
             label_text = f'{mean_val:.3f}\n(n={int(count)})'
-            plt.text(i, mean_val + std_val + (max(stats_df['mean']) * 0.02), 
-                    label_text, ha='center', va='bottom', fontsize=9)
-        
-        # Add grid for better readability
+            plt.text(i, mean_val + std_val + (max(stats_df['mean']) * 0.02), label_text, ha='center', va='bottom', fontsize=9)
+
         plt.grid(axis='y', alpha=0.3)
-        
-        # Adjust layout
         plt.tight_layout()
-        
-        # Save the plot
-        output_path = os.path.join(output_dir, metric_config['filename'])
+
+        output_path = os.path.join(output_dir, filename)
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close()
-        
+
         print(f"Saved {column} comparison plot: {output_path}")
-        
-        # Print summary statistics
         print(f"\n{column.upper().replace('_', ' ')} Summary:")
         print("Experiment | Mean | Std | Count")
         print("-" * 40)
@@ -215,37 +173,46 @@ def create_pdgrapher_comparison_plots(df: pd.DataFrame, output_dir: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Create PDGrapher comparison plots across experiments')
+    parser = argparse.ArgumentParser(description='Create model comparison plots across experiments')
     parser.add_argument('--output-dir', default='reports',
-                       help='Output directory for plots (default: reports)')
+                        help='Output directory for plots (default: reports)')
     parser.add_argument('--reports-dir', default='reports',
-                       help='Directory containing experiment folders (default: reports)')
-    
+                        help='Directory containing experiment folders (default: reports)')
+    parser.add_argument('--model', default='pdgrapher',
+                        help="Which model to compare. Supported: 'pdgrapher', 'pdgrapher_nognn' (or 'pdgraphernognn'), 'gat'")
+
     args = parser.parse_args()
-    
-    print("Creating PDGrapher comparison plots...")
+
+    # Normalize model prefix (accept alias without underscore)
+    model_arg = args.model.lower()
+    if model_arg == 'pdgraphernognn':
+        model_prefix = 'pdgrapher_nognn'
+    else:
+        model_prefix = model_arg
+
+    print(f"Creating comparison plots for model prefix: '{model_prefix}'")
     print(f"Scanning experiments in: {args.reports_dir}")
     print(f"Output directory: {args.output_dir}")
-    
+
     # Create output directory
     os.makedirs(args.output_dir, exist_ok=True)
-    
-    # Load PDGrapher data from all experiments
-    df = load_pdgrapher_data_from_experiments(args.reports_dir)
-    
+
+    # Load data for the requested model prefix
+    df = load_model_data_from_experiments(args.reports_dir, model_prefix=model_prefix)
+
     if df.empty:
-        print("No PDGrapher data found. Cannot create comparison plots.")
+        print(f"No data found for model prefix '{model_prefix}'. Cannot create comparison plots.")
         return
-    
+
     # Create comparison plots
-    create_pdgrapher_comparison_plots(df, args.output_dir)
-    
+    create_model_comparison_plots(df, args.output_dir, model_prefix=model_prefix)
+
     # Save combined data for further analysis
-    output_csv = os.path.join(args.output_dir, 'pdgrapher_comparison_data.csv')
+    output_csv = os.path.join(args.output_dir, f'{model_prefix}_comparison_data.csv')
     df.to_csv(output_csv, index=False)
-    print(f"\nSaved combined PDGrapher data: {output_csv}")
-    
-    print(f"\nPDGrapher comparison complete! Results saved to: {args.output_dir}")
+    print(f"\nSaved combined data: {output_csv}")
+
+    print(f"\n{model_prefix} comparison complete! Results saved to: {args.output_dir}")
 
 
 if __name__ == "__main__":

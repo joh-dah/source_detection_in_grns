@@ -176,6 +176,29 @@ def load_perturbed_graph():
     return G
 
 
+def load_gene_mapping():
+    """
+    Load the gene_to_idx mapping from the shared data directory stored as gene_to_idx.pkl
+    This mapping is created by data_creation.py and used by graph_perturbation.py
+    """
+    # First try experiment-specific path (for backward compatibility)
+    mapping_path = Path(const.DATA_PATH) / "gene_to_idx.pkl"
+    if mapping_path.exists():
+        with open(mapping_path, "rb") as f:
+            gene_to_idx = pickle.load(f)
+        return gene_to_idx
+    
+    # Then try shared data path (canonical location)
+    shared_mapping_path = Path(const.SHARED_DATA_PATH) / "gene_to_idx.pkl"
+    if not shared_mapping_path.exists():
+        raise FileNotFoundError(f"Gene mapping file not found at {mapping_path} or {shared_mapping_path}. Please run data creation first.")
+    
+    with open(shared_mapping_path, "rb") as f:
+        gene_to_idx = pickle.load(f)
+    
+    return gene_to_idx
+
+
 def get_graph_data_from_topo(filepath=None):
     """
     Reads a .topo file and returns:
@@ -208,8 +231,10 @@ def get_graph_data_from_topo(filepath=None):
     gene_to_idx = {gene: idx for idx, gene in enumerate(genes)}
 
     # Build NetworkX DiGraph with weights
+    # CRITICAL: Add nodes in sorted order FIRST to ensure consistency with gene_to_idx
     edges_with_weights = list(zip(df['Source'], df['Target'], df['Type']))
     G = nx.DiGraph()
+    G.add_nodes_from(genes)  # Add nodes in sorted order first
     G.add_weighted_edges_from(edges_with_weights)
 
     return G, gene_to_idx

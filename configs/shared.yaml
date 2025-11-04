@@ -8,6 +8,9 @@ data_creation:
   signal_propagation: racipe  # Options: 'racipe' (complex ODE) or 'si' (simple susceptible-infected)
   si_max_infection_percentage: 0.3  # For SI propagation: stop when this % of nodes are infected (0.0-1.0)
 
+data_splitting:
+  fixed_training_size: null
+
 graph_perturbation:
   random_graph: false  # Set to true if you want to create a random graph instead of perturbing an existing one
   self_loop_graph: false  # Set to true to add self-loops to each node in the graph

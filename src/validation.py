@@ -487,6 +487,7 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
     in_top20 = []
     in_top40 = []
     in_top80 = []
+    n_nodes = len(pred_label_set[0])
 
     for i, pred_labels in enumerate(tqdm(pred_label_set, desc="evaluate model", disable=const.ON_CLUSTER)):
         # Handle both single and multiple sources
@@ -535,6 +536,7 @@ def prediction_metrics(pred_label_set: list, true_sources: list) -> dict:
     return {
         "accuracy": np.mean(np.array(source_ranks) == 0),
         "avg rank of source": np.mean(source_ranks),
+        "avg norm rank of source": np.mean(source_ranks)/n_nodes,
         "avg prediction for source": np.mean(predictions_for_source),
         "avg prediction over all nodes": np.mean(general_predictions),
         "min prediction over all nodes": min(general_predictions) if general_predictions else 0,
@@ -557,6 +559,7 @@ def multi_source_prediction_metrics(pred_label_set: list, test_data_loader) -> d
     all_source_ranks = []
     all_predictions_for_sources = []
     multi_source_accuracy = []  # How many sources we get right per sample
+    n_nodes = len(pred_label_set[0])
     
     for i, (pred_labels, data) in enumerate(zip(pred_label_set, test_data_loader)):
         # Extract all true sources for this sample
@@ -625,6 +628,7 @@ def multi_source_prediction_metrics(pred_label_set: list, test_data_loader) -> d
     return {
         "multi_source_samples": multi_source_samples,
         "avg_rank_of_sources": np.mean(all_source_ranks),
+        "avg_norm_rank_of_sources": np.mean(all_source_ranks)/n_nodes,
         "avg_prediction_for_sources": np.mean(all_predictions_for_sources),
         "avg_source_accuracy_top1": avg_accuracy_top1,
         "avg_source_accuracy_top20": avg_accuracy_top20,

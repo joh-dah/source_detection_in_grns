@@ -103,14 +103,22 @@ if MODEL not in ["gat", "pdgrapher", "gcnsi", "pdgraphernognn"]:
 MODEL_NAME = f"{params["model_name"]}_{EXPERIMENT}"
 
 # Path structure: shared data for same data_creation params, experiment-specific for perturbations
-SHARED_DATA_PATH = get_shared_data_path(params["data_creation"], NETWORK, SEED)
-EXPERIMENT_DATA_PATH = get_experiment_data_path(
-    params["data_creation"], 
-    params.get("graph_perturbation", {}), 
-    NETWORK, 
-    SEED, 
-    EXPERIMENT
-)
+# Check if pre-calculated fingerprint is provided via environment variable (for shared data jobs)
+if os.environ.get('DATA_FINGERPRINT'):
+    SHARED_DATA_PATH = f"data/shared/{os.environ['DATA_FINGERPRINT']}"
+    # For experiment data path, also use the pre-calculated fingerprint
+    from src.data_utils import get_graph_perturbation_fingerprint
+    graph_fingerprint = get_graph_perturbation_fingerprint(params.get("graph_perturbation", {}))
+    EXPERIMENT_DATA_PATH = f"data/experiments/{os.environ['DATA_FINGERPRINT']}/{graph_fingerprint}/{EXPERIMENT}"
+else:
+    SHARED_DATA_PATH = get_shared_data_path(params["data_creation"], NETWORK, SEED)
+    EXPERIMENT_DATA_PATH = get_experiment_data_path(
+        params["data_creation"], 
+        params.get("graph_perturbation", {}), 
+        NETWORK, 
+        SEED, 
+        EXPERIMENT
+    )
 
 # Shared paths (raw data and splits only)
 RAW_PATH = f"{SHARED_DATA_PATH}/raw"
@@ -146,9 +154,15 @@ N_SAMPLES = dc["n_samples"]
 TIME_STEPS = dc.get("time_steps", None)
 TRAINING_SHARE = dc["training_share"]
 REMOVE_NEAR_DUPLICATES = dc["remove_near_duplicates"]
+SIGNAL_PROPAGATION = dc.get("signal_propagation", "racipe")  # Default to RACIPE if not specified
+SI_MAX_INFECTION_PERCENTAGE = dc.get("si_max_infection_percentage", 0.3)  # Default to 30% if not specified
+
+# Data Splitting
+ds = params.get("data_splitting", {})
+FIXED_TRAINING_SIZE = ds.get("fixed_training_size", None)
 
 
-# Graph Perturbation (moved from data_creation)
+# Graph Perturbation
 gp = params.get("graph_perturbation", {})
 GRAPH_NOISE = gp.get("noise", {"missing_edges": 0, "wrong_edges": 0})
 RANDOM_GRAPH = gp.get("random_graph", False)
@@ -177,6 +191,10 @@ network_dict = {
     "dorothea_60": 60,
     "barabasi_64": 64,
     "dorothea_99": 99,
+    "dorothea_100_150": 100,
+    "dorothea_100_200": 100,
+    "dorothea_100_500": 100,
+    "dorothea_100_1000": 100,
     "dorothea_150": 150,
     "dorothea_290": 290,
     "dorothea_500_550": 500,

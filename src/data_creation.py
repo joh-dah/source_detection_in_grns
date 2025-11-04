@@ -23,6 +23,7 @@ from pathlib import Path
 import time
 import psutil
 import os
+import pickle
 
 
 def log_gene_metrics(
@@ -160,6 +161,93 @@ def update_param_files(
     )
 
 
+def simulate_si_propagation(G, perturbed_gene, og_steady_state_df, infection_probability=0.7, max_steps=10, max_infection_percentage=0.3):
+    """
+    Simulate simple SI (Susceptible-Infected) signal propagation.
+    
+    Args:
+        G: NetworkX graph
+        perturbed_gene: Gene that was perturbed (initial infection source)
+        og_steady_state_df: DataFrame with original steady states
+        infection_probability: Probability of infection spreading per edge per step
+        max_steps: Maximum number of propagation steps
+        max_infection_percentage: Stop propagation when this percentage of nodes are infected (0.0-1.0)
+    
+    Returns:
+        DataFrame with perturbed states after SI propagation
+    """
+    assert const.SIGNAL_PROPAGATION == "si", "This function should only be called when SIGNAL_PROPAGATION is 'si'"
+    
+    # Create perturbed states by copying original states
+    perturbed_states = og_steady_state_df.copy()
+    
+    # Get gene names from dataframe columns
+    gene_names = [col for col in og_steady_state_df.columns if col not in ["State", "ParamNum", "InitCondNum"]]
+    
+    # For each parameter combination (row in the DataFrame)
+    for row_idx in range(len(og_steady_state_df)):
+        # Start with all genes susceptible (0)
+        state = np.zeros(len(gene_names), dtype=int)
+        
+        perturbed_gene_idx = gene_names.index(perturbed_gene)
+        state[perturbed_gene_idx] = 1
+        infected = {perturbed_gene_idx}
+        
+        # Randomize the target infection percentage around 30%
+        target_percentage = np.clip(np.random.normal(loc=0.35, scale=0.1), 0.05, 0.95)  # Normal distribution around 30%, ~75% of values between 0.2-0.4
+        max_infected_nodes = max(1, int(len(gene_names) * target_percentage))
+        
+        # Propagate infection through network
+        for step in range(max_steps):
+            if len(infected) >= max_infected_nodes:
+                break
+                
+            new_infections = set()
+            
+            for infected_idx in infected:
+                infected_gene = gene_names[infected_idx]
+                
+                # Check all neighbors that this infected gene can reach
+                if infected_gene in G.nodes():
+                    for neighbor in G.successors(infected_gene):
+                        if neighbor in gene_names:
+                            neighbor_idx = gene_names.index(neighbor)
+                            
+                            # Skip if already infected
+                            if neighbor_idx in infected:
+                                continue
+                            if np.random.random() < infection_probability:
+                                new_infections.add(neighbor_idx)
+
+                            # Stop adding new infections if we reach the limit
+                            if len(infected) + len(new_infections) >= max_infected_nodes:
+                                break
+                
+                # Break outer loop if we've reached the limit
+                if len(infected) + len(new_infections) >= max_infected_nodes:
+                    break
+            
+            # Add new infections (but don't exceed the limit)
+            remaining_capacity = max_infected_nodes - len(infected)
+            new_infections = set(list(new_infections)[:remaining_capacity])
+            infected.update(new_infections)
+            
+            # Set newly infected genes to 1
+            for infected_idx in new_infections:
+                state[infected_idx] = 1
+            
+            # Update the state string
+            new_state_str = ''.join(map(str, state))
+            perturbed_states.iloc[row_idx, perturbed_states.columns.get_loc("State")] = new_state_str
+            
+            # Update individual gene columns
+            for i, gene_name in enumerate(gene_names):
+                if gene_name in perturbed_states.columns:
+                    perturbed_states.iloc[row_idx, perturbed_states.columns.get_loc(gene_name)] = state[i]
+    
+    return perturbed_states
+
+
 def simulate_loss_of_function(G, gene_to_perturb):
     """
     Simulate a loss of function by changing the mode of activation of all outgoing 
@@ -206,8 +294,10 @@ def update_files_to_perturbed_subgraph(subnetwork_name, raw_data_dir, perturbed_
     update_init_conds_file(og_steady_state, nodes_in_subgraph, subnetwork_dir, subnetwork_name)
 
 
-def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_data_dir):
-
+def perturb_graph_racipe(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_data_dir):
+    """
+    Perturb graph using complex RACIPE ODE simulation.
+    """
     metadata = {}
 
     #store what parameters where used for the steady state (init_cond: param_num)
@@ -258,7 +348,6 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
     og_states = [str(s).replace("'", "") for s in og_steady_state_df["State"].tolist()]
     sub_states = [str(s).replace("'", "") for s in subnetwork_perturbed_state_df["State"].tolist()]
 
-
     def merge_states(og_state, sub_state):
         og_state = list(og_state)  # Convert to list for mutability
         for idx, pos in enumerate(index_positions):
@@ -279,6 +368,40 @@ def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_d
             perturbed_steady_state_df[col] = subnetwork_perturbed_state_df[col]
 
     return perturbed_steady_state_df, metadata
+
+
+def perturb_graph_si(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_data_dir):
+    """
+    Perturb graph using simple SI (Susceptible-Infected) propagation.
+    """
+    metadata = {}
+    
+    # For SI propagation, we work with the full graph 
+    metadata["num_nodes_subgraph"] = len(G.nodes())
+    metadata["num_edges_subgraph"] = len(G.edges())
+    metadata["biggest_hub_subnetwork"] = max(dict(G.degree()).values()) if G.nodes() else 0
+    
+    # Use SI propagation instead of RACIPE simulation
+    perturbed_steady_state_df = simulate_si_propagation(
+        G, 
+        gene_to_perturb, 
+        og_steady_state_df,
+        max_infection_percentage=const.SI_MAX_INFECTION_PERCENTAGE
+    )
+    
+    return perturbed_steady_state_df, metadata
+
+
+def perturb_graph(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_data_dir):
+    """
+    Perturb graph using either RACIPE or SI propagation based on configuration.
+    """
+    if const.SIGNAL_PROPAGATION == "racipe":
+        return perturb_graph_racipe(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_data_dir)
+    elif const.SIGNAL_PROPAGATION == "si":
+        return perturb_graph_si(G, gene_to_perturb, og_steady_state_df, subnetwork_name, raw_data_dir)
+    else:
+        raise ValueError(f"Unknown signal propagation method: {const.SIGNAL_PROPAGATION}. Expected 'racipe' or 'si'.")
 
 
 def remove_near_duplicate_combinations(metadata_df, init_states, perturbed_states, gene_name):
@@ -353,30 +476,60 @@ def process_gene(
     start = time.time()
 
     subnetwork_name = f"{og_network_name}_{gene_to_perturb}"
-    num_init_conds = math.sqrt(perturbations_per_gene/10)
-    num_params = math.ceil(num_init_conds*10)
-    num_init_conds = math.ceil(num_init_conds)
-    rr.gen_topo_param_files(
-        topo_file,
-        topo_name=subnetwork_name,
-        save_dir=raw_data_dir,
-        num_replicates=1,
-        num_params=num_params,
-        num_init_conds=num_init_conds,
-        sampling_method="Sobol",
-    )
+    
+    if const.SIGNAL_PROPAGATION == "racipe":
+        # RACIPE approach: generate parameter files and run simulations
+        num_init_conds = math.sqrt(perturbations_per_gene/10)
+        num_params = math.ceil(num_init_conds*10)
+        num_init_conds = math.ceil(num_init_conds)
+        rr.gen_topo_param_files(
+            topo_file,
+            topo_name=subnetwork_name,
+            save_dir=raw_data_dir,
+            num_replicates=1,
+            num_params=num_params,
+            num_init_conds=num_init_conds,
+            sampling_method="Sobol",
+        )
 
-    rr.run_all_replicates(
-        topo_file,
-        topo_name=subnetwork_name,
-        save_dir=raw_data_dir,
-        batch_size=4000,
-        normalize=False,
-        discretize=True
-    )
+        rr.run_all_replicates(
+            topo_file,
+            topo_name=subnetwork_name,
+            save_dir=raw_data_dir,
+            batch_size=4000,
+            normalize=False,
+            discretize=True
+        )
 
+        steady_state_df = get_steady_state_df(raw_data_dir, subnetwork_name)
+        
+    elif const.SIGNAL_PROPAGATION == "si":
+        # SI approach: generate simple synthetic steady states
+        # For SI, we start with all genes susceptible (0) and let the propagation handle infection
+        num_states = perturbations_per_gene
+        gene_names = list(gene_to_idx.keys())
+        
+        # Generate initial states with all genes set to 0 (susceptible)
+        np.random.seed(const.SEED + hash(gene_to_perturb) % 2**31)  # Deterministic but gene-specific seed
+        states = []
+        
+        for i in range(num_states):
+            # Initialize all genes to 0 (susceptible)
+            state = np.zeros(len(gene_names), dtype=int)
+            
+            state_str = ''.join(map(str, state))
+            
+            # Create a row with state and metadata
+            row = {"State": state_str, "ParamNum": i+1, "InitCondNum": i+1}
+            for j, gene_name in enumerate(gene_names):
+                row[gene_name] = state[j]
+            states.append(row)
+        
+        steady_state_df = pd.DataFrame(states)
+    
+    else:
+        raise ValueError(f"Unknown signal propagation method: {const.SIGNAL_PROPAGATION}")
 
-    steady_state_df = get_steady_state_df(raw_data_dir, subnetwork_name)
     init_discrete_steady_states = steady_state_df["State"].values
     og_steady_state_df = steady_state_df[gene_to_idx.keys()].copy()
     perturbed_steady_state_df, subnetwork_metadata = perturb_graph(G, gene_to_perturb, steady_state_df, subnetwork_name, raw_data_dir)
@@ -434,7 +587,9 @@ def process_gene(
         idx = f"{gene_to_perturb}_{i}"
         torch.save(data, raw_data_dir / f"{idx}.pt")
 
-    shutil.rmtree(raw_data_dir / subnetwork_name, ignore_errors=True)
+    # Only clean up RACIPE-generated directories if using RACIPE
+    if const.SIGNAL_PROPAGATION == "racipe":
+        shutil.rmtree(raw_data_dir / subnetwork_name, ignore_errors=True)
 
     end = time.time()
     p = psutil.Process(os.getpid())
@@ -458,7 +613,15 @@ def create_data_set(
     og_network_name: str,
     desired_dataset_size: int,
 ):
+    # Always load from the original topo file to establish canonical mapping
     G, gene_to_idx = utils.get_graph_data_from_topo(topo_file)
+    
+    # Store the canonical gene mapping for graph perturbation to use later
+    gene_mapping_path = Path(const.SHARED_DATA_PATH) / "gene_to_idx.pkl"
+    gene_mapping_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(gene_mapping_path, 'wb') as f:
+        pickle.dump(gene_to_idx, f)
+    print(f"Canonical gene mapping saved to {gene_mapping_path}")
 
     genes_with_outgoing_edges = [gene for gene in G.nodes() if G.out_degree(gene) > 0]
     print(f"Genes that will be used as sources: {genes_with_outgoing_edges}")
@@ -507,7 +670,7 @@ def main():
     from src.data_utils import data_exists
 
     # Check if shared data already exists
-    if data_exists(const.SHARED_DATA_PATH, const.N_SAMPLES):
+    if data_exists(const.SHARED_DATA_PATH, const.N_SAMPLES, const.REMOVE_NEAR_DUPLICATES):
         print(f"Shared data already exists at {const.SHARED_DATA_PATH}")
         print("Skipping data creation...")
         return
