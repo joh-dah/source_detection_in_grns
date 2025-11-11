@@ -173,7 +173,7 @@ class ModelValidator:
     def _load_raw_test_data_from_indices(self):
         """Load raw test data based on split indices."""
         try:
-            splits = torch.load(const.SPLITS_PATH, weights_only=False)
+            splits = torch.load(const.SPLITS_FILE, weights_only=False)
             test_indices = splits["test_index_backward"]
             
             raw_data_dir = Path(const.RAW_PATH)
@@ -203,7 +203,7 @@ class ModelValidator:
         dataset = Dataset(
             forward_path=str(data_path / "data_forward.pt"),
             backward_path=str(data_path / "data_backward.pt"),
-            splits_path=str(const.SPLITS_PATH)
+            splits_path=str(const.SPLITS_FILE)
         )
         # Get test data loader with reduced workers for cluster compatibility
         (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1, num_workers=0)
@@ -217,7 +217,7 @@ class ModelValidator:
         dataset = Dataset(
             forward_path=str(data_path / "data_forward.pt"),
             backward_path=str(data_path / "data_backward.pt"),
-            splits_path=str(const.SPLITS_PATH)
+            splits_path=str(const.SPLITS_FILE)
         )
         # Get test data loader with reduced workers for cluster compatibility
         (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1, num_workers=0)

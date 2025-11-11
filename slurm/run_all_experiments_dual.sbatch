@@ -222,34 +222,23 @@ export DATA_FINGERPRINT=$fingerprint
 
 # === 1. Data Creation ===
 echo "--- Step 1: Data Creation ---"
-START_TIME_DATA=\$(date +%s)
+START_TIME_DATA=$(date +%s)
 
 # Create shared data (this will be stored in data/shared/{fingerprint}/)
 python -m src.data_creation --experiment $representative_experiment --model gat
 
-END_TIME_DATA=\$(date +%s)
-DATA_DURATION=\$((\$END_TIME_DATA - \$START_TIME_DATA))
-echo "Data creation completed in \$DATA_DURATION seconds"
-
-# === 2. Data Splitting ===
-echo "--- Step 2: Data Splitting ---"
-START_TIME_SPLIT=\$(date +%s)
-
-python -m src.create_splits --experiment $representative_experiment --model gat
-
-END_TIME_SPLIT=\$(date +%s)
-SPLIT_DURATION=\$((\$END_TIME_SPLIT - \$START_TIME_SPLIT))
-echo "Data splitting completed in \$SPLIT_DURATION seconds"
+END_TIME_DATA=$(date +%s)
+DATA_DURATION=$((END_TIME_DATA - START_TIME_DATA))
+echo "Data creation completed in $DATA_DURATION seconds"
 
 # === Summary ===
-TOTAL_DURATION=\$((\$END_TIME_SPLIT - \$START_TIME_DATA))
+TOTAL_DURATION=$DATA_DURATION
 echo ""
 echo "=== SHARED DATA CREATION COMPLETE ==="
 echo "Configuration: $representative_experiment"
-echo "Total time: \$TOTAL_DURATION seconds"
+echo "Total time: $TOTAL_DURATION seconds"
 echo "Breakdown:"
-echo "  - Data Creation: \$DATA_DURATION seconds"
-echo "  - Data Splitting: \$SPLIT_DURATION seconds"
+echo "  - Data Creation: $DATA_DURATION seconds"
 echo ""
 echo "This shared data is now ready for parallel experiment execution!"
 echo "Experiments will handle their own graph perturbation and data processing."

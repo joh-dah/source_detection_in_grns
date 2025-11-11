@@ -120,14 +120,14 @@ else:
         EXPERIMENT
     )
 
-# Shared paths (raw data and splits only)
+# Shared paths (raw data only)
 RAW_PATH = f"{SHARED_DATA_PATH}/raw"
-SPLITS_PATH = f"{SHARED_DATA_PATH}/splits/splits.pt"
 
 # Experiment-specific paths (after graph perturbation)
 EXPERIMENT_RAW_PATH = f"{EXPERIMENT_DATA_PATH}/raw"
 EXPERIMENT_PROCESSED_PATH = f"{EXPERIMENT_DATA_PATH}/processed/{MODEL}"
 EXPERIMENT_EDGE_INDEX_PATH = f"{EXPERIMENT_PROCESSED_PATH}/edge_index.pt"
+SPLITS_FILE = f"{EXPERIMENT_DATA_PATH}/splits/splits.pt"
 
 # Data processing is experiment-specific (uses perturbed graph)
 PROCESSED_PATH = EXPERIMENT_PROCESSED_PATH
@@ -156,6 +156,7 @@ TRAINING_SHARE = dc["training_share"]
 REMOVE_NEAR_DUPLICATES = dc["remove_near_duplicates"]
 SIGNAL_PROPAGATION = dc.get("signal_propagation", "racipe")  # Default to RACIPE if not specified
 SI_MAX_INFECTION_PERCENTAGE = dc.get("si_max_infection_percentage", 0.3)  # Default to 30% if not specified
+DATA_NOISE = dc.get("data_noise", 0.0)
 
 # Data Splitting
 ds = params.get("data_splitting", {})
@@ -214,6 +215,8 @@ network_dict = {
     "dorothea_1000": 1000,
     "dorothea_1000_sparse": 1000,
     "dorothea_2000_sparse": 2000,
+    "hub_500_1000": 500,
+    "equal_500_1000": 500,
     "pdgrapher_grn": 10716,
     "random_10716_300000": 10716,
     "10716_not_connected_100": 10716,

@@ -566,6 +566,12 @@ def process_gene(
         og_row = og_steady_state_df.iloc[row_id]
         perturbed_row = perturbed_steady_state_df.iloc[row_id]
 
+        if const.DATA_NOISE > 0.0:
+            noise = np.random.normal(0, const.DATA_NOISE, size=og_row.shape)
+            og_row = og_row + noise
+            noise = np.random.normal(0, const.DATA_NOISE, size=perturbed_row.shape)
+            perturbed_row = perturbed_row + noise
+
         # Create binary perturbation indicator
         binary_perturbation_indicator = [1 if gene == gene_to_perturb else 0 for gene in gene_to_idx.keys()]
                     
@@ -696,6 +702,7 @@ def main():
     )
 
     print(f"Shared data creation complete! Data saved to {const.SHARED_DATA_PATH}")
+    print(f"Total samples created: {len(list(dest_dir.glob('*.pt')))}")
     print("This data can now be reused by experiments with the same data_creation configuration.")
 
 

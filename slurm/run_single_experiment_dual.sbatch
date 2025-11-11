@@ -228,10 +228,51 @@ mkdir -p $TIMING_LOG_DIR
 echo "experiment,method,stage,start_time,end_time,duration_seconds,job_id" > $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 
 # =============================================================================
-# Job 1: Graph Perturbation (depends on shared data creation)
+# Job 1: Per-experiment Data Splitting (depends on shared data creation)
+# =============================================================================
+echo "Submitting per-experiment data splitting job..."
+SPLIT_JOB_ID=$(sbatch --parsable --dependency=afterok:$SHARED_DATA_DEPENDENCY <<EOF
+#!/bin/bash
+#SBATCH --job-name="split_${EXPERIMENT}"
+#SBATCH --mem=32G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --account=sci-renard
+#SBATCH --partition=cpu
+#SBATCH --time=1:00:00
+#SBATCH --chdir=$BASE_DIR
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_split_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_split_%j.err
+
+source .venv/bin/activate
+
+echo "=== STARTING DATA SPLITTING (per-experiment) ==="
+echo "Job ID: \$SLURM_JOB_ID"
+echo "Start time: \$(date)"
+echo "Experiment: $EXPERIMENT"
+echo "Depends on shared data job: $SHARED_DATA_DEPENDENCY"
+
+START_TIME=\$(date +%s)
+export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
+
+# Split shared data for this experiment (must run per-experiment)
+python -m src.create_splits --experiment $EXPERIMENT --model gat
+
+END_TIME=\$(date +%s)
+echo "Data splitting completed at: \$(date)"
+echo "$EXPERIMENT,gat,data_splitting,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+EOF
+)
+echo "Data splitting job submitted with ID: $SPLIT_JOB_ID"
+
+# =============================================================================
+# Job 2: Graph Perturbation (depends on per-experiment splitting)
 # =============================================================================
 echo "Submitting graph perturbation job..."
-GRAPH_PERT_JOB_ID=$(sbatch --parsable --dependency=afterok:$SHARED_DATA_DEPENDENCY <<EOF
+GRAPH_PERT_JOB_ID=$(sbatch --parsable --dependency=afterok:$SPLIT_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="graph_pert_${EXPERIMENT}"
 #SBATCH --mem=64G
@@ -252,7 +293,7 @@ echo "=== STARTING GRAPH PERTURBATION ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
-echo "Depends on shared data job: $SHARED_DATA_DEPENDENCY"
+echo "Depends on split job: $SPLIT_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
@@ -273,7 +314,7 @@ EOF
 echo "Graph perturbation job submitted with ID: $GRAPH_PERT_JOB_ID"
 
 # =============================================================================
-# Job 2: Parallel Data Processing for all three models
+# Job 3: Parallel Data Processing for all three models
 # =============================================================================
 
 # Job 2a: GAT Data Processing
@@ -395,7 +436,7 @@ EOF
 echo "PDGrapherNoGNN data processing job submitted with ID: $PDGNN_PROC_JOB_ID"
 
 # =============================================================================
-# Job 3: Parallel Training for all three models
+# Job 4: Parallel Training for all three models
 # =============================================================================
 
 # (GAT training removed — only PDGrapher models will be trained)
@@ -484,7 +525,7 @@ EOF
 echo "PDGrapherNoGNN training job submitted with ID: $PDGNN_TRAIN_JOB_ID"
 
 # =============================================================================
-# Job 4: Baseline Computation (after data processing is complete for any model)
+# Job 5: Baseline Computation (after data processing is complete for any model)
 # =============================================================================
 echo "Submitting baseline job..."
 # Baseline should depend on GAT processing (GAT data used for baseline)
@@ -526,7 +567,7 @@ EOF
 echo "Baseline job submitted with ID: $BASELINE_JOB_ID"
 
 # =============================================================================
-# Job 5: Parallel Validation for all three models
+# Job 6: Parallel Validation for all three models
 # =============================================================================
 
 # (GAT validation removed — only PDGrapher models will be validated)
@@ -615,7 +656,7 @@ EOF
 echo "PDGrapherNoGNN validation job submitted with ID: $PDGNN_VAL_JOB_ID"
 
 # =============================================================================
-# Job 6: Dual Model Result Comparison (depends on validations + baseline)
+# Job 7: Dual Model Result Comparison (depends on validations + baseline)
 # =============================================================================
 echo "Submitting dual-model result comparison job..."
 DUAL_COMPARE_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_VAL_JOB_ID,$PDGNN_VAL_JOB_ID,$BASELINE_JOB_ID <<EOF
@@ -670,16 +711,17 @@ echo "Experiment: $EXPERIMENT"
 echo "Shared data dependency: $SHARED_DATA_DEPENDENCY"
 echo ""
 echo "Pipeline structure:"
-echo "  1. Graph Perturbation:          $GRAPH_PERT_JOB_ID (after $SHARED_DATA_DEPENDENCY)"
-echo "  2a. GAT Data Processing:        $GAT_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
-echo "  2b. PDGrapher Data Processing:  $PDG_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
-echo "  2c. PDGrapherNoGNN Data Proc:   $PDGNN_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
-echo "  3a. PDGrapher Training:         $PDG_TRAIN_JOB_ID (after $PDG_PROC_JOB_ID)"
-echo "  3b. PDGrapherNoGNN Training:    $PDGNN_TRAIN_JOB_ID (after $PDGNN_PROC_JOB_ID)"
-echo "  4. Baseline:                    $BASELINE_JOB_ID (after $GAT_PROC_JOB_ID)"
-echo "  5a. PDGrapher Validation:       $PDG_VAL_JOB_ID (after $PDG_TRAIN_JOB_ID)"
-echo "  5b. PDGrapherNoGNN Validation:  $PDGNN_VAL_JOB_ID (after $PDGNN_TRAIN_JOB_ID)"
-echo "  6. Dual Model Comparison:       $DUAL_COMPARE_JOB_ID (after validations + baseline)"
+echo "  1. Data Splitting (per-experiment): $SPLIT_JOB_ID (after $SHARED_DATA_DEPENDENCY)"
+echo "  2. Graph Perturbation:             $GRAPH_PERT_JOB_ID (after split $SPLIT_JOB_ID)"
+echo "  3a. GAT Data Processing:           $GAT_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
+echo "  3b. PDGrapher Data Processing:     $PDG_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
+echo "  3c. PDGrapherNoGNN Data Proc:      $PDGNN_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
+echo "  4a. PDGrapher Training:            $PDG_TRAIN_JOB_ID (after $PDG_PROC_JOB_ID)"
+echo "  4b. PDGrapherNoGNN Training:       $PDGNN_TRAIN_JOB_ID (after $PDGNN_PROC_JOB_ID)"
+echo "  5. Baseline:                       $BASELINE_JOB_ID (after $GAT_PROC_JOB_ID)"
+echo "  6a. PDGrapher Validation:          $PDG_VAL_JOB_ID (after $PDG_TRAIN_JOB_ID)"
+echo "  6b. PDGrapherNoGNN Validation:     $PDGNN_VAL_JOB_ID (after $PDGNN_TRAIN_JOB_ID)"
+echo "  7. Dual Model Comparison:          $DUAL_COMPARE_JOB_ID (after validations + baseline)"
 echo ""
 echo "Monitor progress:"
 echo "  squeue -j $GRAPH_PERT_JOB_ID,$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID,$PDGNN_PROC_JOB_ID,$PDG_TRAIN_JOB_ID,$PDGNN_TRAIN_JOB_ID,$BASELINE_JOB_ID,$PDG_VAL_JOB_ID,$PDGNN_VAL_JOB_ID,$DUAL_COMPARE_JOB_ID"

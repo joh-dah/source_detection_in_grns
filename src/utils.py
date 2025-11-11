@@ -115,7 +115,7 @@ def load_processed_data(split="train", model_type=None):
     Returns:
         Dataset: Dataset for the specified split
     """
-    splits_file = Path(const.SPLITS_PATH)
+    splits_file = Path(const.SPLITS_FILE)
     splits = torch.load(splits_file, weights_only=False)
     split_indices = splits[f'{split}_index_backward']
 
@@ -272,7 +272,7 @@ def get_edge_index_from_topo(filepath=None, undirected=True):
 
 def load_raw_test_data():
         """Load raw test data based on split indices."""
-        splits = torch.load(const.SPLITS_PATH, weights_only=False)
+        splits = torch.load(const.SPLITS_FILE, weights_only=False)
         test_indices = splits["test_index_backward"]
         
         raw_data_dir = Path(const.RAW_PATH)

@@ -17,7 +17,7 @@ def main():
     np.random.seed(0) """
 
     data_processed_dir = Path(const.PROCESSED_PATH)  # Use the properly defined processed path
-    splits_path = const.SPLITS_PATH
+    splits_path = const.SPLITS_FILE
 
     # Check if all required files exist
     required_files = [
@@ -35,7 +35,7 @@ def main():
     dataset = Dataset(
         forward_path=f"{data_processed_dir}/data_forward.pt",
         backward_path=f"{data_processed_dir}/data_backward.pt",
-        splits_path=const.SPLITS_PATH,
+        splits_path=const.SPLITS_FILE,
     )
 
     # Load pre-computed thresholds (ensures consistency between training and validation)

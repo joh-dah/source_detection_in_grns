@@ -1,15 +1,16 @@
 data_creation:
-  n_samples: 100000
+  n_samples: 50000
   time_steps: null    
   training_share: 0.6
   normalize_data: true
-  network: tiny
-  remove_near_duplicates: false
+  network: dorothea_500_1000
+  remove_near_duplicates: true
   signal_propagation: racipe  # Options: 'racipe' (complex ODE) or 'si' (simple susceptible-infected)
   si_max_infection_percentage: 0.3  # For SI propagation: stop when this % of nodes are infected (0.0-1.0)
+  data_noise: 0.1
 
 data_splitting:
-  fixed_training_size: null
+  fixed_training_size: 5000
 
 graph_perturbation:
   random_graph: false  # Set to true if you want to create a random graph instead of perturbing an existing one
@@ -24,8 +25,8 @@ seed: 42
 
 # Gene-specific metrics
 gene_specific_metrics:
-  enabled: false  # Disabled by default - requires raw data with gene mappings
-  genes_of_interest: []  # List of gene names to track specifically, e.g., ["TP53", "MYC", "BRCA1"]
+  enabled: true
+  genes_of_interest: ["IRF3", "ATF7", "SREBF2", "MYC"]
 
 # Paths
 data_path: "data"
