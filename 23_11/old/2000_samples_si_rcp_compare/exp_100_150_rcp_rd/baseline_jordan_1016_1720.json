@@ -1,0 +1,16 @@
+{
+    "network": "dorothea_100_150",
+    "metrics": {
+        "accuracy": 0.173,
+        "avg rank of source": 17.949,
+        "avg prediction for source": 0.131,
+        "avg prediction over all nodes": 0.01,
+        "min prediction over all nodes": 0.0,
+        "max prediction over all nodes": 1.0,
+        "source in top 5": 0.343,
+        "source in top 20": 0.606,
+        "source in top 40": 0.906,
+        "source in top 80": 0.961
+    },
+    "model_type": "jordan"
+}

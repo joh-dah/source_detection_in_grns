@@ -1,0 +1,137 @@
+{
+    "network": "dorothea_500_1000",
+    "model_type": "pdgraphernognn",
+    "metrics": {
+        "accuracy": 0.063,
+        "avg rank of source": 133.899,
+        "avg prediction for source": 0.075,
+        "avg prediction over all nodes": -2.371,
+        "min prediction over all nodes": -222.006,
+        "max prediction over all nodes": 12.332,
+        "source in top 3": 0.124,
+        "source in top 5": 0.163,
+        "gene_specific_metrics": {
+            "IRF3": {
+                "gene_name": "IRF3",
+                "gene_index": 214,
+                "total_samples": 19796,
+                "times_true_source": 99,
+                "times_predicted_source": 75,
+                "correct_predictions": 11,
+                "avg_prediction_prob": -1.787,
+                "avg_rank": 0.0,
+                "in_top3_count": 0,
+                "in_top5_count": 0,
+                "avg_rank_when_true": 83.515,
+                "avg_prob_when_true": 0.435,
+                "in_top3_when_true": 20,
+                "in_top5_when_true": 20,
+                "accuracy_when_true": 0.111,
+                "precision": 0.147,
+                "recall": 0.111,
+                "f1_score": 0.126
+            },
+            "SREBF2": {
+                "gene_name": "SREBF2",
+                "gene_index": 433,
+                "total_samples": 19796,
+                "times_true_source": 94,
+                "times_predicted_source": 75,
+                "correct_predictions": 10,
+                "avg_prediction_prob": -1.936,
+                "avg_rank": 0.0,
+                "in_top3_count": 0,
+                "in_top5_count": 0,
+                "avg_rank_when_true": 97.574,
+                "avg_prob_when_true": 0.331,
+                "in_top3_when_true": 19,
+                "in_top5_when_true": 26,
+                "accuracy_when_true": 0.106,
+                "precision": 0.133,
+                "recall": 0.106,
+                "f1_score": 0.118
+            },
+            "MYC": {
+                "gene_name": "MYC",
+                "gene_index": 265,
+                "total_samples": 19796,
+                "times_true_source": 89,
+                "times_predicted_source": 83,
+                "correct_predictions": 3,
+                "avg_prediction_prob": -15.238,
+                "avg_rank": 0.0,
+                "in_top3_count": 0,
+                "in_top5_count": 0,
+                "avg_rank_when_true": 51.899,
+                "avg_prob_when_true": 1.065,
+                "in_top3_when_true": 17,
+                "in_top5_when_true": 31,
+                "accuracy_when_true": 0.034,
+                "precision": 0.036,
+                "recall": 0.034,
+                "f1_score": 0.035
+            }
+        }
+    },
+    "data stats": {
+        "graph stats": {
+            "number of nodes": 500,
+            "number of possible sources": 202
+        },
+        "infection stats": {
+            "avg number of sources": 1.0,
+            "avg portion of affected nodes": 0.522,
+            "std portion of affected nodes": 0.358
+        }
+    },
+    "parameters": {
+        "data_creation": {
+            "n_samples": 100000,
+            "time_steps": null,
+            "training_share": 0.6,
+            "normalize_data": true,
+            "network": "dorothea_500_1000",
+            "remove_near_duplicates": false
+        },
+        "graph_perturbation": {
+            "random_graph": true,
+            "noise": {
+                "missing_edges": 0,
+                "wrong_edges": 0
+            }
+        },
+        "on_cluster": true,
+        "seed": 42,
+        "gene_specific_metrics": {
+            "enabled": true,
+            "genes_of_interest": [
+                "IRF3",
+                "ATF7",
+                "SREBF2",
+                "MYC"
+            ]
+        },
+        "data_path": "data",
+        "model_path": "models",
+        "figures_path": "figures",
+        "report_path": "reports",
+        "topo_path": "topos",
+        "model": "PDGrapherNoGNN",
+        "model_name": "pdgrapher_nognn_default",
+        "training": {
+            "epochs": 200,
+            "layers": 3,
+            "alpha": 0.75,
+            "batch_size": 32,
+            "class_weighting": true,
+            "graph_weighting": true,
+            "hidden_size": 256,
+            "heads": 8,
+            "dropout": 0.1,
+            "learning_rate": 0.0002,
+            "subsample": false,
+            "weight_decay": 0.0001
+        },
+        "experiment": "bs_500_1000_fr"
+    }
+}

@@ -1,0 +1,60 @@
+{
+    "network": "10716_self_loops",
+    "model_type": "pdgrapher",
+    "metrics": {
+        "accuracy": 0.016,
+        "avg rank of source": 2188.372,
+        "avg prediction for source": 0.22,
+        "avg prediction over all nodes": -0.152,
+        "min prediction over all nodes": -1.348,
+        "max prediction over all nodes": 4.693,
+        "source in top 3": 0.029,
+        "source in top 5": 0.036
+    },
+    "parameters": {
+        "data_creation": {
+            "n_samples": 10000,
+            "time_steps": null,
+            "training_share": 0.6,
+            "normalize_data": true,
+            "network": "10716_self_loops",
+            "remove_near_duplicates": false
+        },
+        "graph_perturbation": {
+            "random_graph": false,
+            "self_loop_graph": false,
+            "noise": {
+                "missing_edges": 0,
+                "wrong_edges": 0
+            }
+        },
+        "on_cluster": true,
+        "seed": 42,
+        "gene_specific_metrics": {
+            "enabled": false,
+            "genes_of_interest": []
+        },
+        "data_path": "data",
+        "model_path": "models",
+        "figures_path": "figures",
+        "report_path": "reports",
+        "topo_path": "topos",
+        "model": "PDGrapher",
+        "model_name": "pdgrapher_default",
+        "training": {
+            "epochs": 200,
+            "layers": 3,
+            "alpha": 0.75,
+            "batch_size": 1,
+            "class_weighting": true,
+            "graph_weighting": true,
+            "hidden_size": 256,
+            "heads": 8,
+            "dropout": 0.1,
+            "learning_rate": 0.0002,
+            "subsample": false,
+            "weight_decay": 0.0001
+        },
+        "experiment": "10716_self_loops"
+    }
+}

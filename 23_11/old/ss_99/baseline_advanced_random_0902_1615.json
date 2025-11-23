@@ -1,0 +1,14 @@
+{
+    "network": "dorothea_99",
+    "metrics": {
+        "accuracy": 0.009,
+        "avg rank of source": 49.026,
+        "avg prediction for source": 0.01,
+        "avg prediction over all nodes": 0.01,
+        "min prediction over all nodes": 0.0,
+        "max prediction over all nodes": 0.027,
+        "source in top 3": 0.029,
+        "source in top 5": 0.049
+    },
+    "model_type": "advanced_random"
+}

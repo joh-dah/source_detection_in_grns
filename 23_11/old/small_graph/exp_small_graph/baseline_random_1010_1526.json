@@ -1,0 +1,16 @@
+{
+    "network": "barabasi_64",
+    "metrics": {
+        "accuracy": 0.019,
+        "avg rank of source": 30.572,
+        "avg prediction for source": 0.016,
+        "avg prediction over all nodes": 0.016,
+        "min prediction over all nodes": 0.0,
+        "max prediction over all nodes": 0.04,
+        "source in top 5": 0.083,
+        "source in top 20": 0.326,
+        "source in top 40": 0.647,
+        "source in top 80": 1.0
+    },
+    "model_type": "random"
+}

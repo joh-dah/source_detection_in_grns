@@ -1,0 +1,3 @@
+method,data_creation,data_processing,training,evaluation,Total
+pdgrapher,0.0,0.0,1.9055555555555554,0.0,1.9055555555555554
+pdgrapher_nognn,0.0,0.0,0.09638888888888889,0.0,0.09638888888888889

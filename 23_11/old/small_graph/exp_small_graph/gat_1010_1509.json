@@ -1,0 +1,78 @@
+{
+    "network": "barabasi_64",
+    "model_type": "gat",
+    "metrics": {
+        "accuracy": 0.021,
+        "avg rank of source": 29.959,
+        "avg prediction for source": 0.143,
+        "avg prediction over all nodes": 0.142,
+        "min prediction over all nodes": 0.114,
+        "max prediction over all nodes": 0.186,
+        "source in top 5": 0.094,
+        "source in top 20": 0.356,
+        "source in top 40": 0.641,
+        "source in top 80": 1.0
+    },
+    "parameters": {
+        "data_creation": {
+            "n_samples": 5000,
+            "time_steps": null,
+            "training_share": 0.6,
+            "normalize_data": true,
+            "network": "barabasi_64",
+            "remove_near_duplicates": false
+        },
+        "graph_perturbation": {
+            "random_graph": false,
+            "self_loop_graph": false,
+            "noise": {
+                "missing_edges": 0,
+                "wrong_edges": 0
+            }
+        },
+        "on_cluster": true,
+        "seed": 42,
+        "gene_specific_metrics": {
+            "enabled": true,
+            "genes_of_interest": [
+                "IRF3",
+                "ATF7",
+                "SREBF2",
+                "MYC"
+            ]
+        },
+        "data_path": "data",
+        "model_path": "models",
+        "figures_path": "figures",
+        "report_path": "reports",
+        "topo_path": "topos",
+        "model": "GAT",
+        "model_name": "gat_default",
+        "training": {
+            "alpha": 0.5,
+            "batch_size": 64,
+            "class_weighting": false,
+            "epochs": 100,
+            "graph_weighting": false,
+            "hidden_size": 128,
+            "heads": 4,
+            "layers": 2,
+            "dropout": 0.3,
+            "learning_rate": 0.0001,
+            "subsample": false,
+            "weight_decay": 0.0005
+        },
+        "experiment": "small_graph"
+    },
+    "data stats": {
+        "graph stats": {
+            "number of nodes": 64,
+            "number of possible sources": 64
+        },
+        "infection stats": {
+            "avg number of sources": 1.0,
+            "avg portion of affected nodes": 0.983,
+            "std portion of affected nodes": 0.102
+        }
+    }
+}

@@ -1,0 +1,137 @@
+{
+    "network": "dorothea_290",
+    "model_type": "gat",
+    "metrics": {
+        "accuracy": 0.002,
+        "avg rank of source": 135.506,
+        "avg prediction for source": 0.034,
+        "avg prediction over all nodes": 0.033,
+        "min prediction over all nodes": 0.018,
+        "max prediction over all nodes": 0.07,
+        "source in top 3": 0.016,
+        "source in top 5": 0.024,
+        "gene_specific_metrics": {
+            "IRF3": {
+                "gene_name": "IRF3",
+                "gene_index": 125,
+                "total_samples": 1440,
+                "times_true_source": 4,
+                "times_predicted_source": 0,
+                "correct_predictions": 0,
+                "avg_prediction_prob": 0.035,
+                "avg_rank": 0.0,
+                "in_top3_count": 0,
+                "in_top5_count": 0,
+                "avg_rank_when_true": 68.75,
+                "avg_prob_when_true": 0.036,
+                "in_top3_when_true": 0,
+                "in_top5_when_true": 0,
+                "accuracy_when_true": 0.0,
+                "precision": null,
+                "recall": 0.0,
+                "f1_score": null
+            },
+            "SREBF2": {
+                "gene_name": "SREBF2",
+                "gene_index": 246,
+                "total_samples": 1440,
+                "times_true_source": 12,
+                "times_predicted_source": 3,
+                "correct_predictions": 0,
+                "avg_prediction_prob": 0.042,
+                "avg_rank": 0.0,
+                "in_top3_count": 0,
+                "in_top5_count": 0,
+                "avg_rank_when_true": 28.75,
+                "avg_prob_when_true": 0.041,
+                "in_top3_when_true": 0,
+                "in_top5_when_true": 0,
+                "accuracy_when_true": 0.0,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1_score": null
+            },
+            "MYC": {
+                "gene_name": "MYC",
+                "gene_index": 152,
+                "total_samples": 1440,
+                "times_true_source": 11,
+                "times_predicted_source": 62,
+                "correct_predictions": 0,
+                "avg_prediction_prob": 0.042,
+                "avg_rank": 0.0,
+                "in_top3_count": 0,
+                "in_top5_count": 0,
+                "avg_rank_when_true": 40.545,
+                "avg_prob_when_true": 0.041,
+                "in_top3_when_true": 0,
+                "in_top5_when_true": 0,
+                "accuracy_when_true": 0.0,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1_score": null
+            }
+        }
+    },
+    "data stats": {
+        "graph stats": {
+            "number of nodes": 290,
+            "number of possible sources": 180
+        },
+        "infection stats": {
+            "avg number of sources": 1.0,
+            "avg portion of affected nodes": 0.586,
+            "std portion of affected nodes": 0.3
+        }
+    },
+    "parameters": {
+        "data_creation": {
+            "n_samples": 10000,
+            "time_steps": null,
+            "training_share": 0.6,
+            "normalize_data": true,
+            "network": "dorothea_290",
+            "remove_near_duplicates": false
+        },
+        "graph_perturbation": {
+            "random_graph": false,
+            "noise": {
+                "missing_edges": 0,
+                "wrong_edges": 0
+            }
+        },
+        "on_cluster": true,
+        "seed": 42,
+        "gene_specific_metrics": {
+            "enabled": true,
+            "genes_of_interest": [
+                "IRF3",
+                "ATF7",
+                "SREBF2",
+                "MYC"
+            ]
+        },
+        "data_path": "data",
+        "model_path": "models",
+        "figures_path": "figures",
+        "report_path": "reports",
+        "topo_path": "topos",
+        "model": "GAT",
+        "model_name": "gat_default",
+        "training": {
+            "alpha": 0.5,
+            "batch_size": 64,
+            "class_weighting": false,
+            "epochs": 200,
+            "graph_weighting": false,
+            "hidden_size": 128,
+            "heads": 4,
+            "layers": 2,
+            "dropout": 0.3,
+            "learning_rate": 0.0001,
+            "subsample": false,
+            "weight_decay": 0.0005
+        },
+        "experiment": "ss_290"
+    }
+}

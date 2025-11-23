@@ -1,0 +1,14 @@
+{
+    "network": "dorothea_727_sparse",
+    "metrics": {
+        "accuracy": 0.002,
+        "avg rank of source": 335.653,
+        "avg prediction for source": 0.002,
+        "avg prediction over all nodes": 0.001,
+        "min prediction over all nodes": 0.0,
+        "max prediction over all nodes": 0.013,
+        "source in top 3": 0.005,
+        "source in top 5": 0.008
+    },
+    "model_type": "advanced_random"
+}

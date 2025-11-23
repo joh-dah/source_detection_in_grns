@@ -1,0 +1,93 @@
+{
+    "network": "random_10716_300000",
+    "model_type": "pdgrapher",
+    "metrics": {
+        "accuracy": 0.012,
+        "avg rank of source": 2523.52,
+        "avg prediction for source": 0.439,
+        "avg prediction over all nodes": -0.152,
+        "min prediction over all nodes": -2.627,
+        "max prediction over all nodes": 7.062,
+        "source in top 5": 0.032,
+        "source in top 20": 0.058,
+        "source in top 40": 0.075,
+        "source in top 80": 0.098,
+        "pdgrapher_perturbation_discovery": {
+            "recall@1": 0.0025,
+            "recall@10": 0.0233,
+            "recall@100": 0.0629,
+            "recall@1000": 0.2645,
+            "ranking_score": 0.7189,
+            "ranking_score_dcg": 0.0823,
+            "perc_partially_accurate_predictions": 0.25,
+            "recall@1_std": 0.0497,
+            "recall@10_std": 0.1508,
+            "recall@100_std": 0.2427,
+            "recall@1000_std": 0.4411,
+            "ranking_score_std": 0.2464,
+            "ranking_score_dcg_std": 0.082,
+            "perc_partially_accurate_predictions_std": 4.97,
+            "total_samples": 4851,
+            "avg_topk": 7703.8955
+        },
+        "pdgrapher_response_prediction": {
+            "forward_mae": -1,
+            "forward_mse": -1,
+            "forward_r2": -1,
+            "forward_r2_scgen": -1,
+            "forward_spearman": -1,
+            "backward_mae": -1,
+            "backward_mse": -1,
+            "backward_r2": -1,
+            "backward_r2_scgen": -1,
+            "backward_spearman": -1,
+            "backward_avg_topk": -1
+        }
+    },
+    "parameters": {
+        "data_creation": {
+            "n_samples": 10000,
+            "time_steps": null,
+            "training_share": 0.6,
+            "normalize_data": true,
+            "network": "random_10716_300000",
+            "remove_near_duplicates": false
+        },
+        "graph_perturbation": {
+            "random_graph": false,
+            "self_loop_graph": false,
+            "noise": {
+                "missing_edges": 0,
+                "wrong_edges": 0
+            }
+        },
+        "on_cluster": true,
+        "seed": 42,
+        "gene_specific_metrics": {
+            "enabled": false,
+            "genes_of_interest": []
+        },
+        "data_path": "data",
+        "model_path": "models",
+        "figures_path": "figures",
+        "report_path": "reports",
+        "topo_path": "topos",
+        "model": "PDGrapher",
+        "model_name": "pdgrapher_default",
+        "training": {
+            "epochs": 200,
+            "layers": 3,
+            "alpha": 0.75,
+            "batch_size": 8,
+            "class_weighting": true,
+            "graph_weighting": true,
+            "hidden_size": 256,
+            "heads": 8,
+            "dropout": 0.1,
+            "learning_rate": 0.0002,
+            "subsample": false,
+            "weight_decay": 0.0001
+        },
+        "experiment": "og_pdgrapher_data_fr"
+    }
+}

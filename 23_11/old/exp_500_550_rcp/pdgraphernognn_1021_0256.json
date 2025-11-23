@@ -1,0 +1,201 @@
+{
+    "network": "dorothea_500_550",
+    "model_type": "pdgraphernognn",
+    "metrics": {
+        "accuracy": 0.026,
+        "avg rank of source": 73.944,
+        "avg prediction for source": -0.283,
+        "avg prediction over all nodes": -9.508,
+        "min prediction over all nodes": -227.291,
+        "max prediction over all nodes": 11.498,
+        "source in top 5": 0.129,
+        "source in top 20": 0.429,
+        "source in top 40": 0.645,
+        "source in top 80": 0.727,
+        "pdgrapher_perturbation_discovery": {
+            "recall@1": 0.0045,
+            "recall@10": 0.0414,
+            "recall@100": 0.3115,
+            "recall@1000": 1.0,
+            "ranking_score": 0.5723,
+            "ranking_score_dcg": 0.103,
+            "perc_partially_accurate_predictions": 0.45,
+            "recall@1_std": 0.0672,
+            "recall@10_std": 0.1993,
+            "recall@100_std": 0.4631,
+            "recall@1000_std": 0.0,
+            "ranking_score_std": 0.3064,
+            "ranking_score_dcg_std": 0.1063,
+            "perc_partially_accurate_predictions_std": 6.72,
+            "total_samples": 22042,
+            "avg_topk": 286.1523
+        },
+        "pdgrapher_response_prediction": {
+            "forward_mae": -1,
+            "forward_mse": -1,
+            "forward_r2": -1,
+            "forward_r2_scgen": -1,
+            "forward_spearman": -1,
+            "backward_mae": -1,
+            "backward_mse": -1,
+            "backward_r2": -1,
+            "backward_r2_scgen": -1,
+            "backward_spearman": -1,
+            "backward_avg_topk": -1
+        },
+        "gene_specific_metrics": {
+            "IRF3": {
+                "gene_name": "IRF3",
+                "gene_index": 195,
+                "total_samples": 22042,
+                "times_true_source": 0,
+                "times_predicted_source": 0,
+                "correct_predictions": 0,
+                "avg_prediction_prob": -77.27,
+                "avg_rank": 0.0,
+                "in_top20_count": 0,
+                "in_top40_count": 0,
+                "in_top80_count": 0,
+                "avg_rank_when_true": null,
+                "avg_prob_when_true": null,
+                "in_top20_when_true": 0,
+                "in_top40_when_true": 0,
+                "in_top80_when_true": 0,
+                "accuracy_when_true": null,
+                "precision": null,
+                "recall": null,
+                "f1_score": null
+            },
+            "ATF7": {
+                "gene_name": "ATF7",
+                "gene_index": 15,
+                "total_samples": 22042,
+                "times_true_source": 74,
+                "times_predicted_source": 94,
+                "correct_predictions": 1,
+                "avg_prediction_prob": -4.866,
+                "avg_rank": 0.0,
+                "in_top20_count": 0,
+                "in_top40_count": 0,
+                "in_top80_count": 0,
+                "avg_rank_when_true": 51.473,
+                "avg_prob_when_true": 0.23,
+                "in_top20_when_true": 26,
+                "in_top40_when_true": 53,
+                "in_top80_when_true": 60,
+                "accuracy_when_true": 0.014,
+                "precision": 0.011,
+                "recall": 0.014,
+                "f1_score": 0.012
+            },
+            "SREBF2": {
+                "gene_name": "SREBF2",
+                "gene_index": 402,
+                "total_samples": 22042,
+                "times_true_source": 88,
+                "times_predicted_source": 15,
+                "correct_predictions": 0,
+                "avg_prediction_prob": -4.09,
+                "avg_rank": 0.0,
+                "in_top20_count": 0,
+                "in_top40_count": 0,
+                "in_top80_count": 0,
+                "avg_rank_when_true": 46.807,
+                "avg_prob_when_true": -1.328,
+                "in_top20_when_true": 29,
+                "in_top40_when_true": 42,
+                "in_top80_when_true": 74,
+                "accuracy_when_true": 0.0,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1_score": null
+            },
+            "MYC": {
+                "gene_name": "MYC",
+                "gene_index": 260,
+                "total_samples": 22042,
+                "times_true_source": 0,
+                "times_predicted_source": 0,
+                "correct_predictions": 0,
+                "avg_prediction_prob": -6.126,
+                "avg_rank": 0.0,
+                "in_top20_count": 0,
+                "in_top40_count": 0,
+                "in_top80_count": 0,
+                "avg_rank_when_true": null,
+                "avg_prob_when_true": null,
+                "in_top20_when_true": 0,
+                "in_top40_when_true": 0,
+                "in_top80_when_true": 0,
+                "accuracy_when_true": null,
+                "precision": null,
+                "recall": null,
+                "f1_score": null
+            }
+        }
+    },
+    "parameters": {
+        "data_creation": {
+            "n_samples": 100000,
+            "time_steps": null,
+            "training_share": 0.6,
+            "normalize_data": true,
+            "network": "dorothea_500_550",
+            "remove_near_duplicates": false,
+            "signal_propagation": "racipe",
+            "si_max_infection_percentage": 0.3
+        },
+        "graph_perturbation": {
+            "random_graph": false,
+            "self_loop_graph": false,
+            "noise": {
+                "missing_edges": 0,
+                "wrong_edges": 0
+            }
+        },
+        "on_cluster": true,
+        "seed": 42,
+        "gene_specific_metrics": {
+            "enabled": true,
+            "genes_of_interest": [
+                "IRF3",
+                "ATF7",
+                "SREBF2",
+                "MYC"
+            ]
+        },
+        "data_path": "data",
+        "model_path": "models",
+        "figures_path": "figures",
+        "report_path": "reports",
+        "topo_path": "topos",
+        "model": "PDGrapherNoGNN",
+        "model_name": "pdgrapher_nognn_default",
+        "training": {
+            "epochs": 100,
+            "layers": 3,
+            "alpha": 0.75,
+            "batch_size": 8,
+            "class_weighting": true,
+            "graph_weighting": true,
+            "hidden_size": 256,
+            "heads": 8,
+            "dropout": 0.1,
+            "learning_rate": 0.0002,
+            "subsample": false,
+            "weight_decay": 0.0001
+        },
+        "experiment": "exp_500_550_rcp"
+    },
+    "data stats": {
+        "graph stats": {
+            "number of nodes": 500,
+            "number of possible sources": 246
+        },
+        "infection stats": {
+            "avg number of sources": 1.0,
+            "avg portion of affected nodes": 0.032,
+            "std portion of affected nodes": 0.047
+        }
+    }
+}

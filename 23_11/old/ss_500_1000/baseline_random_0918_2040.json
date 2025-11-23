@@ -1,0 +1,14 @@
+{
+    "network": "dorothea_500_1000",
+    "metrics": {
+        "accuracy": 0.004,
+        "avg rank of source": 252.468,
+        "avg prediction for source": 0.002,
+        "avg prediction over all nodes": 0.002,
+        "min prediction over all nodes": 0.0,
+        "max prediction over all nodes": 0.004,
+        "source in top 3": 0.006,
+        "source in top 5": 0.012
+    },
+    "model_type": "random"
+}

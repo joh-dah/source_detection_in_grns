@@ -1,0 +1,17 @@
+{
+    "network": "dorothea_500_1000",
+    "metrics": {
+        "accuracy": 0.029,
+        "avg rank of source": 101.185,
+        "avg norm rank of source": 0.202,
+        "avg prediction for source": 0.032,
+        "avg prediction over all nodes": 0.002,
+        "min prediction over all nodes": 0.0,
+        "max prediction over all nodes": 0.997,
+        "source in top 5": 0.222,
+        "source in top 20": 0.297,
+        "source in top 40": 0.377,
+        "source in top 80": 0.513
+    },
+    "model_type": "overlap"
+}

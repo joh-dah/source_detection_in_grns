@@ -1,0 +1,14 @@
+{
+    "network": "dorothea_2000_sparse",
+    "metrics": {
+        "accuracy": 0.0,
+        "avg rank of source": 1088.571,
+        "avg prediction for source": 0.0,
+        "avg prediction over all nodes": 0.001,
+        "min prediction over all nodes": 0.0,
+        "max prediction over all nodes": 1.0,
+        "source in top 3": 0.0,
+        "source in top 5": 0.0
+    },
+    "model_type": "jordan"
+}

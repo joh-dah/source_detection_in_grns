@@ -1,0 +1,179 @@
+{
+    "network": "dorothea_100_500",
+    "model_type": "pdgrapher",
+    "metrics": {
+        "accuracy": 0.001,
+        "avg rank of source": 51.94,
+        "avg prediction for source": 0.108,
+        "avg prediction over all nodes": 0.11,
+        "min prediction over all nodes": -6.121,
+        "max prediction over all nodes": 2.472,
+        "source in top 5": 0.014,
+        "source in top 20": 0.108,
+        "source in top 40": 0.303,
+        "source in top 80": 0.874,
+        "pdgrapher_perturbation_discovery": {
+            "recall@1": 0.0104,
+            "recall@10": 0.1108,
+            "recall@100": 1.0,
+            "recall@1000": 1.0,
+            "ranking_score": 0.5187,
+            "ranking_score_dcg": 0.1293,
+            "perc_partially_accurate_predictions": 1.04,
+            "recall@1_std": 0.1016,
+            "recall@10_std": 0.3139,
+            "recall@100_std": 0.0,
+            "recall@1000_std": 0.0,
+            "ranking_score_std": 0.2888,
+            "ranking_score_dcg_std": 0.1418,
+            "perc_partially_accurate_predictions_std": 10.16,
+            "total_samples": 2012,
+            "avg_topk": 51.8688
+        },
+        "pdgrapher_response_prediction": {
+            "forward_mae": -1,
+            "forward_mse": -1,
+            "forward_r2": -1,
+            "forward_r2_scgen": -1,
+            "forward_spearman": -1,
+            "backward_mae": -1,
+            "backward_mse": -1,
+            "backward_r2": -1,
+            "backward_r2_scgen": -1,
+            "backward_spearman": -1,
+            "backward_avg_topk": -1
+        },
+        "gene_specific_metrics": {
+            "IRF3": {
+                "gene_name": "IRF3",
+                "gene_index": 37,
+                "total_samples": 2012,
+                "times_true_source": 18,
+                "times_predicted_source": 0,
+                "correct_predictions": 0,
+                "avg_prediction_prob": 0.323,
+                "avg_rank": 0.0,
+                "in_top20_count": 0,
+                "in_top40_count": 0,
+                "in_top80_count": 0,
+                "avg_rank_when_true": 64.111,
+                "avg_prob_when_true": -0.119,
+                "in_top20_when_true": 0,
+                "in_top40_when_true": 0,
+                "in_top80_when_true": 18,
+                "accuracy_when_true": 0.0,
+                "precision": null,
+                "recall": 0.0,
+                "f1_score": null
+            },
+            "ATF7": {
+                "gene_name": "ATF7",
+                "gene_index": 3,
+                "total_samples": 2012,
+                "times_true_source": 20,
+                "times_predicted_source": 0,
+                "correct_predictions": 0,
+                "avg_prediction_prob": 0.67,
+                "avg_rank": 0.0,
+                "in_top20_count": 0,
+                "in_top40_count": 0,
+                "in_top80_count": 0,
+                "avg_rank_when_true": 40.2,
+                "avg_prob_when_true": 0.384,
+                "in_top20_when_true": 0,
+                "in_top40_when_true": 9,
+                "in_top80_when_true": 20,
+                "accuracy_when_true": 0.0,
+                "precision": null,
+                "recall": 0.0,
+                "f1_score": null
+            },
+            "MYC": {
+                "gene_name": "MYC",
+                "gene_index": 50,
+                "total_samples": 2012,
+                "times_true_source": 20,
+                "times_predicted_source": 0,
+                "correct_predictions": 0,
+                "avg_prediction_prob": -0.662,
+                "avg_rank": 0.0,
+                "in_top20_count": 0,
+                "in_top40_count": 0,
+                "in_top80_count": 0,
+                "avg_rank_when_true": 76.25,
+                "avg_prob_when_true": -0.418,
+                "in_top20_when_true": 0,
+                "in_top40_when_true": 0,
+                "in_top80_when_true": 20,
+                "accuracy_when_true": 0.0,
+                "precision": null,
+                "recall": 0.0,
+                "f1_score": null
+            }
+        }
+    },
+    "parameters": {
+        "data_creation": {
+            "n_samples": 10000,
+            "time_steps": null,
+            "training_share": 0.6,
+            "normalize_data": true,
+            "network": "dorothea_100_500",
+            "remove_near_duplicates": true,
+            "signal_propagation": "si",
+            "si_max_infection_percentage": 0.3
+        },
+        "graph_perturbation": {
+            "random_graph": false,
+            "self_loop_graph": true,
+            "noise": {
+                "missing_edges": 0,
+                "wrong_edges": 0
+            }
+        },
+        "on_cluster": true,
+        "seed": 42,
+        "gene_specific_metrics": {
+            "enabled": true,
+            "genes_of_interest": [
+                "IRF3",
+                "ATF7",
+                "SREBF2",
+                "MYC"
+            ]
+        },
+        "data_path": "data",
+        "model_path": "models",
+        "figures_path": "figures",
+        "report_path": "reports",
+        "topo_path": "topos",
+        "model": "PDGrapher",
+        "model_name": "pdgrapher_default",
+        "training": {
+            "epochs": 100,
+            "layers": 3,
+            "alpha": 0.75,
+            "batch_size": 8,
+            "class_weighting": true,
+            "graph_weighting": true,
+            "hidden_size": 256,
+            "heads": 8,
+            "dropout": 0.1,
+            "learning_rate": 0.0002,
+            "subsample": false,
+            "weight_decay": 0.0001
+        },
+        "experiment": "exp_100_500_si_sl_rd"
+    },
+    "data stats": {
+        "graph stats": {
+            "number of nodes": 100,
+            "number of possible sources": 89
+        },
+        "infection stats": {
+            "avg number of sources": 1.0,
+            "avg portion of affected nodes": 0.346,
+            "std portion of affected nodes": 0.1
+        }
+    }
+}

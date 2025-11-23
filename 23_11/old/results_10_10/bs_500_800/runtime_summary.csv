@@ -1,0 +1,5 @@
+method,data_creation,data_processing,training,evaluation,Total
+baseline,0.0,0.0,0.0,0.0,0.0
+gat,0.0,0.005,0.18055555555555555,0.0,0.18555555555555556
+pdgrapher,0.0,0.005,0.22972222222222222,0.0,0.23472222222222222
+pdgrapher_nognn,0.0,0.005,0.0875,0.0,0.0925

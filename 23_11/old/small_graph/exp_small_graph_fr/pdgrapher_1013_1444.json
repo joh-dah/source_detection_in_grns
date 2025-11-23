@@ -1,0 +1,111 @@
+{
+    "network": "barabasi_64",
+    "model_type": "pdgrapher",
+    "metrics": {
+        "accuracy": 0.15,
+        "avg rank of source": 23.128,
+        "avg prediction for source": 0.191,
+        "avg prediction over all nodes": -0.801,
+        "min prediction over all nodes": -3.266,
+        "max prediction over all nodes": 19.117,
+        "source in top 5": 0.266,
+        "source in top 20": 0.513,
+        "source in top 40": 0.739,
+        "source in top 80": 1.0,
+        "pdgrapher_perturbation_discovery": {
+            "recall@1": 0.0153,
+            "recall@10": 0.1679,
+            "recall@100": 1.0,
+            "recall@1000": 1.0,
+            "ranking_score": 0.5118,
+            "ranking_score_dcg": 0.1446,
+            "perc_partially_accurate_predictions": 1.53,
+            "recall@1_std": 0.1226,
+            "recall@10_std": 0.3737,
+            "recall@100_std": 0.0,
+            "recall@1000_std": 0.0,
+            "ranking_score_std": 0.2905,
+            "ranking_score_dcg_std": 0.1603,
+            "perc_partially_accurate_predictions_std": 12.26,
+            "total_samples": 1114,
+            "avg_topk": 32.754
+        },
+        "pdgrapher_response_prediction": {
+            "forward_mae": -1,
+            "forward_mse": -1,
+            "forward_r2": -1,
+            "forward_r2_scgen": -1,
+            "forward_spearman": -1,
+            "backward_mae": -1,
+            "backward_mse": -1,
+            "backward_r2": -1,
+            "backward_r2_scgen": -1,
+            "backward_spearman": -1,
+            "backward_avg_topk": -1
+        }
+    },
+    "parameters": {
+        "data_creation": {
+            "n_samples": 5000,
+            "time_steps": null,
+            "training_share": 0.6,
+            "normalize_data": true,
+            "network": "barabasi_64",
+            "remove_near_duplicates": false,
+            "signal_propagation": "racipe",
+            "si_max_infection_percentage": 0.3
+        },
+        "graph_perturbation": {
+            "random_graph": true,
+            "self_loop_graph": false,
+            "noise": {
+                "missing_edges": 0,
+                "wrong_edges": 0
+            }
+        },
+        "on_cluster": true,
+        "seed": 42,
+        "gene_specific_metrics": {
+            "enabled": true,
+            "genes_of_interest": [
+                "IRF3",
+                "ATF7",
+                "SREBF2",
+                "MYC"
+            ]
+        },
+        "data_path": "data",
+        "model_path": "models",
+        "figures_path": "figures",
+        "report_path": "reports",
+        "topo_path": "topos",
+        "model": "PDGrapher",
+        "model_name": "pdgrapher_default",
+        "training": {
+            "epochs": 100,
+            "layers": 3,
+            "alpha": 0.75,
+            "batch_size": 8,
+            "class_weighting": true,
+            "graph_weighting": true,
+            "hidden_size": 256,
+            "heads": 8,
+            "dropout": 0.1,
+            "learning_rate": 0.0002,
+            "subsample": false,
+            "weight_decay": 0.0001
+        },
+        "experiment": "exp_small_graph_fr"
+    },
+    "data stats": {
+        "graph stats": {
+            "number of nodes": 64,
+            "number of possible sources": 64
+        },
+        "infection stats": {
+            "avg number of sources": 1.0,
+            "avg portion of affected nodes": 0.983,
+            "std portion of affected nodes": 0.099
+        }
+    }
+}
