@@ -161,13 +161,13 @@ DATA_NOISE = dc.get("data_noise", 0.0)
 # Data Splitting
 ds = params.get("data_splitting", {})
 FIXED_TRAINING_SIZE = ds.get("fixed_training_size", None)
+USE_PROCESSED_DATA = ds.get("use_processed_data", False)
 
 
 # Graph Perturbation
 gp = params.get("graph_perturbation", {})
 GRAPH_NOISE = gp.get("noise", {"missing_edges": 0, "wrong_edges": 0})
-RANDOM_GRAPH = gp.get("random_graph", False)
-SELF_LOOP_GRAPH = gp.get("self_loop_graph", False)
+GRAPH_TYPE = gp.get("graph_type", None)  # Options: None, 'barabasi', 'self_loop', 'equal', 'hub'
 
 # Training
 training = params["training"]
@@ -194,6 +194,7 @@ network_dict = {
     "dorothea_99": 99,
     "dorothea_100_150": 100,
     "dorothea_100_200": 100,
+    "dorothea_250_500": 250,
     "dorothea_100_500": 100,
     "dorothea_100_1000": 100,
     "dorothea_150": 150,
@@ -210,9 +211,11 @@ network_dict = {
     "dorothea_500_2500": 500,
     "dorothea_500_3000": 500,
     "dorothea_500_4000": 500,
+    "dorothea_600_1200": 600,
     "dorothea_727_sparse": 727,
     "dorothea_882_sparse": 882,
     "dorothea_1000": 1000,
+    "dorothea_1000_2000": 1000,
     "dorothea_1000_sparse": 1000,
     "dorothea_2000_sparse": 2000,
     "hub_500_1000": 500,
@@ -221,6 +224,11 @@ network_dict = {
     "random_10716_300000": 10716,
     "10716_not_connected_100": 10716,
     "10716_self_loops": 10716,
+    "10716_hub": 10716,
+    "10716_equal": 10716,
+    "10716_equal_dense": 10716,
+    "10716_equal_extradense": 10716,
+    "10716_hub": 10716,
     "10716_weakly_connected_10": 10716,
     "10716_weakly_connected_100": 10716,
 }

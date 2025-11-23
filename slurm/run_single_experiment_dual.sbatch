@@ -39,7 +39,7 @@ if [ "$TRAIN_ONLY" = "1" ] || [ "$TRAIN_ONLY" = "true" ]; then
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-batch
 #SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -78,7 +78,7 @@ EOF
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-batch
 #SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -119,7 +119,7 @@ EOF
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-batch
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -146,7 +146,7 @@ EOF
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-batch
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -173,7 +173,7 @@ EOF
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --account=sci-renard
-#SBATCH --partition=cpu
+#SBATCH --partition=cpu-batch
 #SBATCH --time=2:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL,END
@@ -238,7 +238,7 @@ SPLIT_JOB_ID=$(sbatch --parsable --dependency=afterok:$SHARED_DATA_DEPENDENCY <<
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --account=sci-renard
-#SBATCH --partition=cpu
+#SBATCH --partition=cpu-batch
 #SBATCH --time=1:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -279,7 +279,7 @@ GRAPH_PERT_JOB_ID=$(sbatch --parsable --dependency=afterok:$SPLIT_JOB_ID <<EOF
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
-#SBATCH --partition=cpu
+#SBATCH --partition=cpu-batch
 #SBATCH --time=2:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -326,7 +326,7 @@ GAT_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$GRAPH_PERT_JOB_ID <<EO
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
-#SBATCH --partition=cpu
+#SBATCH --partition=cpu-batch
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -365,7 +365,7 @@ PDG_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$GRAPH_PERT_JOB_ID <<EO
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
-#SBATCH --partition=cpu
+#SBATCH --partition=cpu-batch
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -404,7 +404,7 @@ PDGNN_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$GRAPH_PERT_JOB_ID <<
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
-#SBATCH --partition=cpu
+#SBATCH --partition=cpu-batch
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -452,7 +452,7 @@ PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-batch
 #SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -493,7 +493,7 @@ PDGNN_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_PROC_JOB_ID <
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-batch
 #SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -536,7 +536,7 @@ BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --account=sci-renard
-#SBATCH --partition=cpu
+#SBATCH --partition=cpu-batch
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -583,7 +583,7 @@ PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-batch
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -624,7 +624,7 @@ PDGNN_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_TRAIN_JOB_ID <<
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-batch
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
@@ -666,7 +666,7 @@ DUAL_COMPARE_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_VAL_JOB_ID,$PD
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --account=sci-renard
-#SBATCH --partition=cpu
+#SBATCH --partition=cpu-batch
 #SBATCH --time=2:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL,END

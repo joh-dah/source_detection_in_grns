@@ -9,20 +9,19 @@ parent = "reports"
 # --- argument parsing ---
 metric = sys.argv[1] if len(sys.argv) > 1 else "source in top 20"
 normalize = any(a.lower() == "normalize=true" for a in sys.argv[2:])
-# include self-loop variants only when explicitly requested via `self_loop=true` or `selfloop=true`
-self_loop = any(a.lower().replace('-', '_') in ("self_loop=true", "selfloop=true") for a in sys.argv[2:])
-print(f"Comparing random graph results for metric '{metric}'{' with normalization' if normalize else ''}{' (including _sl variants)' if self_loop else ''}...")
+print(f"Comparing random graph results for metric '{metric}'{' with normalization' if normalize else ''}...")
 
 all_folders = [f for f in os.listdir(parent) if os.path.isdir(os.path.join(parent, f))]
-# by default exclude folders with the '_sl' variant unless the user passed self_loop=true
-if not self_loop:
-    filtered = [f for f in all_folders if '_sl' not in f]
-    if len(filtered) != len(all_folders):
-        print("Note: excluding '_sl' variants from analysis (pass self_loop=true to include them).")
-    all_folders = filtered
 
 def base_name(folder):
-    return re.sub(r'(_fr|_sl|_r33|_r66)(?=_|$)', '', folder)
+        """Return the experiment base name (everything before the first underscore).
+
+        Examples:
+            'exp2' -> 'exp2'
+            'exp2_fr' -> 'exp2'
+            'exp2_500_1000' -> 'exp2'
+        """
+        return folder.split('_', 1)[0]
 
 groups = {}
 for f in all_folders:
@@ -30,12 +29,19 @@ for f in all_folders:
     groups.setdefault(b, []).append(f)
 
 def sort_variants(base, variants):
-    base_only = [v for v in variants if not re.search(r'_fr|_sl|_r33|_r66', v)]
-    r33 = [v for v in variants if '_r33' in v]
-    r66 = [v for v in variants if '_r66' in v]
-    fr = [v for v in variants if '_fr' in v]
-    sl = [v for v in variants if '_sl' in v]
-    return base_only + r33 + r66 + fr + sl
+    """Sort variants so that the exact base folder (no underscore) comes first
+    (if present), then all other variants that start with the base as a prefix.
+
+    The exact naming/contents of the suffixes is ignored; they are preserved
+    and later used as legend labels.
+    """
+    # put exact base (e.g. 'exp2') first if present
+    base_only = [v for v in variants if v == base]
+    # all other variants that start with base + '_' sorted lexicographically
+    others = sorted([v for v in variants if v != base and v.startswith(base + '_')])
+    # include any remaining variants (defensive) after that
+    remaining = sorted([v for v in variants if v not in base_only + others])
+    return base_only + others + remaining
 
 groups = {b: sort_variants(b, v) for b, v in groups.items() if len(v) > 1}
 
@@ -140,10 +146,8 @@ for idx, (base, variants) in enumerate(groups.items()):
     model_types = selected_model_types
 
     # compute pdgrapher base - fr difference for this experiment (if both present)
-    try:
-        base_idx = next((i for i, v in enumerate(available_variants) if not re.search(r'_fr|_sl|_r33|_r66', v)), None)
-    except StopIteration:
-        base_idx = None
+    # base is the exact folder equal to the base name (no underscore)
+    base_idx = next((i for i, v in enumerate(available_variants) if v == base), None)
     fr_idx = next((i for i, v in enumerate(available_variants) if '_fr' in v), None)
 
     base_mean_val = None
@@ -184,27 +188,23 @@ for idx, (base, variants) in enumerate(groups.items()):
         continue
 
     w = 0.8 / len(available_variants)
-    label_dict = {
-        "base": "Base",
-        "r33": "33% Random Graph",
-        "r66": "66% Random Graph",
-        "fr": "Full Random Graph",
-        "sl": "Self-Loop Graph",
-    }
-
-    used_keys = set()
+    # per-variant legend: use suffix (part after base_) or 'Base' when exact match
+    color_cycle = plt.rcParams.get('axes.prop_cycle').by_key().get('color', list(colors.values()))
     for i, v in enumerate(available_variants):
-        key = "fr" if "_fr" in v else "sl" if "_sl" in v else "r33" if "_r33" in v else "r66" if "_r66" in v else "base"
-        # use short key as legend label and only add it once
-        label = label_dict[key] if key not in used_keys else "_nolegend_"
-        used_keys.add(key)
+        if v == base:
+            label = "Base"
+        elif v.startswith(base + '_'):
+            label = v[len(base) + 1:]
+        else:
+            label = v
+        clr = color_cycle[i % len(color_cycle)]
         ax.bar(
             [xi - 0.4 + w / 2 + i * w for xi in x],
             [means[i].get(mt, 0) for mt in model_types],
             w,
             yerr=[stds[i].get(mt, 0) for mt in model_types],
             label=label,
-            color=colors[key],
+            color=clr,
         )
 
     ax.set_xticks(x)
@@ -269,7 +269,7 @@ pdgrapher_diff_names = []
 
 for base in experiment_names:
     variants = groups.get(base, [])
-    base_variant = next((v for v in variants if not re.search(r'_fr|_sl|_r33|_r66', v)), None)
+    base_variant = next((v for v in variants if v == base), None)
     fr_variant = next((v for v in variants if '_fr' in v), None)
     if base_variant is None or fr_variant is None:
         print(f"Note: cannot compute pdgrapher diff for '{base}' (missing base or _fr variant).")
@@ -319,7 +319,7 @@ pdgraphernognn_diff_names = []
 
 for base in experiment_names_2:
     variants = groups.get(base, [])
-    base_variant = next((v for v in variants if not re.search(r'_fr|_sl|_r33|_r66', v)), None)
+    base_variant = next((v for v in variants if v == base), None)
     fr_variant = next((v for v in variants if '_fr' in v), None)
     if base_variant is None or fr_variant is None:
         print(f"Note: cannot compute pdgraphernognn vs pdgrapher_fr diff for '{base}' (missing base or _fr variant).")
@@ -367,7 +367,7 @@ overall_fr_vals = []
 overall_names = []
 for base in groups.keys():
     variants = groups.get(base, [])
-    base_variant = next((v for v in variants if not re.search(r'_fr|_sl|_r33|_r66', v)), None)
+    base_variant = next((v for v in variants if v == base), None)
     fr_variant = next((v for v in variants if '_fr' in v), None)
     if base_variant is None or fr_variant is None:
         continue

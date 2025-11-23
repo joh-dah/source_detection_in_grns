@@ -164,8 +164,8 @@ def apply_graph_noise(G: nx.DiGraph, missing_edges_fraction: float, wrong_edges_
     return G_perturbed
 
 
-def add_noise_to_graph(G: nx.DiGraph, random_graph=False, self_loop_graph=False) -> nx.DiGraph:
-    if random_graph:
+def add_noise_to_graph(G: nx.DiGraph, graph_type=None) -> nx.DiGraph:
+    if graph_type == "barabasi":
         # create a random graph with the same number of nodes and edges
         G_random = nx.barabasi_albert_graph(G.number_of_nodes(), G.number_of_edges() // G.number_of_nodes())
         G_random = nx.DiGraph(G_random)  # Convert to directed graph
@@ -174,7 +174,7 @@ def add_noise_to_graph(G: nx.DiGraph, random_graph=False, self_loop_graph=False)
             G_random[u][v]['weight'] = np.random.choice([1, 2])
         print("Random graph created.")
         return G_random
-    elif self_loop_graph:
+    elif graph_type == "self_loop":
         print("Creating random graph...")
         # create a graph with G.number_of_nodes() and only self loops with weight 1 or 2
         G_random = nx.DiGraph()
@@ -183,6 +183,84 @@ def add_noise_to_graph(G: nx.DiGraph, random_graph=False, self_loop_graph=False)
             G_random.add_edge(node, node, weight=np.random.choice([1, 2]))
         print("Random graph created.")
         return G_random
+    elif graph_type == "equal":
+        print("Creating circular graph with equal edges...")
+        G_equal = nx.DiGraph()
+        G_equal.add_nodes_from(G.nodes(data=True))
+        nodes = list(G_equal.nodes())
+        num_nodes = len(nodes)
+        for i in range(num_nodes):
+            left = (i - 1) % num_nodes
+            right = (i + 1) % num_nodes
+            G_equal.add_edge(nodes[i], nodes[left], weight=1)
+            G_equal.add_edge(nodes[i], nodes[right], weight=1)
+        print("Circular graph created.")
+        return G_equal
+    elif graph_type == "equal_dense":
+        print("Creating circular dense graph with equal edges and self-loops...")
+        G_equal = nx.DiGraph()
+        G_equal.add_nodes_from(G.nodes(data=True))
+        nodes = list(G_equal.nodes())
+        num_nodes = len(nodes)
+        assert num_nodes > 0, "Graph must contain at least one node."
+
+        # Connect each node to three neighbors on both sides and add a self-loop
+        for i in range(num_nodes):
+            # self-loop
+            G_equal.add_edge(nodes[i], nodes[i], weight=1)
+            for k in range(1, 4):  # three neighbours on each side
+                left = (i - k) % num_nodes
+                right = (i + k) % num_nodes
+                G_equal.add_edge(nodes[i], nodes[left], weight=1)
+                G_equal.add_edge(nodes[i], nodes[right], weight=1)
+
+        print("Dense circular graph created.")
+        return G_equal
+    elif graph_type == "equal_extradense":
+        print("Creating circular dense graph with equal edges and self-loops...")
+        G_equal = nx.DiGraph()
+        G_equal.add_nodes_from(G.nodes(data=True))
+        nodes = list(G_equal.nodes())
+        num_nodes = len(nodes)
+        assert num_nodes > 0, "Graph must contain at least one node."
+
+        # Connect each node to three neighbors on both sides and add a self-loop
+        for i in range(num_nodes):
+            # self-loop
+            G_equal.add_edge(nodes[i], nodes[i], weight=1)
+            for k in range(1, 20):  # three neighbours on each side
+                left = (i - k) % num_nodes
+                right = (i + k) % num_nodes
+                G_equal.add_edge(nodes[i], nodes[left], weight=1)
+                G_equal.add_edge(nodes[i], nodes[right], weight=1)
+
+        print("Dense circular graph created.")
+        return G_equal
+    elif graph_type == "fully_connected":
+        G_fc = nx.DiGraph()
+        G_fc.add_nodes_from(G.nodes(data=True))
+        nodes = list(G_fc.nodes())
+        num_nodes = len(nodes)
+        assert num_nodes > 0, "Graph must contain at least one node."
+        for n in nodes:
+            for m in nodes:
+                G_fc.add_edge(n, m, weight=1)
+        print("Fully connected graph created.")
+        return G_fc
+    elif graph_type == "hub":
+        print("Creating hub graph...")
+        G_hub = nx.DiGraph()
+        G_hub.add_nodes_from(G.nodes(data=True))
+        nodes = list(G_hub.nodes())
+        num_nodes = len(nodes)
+        # Create G.edges / G.nodes hubs. Every hub connects to all other nodes including itself
+        num_hubs = max(1, G.number_of_edges() // G.number_of_nodes())
+        for i in range(num_hubs):
+            hub_node = nodes[i % num_nodes]
+            for target_node in nodes:
+                G_hub.add_edge(hub_node, target_node, weight=np.random.choice([1, 2]))
+        print("Hub graph created.")
+        return G_hub
     else:
         return apply_graph_noise(G, const.GRAPH_NOISE["missing_edges"], const.GRAPH_NOISE["wrong_edges"])
 
@@ -198,7 +276,7 @@ def main():
     store_graph(G_original_pyg, name="original")
     
     # Apply perturbations
-    G_perturbed = add_noise_to_graph(G, const.RANDOM_GRAPH, const.SELF_LOOP_GRAPH)
+    G_perturbed = add_noise_to_graph(G, const.GRAPH_TYPE)
 
     # Store perturbed graph in PyTorch Geometric format
     G_perturbed_pyg = from_networkx(G_perturbed, group_edge_attrs=['weight'])

@@ -5,12 +5,12 @@
 # Usage: sbatch slurm/train_pdgrapher_from_processed_data.sbatch EXPERIMENT_NAME
 
 #SBATCH --job-name="pdg_complete_pipeline"
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:a100:1
 #SBATCH --account=sci-renard
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu-batch
 #SBATCH --time=2-00:00:00
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -50,7 +50,13 @@ echo "Base directory: $BASE_DIR"
 # Set environment variables
 export EXPERIMENT_NAME=$EXPERIMENT
 export MODEL=pdgrapher
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# Improve allocator to reduce fragmentation and allow larger contiguous allocations.
+# Adds a max split size and a GC threshold in addition to expandable segments.
+export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_threshold:0.6,expandable_segments:True"
+
+# Limit CPU threading from libraries to reduce overall memory/oversubscription
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
 
 # Initialize timing log
 TIMING_LOG_FILE="$TIMING_LOG_DIR/${EXPERIMENT}_pdgrapher_complete_timing.csv"

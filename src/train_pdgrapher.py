@@ -8,6 +8,13 @@ import os
 from pdgrapher import Dataset, PDGrapher, Trainer
 
 torch.set_num_threads(5)
+# Improve matmul precision on Tensor-Core GPUs (trades a bit of precision for performance)
+# Suggested by runtime warning when using A100 devices.
+try:
+    torch.set_float32_matmul_precision('medium')
+except Exception:
+    # Older torch versions may not have this API; fail silently but don't crash.
+    pass
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -75,7 +82,9 @@ def main():
         accelerator = "cpu"
 
     trainer = Trainer(
-        fabric_kwargs={"accelerator": accelerator, "devices": 1},
+        # Ask Lightning Fabric to use mixed precision which typically reduces GPU memory usage
+        # and speeds up training on Tensor-Core GPUs.
+        fabric_kwargs={"accelerator": accelerator, "devices": 1, "precision": "16-mixed"},
         log=True, logging_name=f"{const.EXPERIMENT}_tuned",
         use_forward_data=True, use_backward_data=True, use_supervision=True,
         use_intervention_data=True, supervision_multiplier=0.05,

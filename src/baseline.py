@@ -345,7 +345,11 @@ def main():
     if "all" in methods:
         methods_to_eval = list(detectors.keys())
     else:
+        # remove jordan center from the list
         methods_to_eval = methods
+    
+    methods_to_eval.remove("jordan")
+        
     
     # Evaluate each method
     all_results = {}

@@ -188,11 +188,11 @@ while IFS=':' read -r fingerprint experiments; do
     DATA_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="shared_data_${fingerprint:0:12}"
-#SBATCH --mem=600G
+#SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard
-#SBATCH --partition=cpu
+#SBATCH --partition=cpu-batch
 #SBATCH --time=5-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL,END

@@ -330,7 +330,7 @@ def perturb_graph_racipe(G, gene_to_perturb, og_steady_state_df, subnetwork_name
     rr.run_all_replicates(
         topo_file=subnetwork_name,
         save_dir=raw_data_dir,
-        batch_size=4000,
+        batch_size=256,
         predefined_combinations=params_per_steady_state, #TODO check if this is right
         tsteps=const.TIME_STEPS,
         normalize=False,
@@ -496,7 +496,7 @@ def process_gene(
             topo_file,
             topo_name=subnetwork_name,
             save_dir=raw_data_dir,
-            batch_size=4000,
+            batch_size=256,
             normalize=False,
             discretize=True
         )
@@ -675,8 +675,12 @@ def main():
     """
     from src.data_utils import data_exists
 
+    data_already_created = data_exists(const.SHARED_DATA_PATH, const.N_SAMPLES, const.REMOVE_NEAR_DUPLICATES)
+    completion_file = Path(const.SHARED_DATA_PATH) / "data_creation_complete.txt"
+    data_completion_file_found = completion_file.exists()
+
     # Check if shared data already exists
-    if data_exists(const.SHARED_DATA_PATH, const.N_SAMPLES, const.REMOVE_NEAR_DUPLICATES):
+    if data_already_created and data_completion_file_found:
         print(f"Shared data already exists at {const.SHARED_DATA_PATH}")
         print("Skipping data creation...")
         return
@@ -704,6 +708,9 @@ def main():
     print(f"Shared data creation complete! Data saved to {const.SHARED_DATA_PATH}")
     print(f"Total samples created: {len(list(dest_dir.glob('*.pt')))}")
     print("This data can now be reused by experiments with the same data_creation configuration.")
+
+    with open(completion_file, 'w') as f:
+        f.write("Data creation complete.\n")
 
 
 if __name__ == "__main__":
