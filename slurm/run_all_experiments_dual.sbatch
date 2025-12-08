@@ -13,7 +13,7 @@ TIMING_LOG_DIR="$BASE_DIR/timing_logs"
 CONFIG_DIR="$BASE_DIR/configs/experiments"
 
 # GPU configuration (excluding gx26 due to GPU errors)
-COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx21,gx25,gx27,gx28,gx29"
+COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx25,gx27,gx28,gx29"
 
 echo "=== DUAL MODEL PIPELINE RUNNER ==="
 echo "Models: PDGrapher, PDGrapherNoGNN"
@@ -188,12 +188,12 @@ while IFS=':' read -r fingerprint experiments; do
     DATA_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="shared_data_${fingerprint:0:12}"
-#SBATCH --mem=600G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=4
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu-batch
-#SBATCH --time=5-00:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de

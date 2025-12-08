@@ -10,12 +10,13 @@ SLURM_OUT_DIR="$BASE_DIR/slurm_out"
 TIMING_LOG_DIR="$BASE_DIR/timing_logs"
 
 # GPU configuration (excluding gx26 due to GPU errors)
-COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx21,gx25,gx27,gx28,gx29"
+COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx25,gx27,gx28,gx29"
 
 # Get experiment name and shared data job dependency
 EXPERIMENT=${EXPERIMENT_NAME}
 SHARED_DATA_DEPENDENCY=${SHARED_DATA_JOB_ID}
 FINGERPRINT=${DATA_FINGERPRINT}
+SKIP_SHARED_DATA_DEPENDENCY=${SKIP_SHARED_DATA_DEPENDENCY:-0}
 
 # TRAIN_ONLY mode: if TRAIN_ONLY=1, skip shared data / perturbation / processing / baseline
 TRAIN_ONLY=${TRAIN_ONLY:-0}
@@ -40,7 +41,7 @@ if [ "$TRAIN_ONLY" = "1" ] || [ "$TRAIN_ONLY" = "true" ]; then
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu-batch
-#SBATCH --time=3-00:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -79,7 +80,7 @@ EOF
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu-batch
-#SBATCH --time=3-00:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -202,23 +203,36 @@ if [ -z "$EXPERIMENT" ]; then
     exit 1
 fi
 
-if [ -z "$SHARED_DATA_DEPENDENCY" ]; then
-    echo "ERROR: SHARED_DATA_JOB_ID must be provided"
-    echo "Usage: SHARED_DATA_JOB_ID=12345 DATA_FINGERPRINT=abc123 EXPERIMENT_NAME=my_experiment bash slurm/run_single_experiment_dual.sbatch"
-    exit 1
-fi
-
 if [ -z "$FINGERPRINT" ]; then
     echo "ERROR: DATA_FINGERPRINT must be provided"
     echo "Usage: SHARED_DATA_JOB_ID=12345 DATA_FINGERPRINT=abc123 EXPERIMENT_NAME=my_experiment bash slurm/run_single_experiment_dual.sbatch"
     exit 1
 fi
 
+if [ "$SKIP_SHARED_DATA_DEPENDENCY" = "1" ] || [ "$SKIP_SHARED_DATA_DEPENDENCY" = "true" ]; then
+    SHARED_DATA_DEPENDENCY=""
+    SHARED_DATA_DIR="$BASE_DIR/data/shared/$FINGERPRINT"
+    if [ ! -d "$SHARED_DATA_DIR" ]; then
+        echo "ERROR: Shared data directory $SHARED_DATA_DIR does not exist for fingerprint $FINGERPRINT"
+        exit 1
+    fi
+    SHARED_DATA_DEP_MSG="pre-created shared data at $SHARED_DATA_DIR"
+    SPLIT_DEP_FLAG=""
+else
+    if [ -z "$SHARED_DATA_DEPENDENCY" ]; then
+        echo "ERROR: SHARED_DATA_JOB_ID must be provided"
+        echo "Usage: SHARED_DATA_JOB_ID=12345 DATA_FINGERPRINT=abc123 EXPERIMENT_NAME=my_experiment bash slurm/run_single_experiment_dual.sbatch"
+        exit 1
+    fi
+    SHARED_DATA_DEP_MSG="$SHARED_DATA_DEPENDENCY"
+    SPLIT_DEP_FLAG="--dependency=afterok:$SHARED_DATA_DEPENDENCY"
+fi
+
 echo "Starting dual-model experiment pipeline with shared data dependency..."
 echo "Base directory: $BASE_DIR"
 echo "Experiment: $EXPERIMENT"
 echo "Models: PDGrapher, PDGrapherNoGNN"
-echo "Shared data dependency: $SHARED_DATA_DEPENDENCY"
+echo "Shared data dependency: $SHARED_DATA_DEP_MSG"
 
 # Create output directories if they don't exist
 mkdir -p $SLURM_OUT_DIR
@@ -231,7 +245,7 @@ echo "experiment,method,stage,start_time,end_time,duration_seconds,job_id" > $TI
 # Job 1: Per-experiment Data Splitting (depends on shared data creation)
 # =============================================================================
 echo "Submitting per-experiment data splitting job..."
-SPLIT_JOB_ID=$(sbatch --parsable --dependency=afterok:$SHARED_DATA_DEPENDENCY <<EOF
+SPLIT_JOB_ID=$(sbatch --parsable $SPLIT_DEP_FLAG <<EOF
 #!/bin/bash
 #SBATCH --job-name="split_${EXPERIMENT}"
 #SBATCH --mem=32G
@@ -252,7 +266,7 @@ echo "=== STARTING DATA SPLITTING (per-experiment) ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
-echo "Depends on shared data job: $SHARED_DATA_DEPENDENCY"
+echo "Depends on shared data: $SHARED_DATA_DEP_MSG"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
@@ -322,7 +336,7 @@ echo "Submitting GAT data processing job..."
 GAT_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$GRAPH_PERT_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="gat_proc_${EXPERIMENT}"
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
@@ -361,7 +375,7 @@ echo "Submitting PDGrapher data processing job..."
 PDG_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$GRAPH_PERT_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdg_proc_${EXPERIMENT}"
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
@@ -400,7 +414,7 @@ echo "Submitting PDGrapherNoGNN data processing job..."
 PDGNN_PROC_JOB_ID=$(sbatch --parsable --dependency=afterok:$GRAPH_PERT_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdgnn_proc_${EXPERIMENT}"
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --account=sci-renard
@@ -453,7 +467,7 @@ PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu-batch
-#SBATCH --time=3-00:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -494,7 +508,7 @@ PDGNN_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_PROC_JOB_ID <
 #SBATCH --nodelist=$COMPATIBLE_GPU_NODES
 #SBATCH --account=sci-renard
 #SBATCH --partition=gpu-batch
-#SBATCH --time=3-00:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
@@ -708,10 +722,10 @@ echo "Dual model result comparison job submitted with ID: $DUAL_COMPARE_JOB_ID"
 echo ""
 echo "=== DUAL MODEL EXPERIMENT PIPELINE SUBMISSION SUMMARY ==="
 echo "Experiment: $EXPERIMENT"
-echo "Shared data dependency: $SHARED_DATA_DEPENDENCY"
+echo "Shared data dependency: $SHARED_DATA_DEP_MSG"
 echo ""
 echo "Pipeline structure:"
-echo "  1. Data Splitting (per-experiment): $SPLIT_JOB_ID (after $SHARED_DATA_DEPENDENCY)"
+echo "  1. Data Splitting (per-experiment): $SPLIT_JOB_ID (after $SHARED_DATA_DEP_MSG)"
 echo "  2. Graph Perturbation:             $GRAPH_PERT_JOB_ID (after split $SPLIT_JOB_ID)"
 echo "  3a. GAT Data Processing:           $GAT_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
 echo "  3b. PDGrapher Data Processing:     $PDG_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"

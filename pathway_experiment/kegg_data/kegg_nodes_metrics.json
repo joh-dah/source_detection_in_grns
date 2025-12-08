@@ -1,0 +1,138 @@
+{
+    "Apoptosis (hsa04210)": {
+        "number_of_nodes": 114,
+        "number_of_edges": 314,
+        "average_degree": 2.754385964912281,
+        "density": 0.024161280393967373,
+        "number_of_perturbed_genes_in_pathway": 88,
+        "number_of_sig_info_in_pathway": 8095
+    },
+    "Breast Cancer (hsa05224)": {
+        "number_of_nodes": 80,
+        "number_of_edges": 192,
+        "average_degree": 2.4,
+        "density": 0.03,
+        "number_of_perturbed_genes_in_pathway": 71,
+        "number_of_sig_info_in_pathway": 6186
+    },
+    "Cell Cycle (hsa04110)": {
+        "number_of_nodes": 30,
+        "number_of_edges": 48,
+        "average_degree": 1.6,
+        "density": 0.05333333333333334,
+        "number_of_perturbed_genes_in_pathway": 29,
+        "number_of_sig_info_in_pathway": 3020
+    },
+    "Central Carbon Metabolism In Cancer (hsa05230)": {
+        "number_of_nodes": 57,
+        "number_of_edges": 126,
+        "average_degree": 2.210526315789474,
+        "density": 0.038781163434903045,
+        "number_of_perturbed_genes_in_pathway": 52,
+        "number_of_sig_info_in_pathway": 5315
+    },
+    "Colorectal Cancer (hsa05210)": {
+        "number_of_nodes": 40,
+        "number_of_edges": 90,
+        "average_degree": 2.25,
+        "density": 0.05625,
+        "number_of_perturbed_genes_in_pathway": 39,
+        "number_of_sig_info_in_pathway": 4310
+    },
+    "Mapk Signaling (hsa04010)": {
+        "number_of_nodes": 74,
+        "number_of_edges": 1225,
+        "average_degree": 16.554054054054053,
+        "density": 0.22370343316289262,
+        "number_of_perturbed_genes_in_pathway": 69,
+        "number_of_sig_info_in_pathway": 5215
+    },
+    "Mtor Signaling (hsa04150)": {
+        "number_of_nodes": 55,
+        "number_of_edges": 85,
+        "average_degree": 1.5454545454545454,
+        "density": 0.02809917355371901,
+        "number_of_perturbed_genes_in_pathway": 51,
+        "number_of_sig_info_in_pathway": 5466
+    },
+    "Nf Kb Signaling (hsa04064)": {
+        "number_of_nodes": 6,
+        "number_of_edges": 5,
+        "average_degree": 0.8333333333333334,
+        "density": 0.1388888888888889,
+        "number_of_perturbed_genes_in_pathway": 6,
+        "number_of_sig_info_in_pathway": 510
+    },
+    "Non Small Cell Lung Cancer (hsa05223)": {
+        "number_of_nodes": 38,
+        "number_of_edges": 83,
+        "average_degree": 2.1842105263157894,
+        "density": 0.0574792243767313,
+        "number_of_perturbed_genes_in_pathway": 37,
+        "number_of_sig_info_in_pathway": 4009
+    },
+    "P53 Signaling (hsa04115)": {
+        "number_of_nodes": 49,
+        "number_of_edges": 53,
+        "average_degree": 1.0816326530612246,
+        "density": 0.022074135776759683,
+        "number_of_perturbed_genes_in_pathway": 34,
+        "number_of_sig_info_in_pathway": 3155
+    },
+    "Pathways In Cancer (hsa05200)": {
+        "number_of_nodes": 241,
+        "number_of_edges": 1104,
+        "average_degree": 4.580912863070539,
+        "density": 0.019007937191164063,
+        "number_of_perturbed_genes_in_pathway": 203,
+        "number_of_sig_info_in_pathway": 16070
+    },
+    "Pi3K Akt Signaling (hsa04151)": {
+        "number_of_nodes": 177,
+        "number_of_edges": 1538,
+        "average_degree": 8.689265536723164,
+        "density": 0.04909189568770149,
+        "number_of_perturbed_genes_in_pathway": 159,
+        "number_of_sig_info_in_pathway": 13185
+    },
+    "Small Cell Lung Cancer (hsa05222)": {
+        "number_of_nodes": 16,
+        "number_of_edges": 28,
+        "average_degree": 1.75,
+        "density": 0.109375,
+        "number_of_perturbed_genes_in_pathway": 14,
+        "number_of_sig_info_in_pathway": 757
+    },
+    "T Cell Receptor Signaling (hsa04660)": {
+        "number_of_nodes": 83,
+        "number_of_edges": 210,
+        "average_degree": 2.5301204819277108,
+        "density": 0.030483379300333867,
+        "number_of_perturbed_genes_in_pathway": 69,
+        "number_of_sig_info_in_pathway": 6388
+    },
+    "Tgf-Beta Signaling (hsa04350)": {
+        "number_of_nodes": 63,
+        "number_of_edges": 186,
+        "average_degree": 2.9523809523809526,
+        "density": 0.04686318972033258,
+        "number_of_perturbed_genes_in_pathway": 45,
+        "number_of_sig_info_in_pathway": 2733
+    },
+    "Tnf Signaling (hsa04668)": {
+        "number_of_nodes": 33,
+        "number_of_edges": 38,
+        "average_degree": 1.1515151515151516,
+        "density": 0.03489439853076217,
+        "number_of_perturbed_genes_in_pathway": 33,
+        "number_of_sig_info_in_pathway": 2598
+    },
+    "Transcriptional Misregulation In Cancer (hsa05202)": {
+        "number_of_nodes": 4,
+        "number_of_edges": 3,
+        "average_degree": 0.75,
+        "density": 0.1875,
+        "number_of_perturbed_genes_in_pathway": 1,
+        "number_of_sig_info_in_pathway": 56
+    }
+}

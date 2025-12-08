@@ -218,6 +218,7 @@ network_dict = {
     "dorothea_1000_2000": 1000,
     "dorothea_1000_sparse": 1000,
     "dorothea_2000_sparse": 2000,
+    "pw_in_cancer": 241,
     "hub_500_1000": 500,
     "equal_500_1000": 500,
     "pdgrapher_grn": 10716,
