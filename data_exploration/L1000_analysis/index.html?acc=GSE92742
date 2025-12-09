@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <title>Download data  for GSE92742 - GEO - NCBI</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="author" content="geo" />
+    <meta name="keywords" content="NCBI, national institutes of health, nih, database, archive, central, bioinformatics,          biomedicine, geo, gene, expression, omnibus, chips, microarrays, oligonucleotide, array, sage, CGH" />
+    <meta name="description" content="Gene Expression Omnibus (GEO) is a database repository of high throughput          gene expression data and hybridization arrays, chips, microarrays." />
+    <meta name="ncbi_app" content="geo" />
+    <meta name="ncbi_pdid" content="download" />
+    <meta name="ncbi_phid" content="0C420C03931444310000000000000001" />
+    <meta name="ncbi_sessionid" content="0C420C0393144431_0000SID" />
+    <link rel="stylesheet" type="text/css" href="/geo/css/reset.css" />
+    <link rel="stylesheet" type="text/css" href="/geo/css/nav.css" />
+    <link rel="stylesheet" type="text/css" href="download.css" />
+    <script type="text/javascript" src="/core/jig/1.15.10/js/jig.min.js"></script>
+    <script type="text/javascript" src="/geo/js/dd_menu.js"></script>
+    <script type="text/javascript">
+        jQuery.getScript("/core/alerts/alerts.js", function () {
+            galert(['#crumbs_login_bar', 'body &gt; *:nth-child(1)'])
+        });
+    </script>
+  </head>
+  <body class="download">
+    <div id="all">
+      <div id="page">
+        <div xmlns="" id="header">
+    <div id="ncbi_logo">
+        <a href="/">
+            <img src="/geo/img/ncbi_logo.gif" alt="NCBI Logo" />
+        </a>
+    </div>
+    <div id="geo_logo">
+        <a href="/geo/"><img src="/geo/img/geo_main.gif" alt="GEO Logo" /></a>
+    </div>
+</div>
+        <div xmlns="" id="nav_bar">
+    <ul id="geo_nav_bar">
+        <li><a href="#">GEO Publications</a>
+            <ul class="sublist">
+                <li><a href="/geo/info/GEOHandoutFinal.pdf">Handout</a></li>
+                <li><a href="/pmc/articles/PMC10767856/">NAR 2024 (latest)</a></li>
+                <li><a href="/pmc/articles/PMC99122/">NAR 2002 (original)</a></li>
+                <li><a href="/pmc/?term=10767856,4944384,3531084,3341798,3013736,2686538,2270403,1669752,1619900,1619899,539976,99122">All publications</a></li>
+            </ul>
+        </li>
+        <li><a href="/geo/info/faq.html">FAQ</a></li>
+        <li><a href="/geo/info/MIAME.html" title="Minimum Information About a Microarray Experiment">MIAME</a></li>
+        <li><a href="mailto:geo@ncbi.nlm.nih.gov">Email GEO</a></li>
+    </ul>
+</div>
+        <div id="crumbs_login_bar"><a title="NCBI home page" href="/">NCBI</a> » 
+        <a id="curr_page" title="GEO home page" href="/geo/">GEO</a> »
+        <a href="/geo/download/">Download data</a><span id="login_status"><a href="/geo/submitter" title="Click here to login.">Login</a></span></div>
+        <div id="content">
+          <h1>Download data for <a href="/geo/query/acc.cgi?acc=GSE92742">GSE92742</a></h1>
+          <div id="downloads">
+            <p>
+                                
+                                Information about GEO data organization is provided in the <a href="/geo/info/overview.html">GEO overview</a>.
+                                GEO <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/">FTP site</a> structure and available formats are described in 
+                                <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/README.txt">README.txt</a>. Additional download options are described at
+                                <a href="/geo/info/download.html">Download GEO data</a>.
+                            </p>
+            <h2>Submitter-supplied data<a href="/geo/info/download.html" class="help_link" target="_blank">?</a></h2>
+            <div class="section">
+              <h2>Series SOFT file</h2>
+              <ul>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/soft/GSE92742_family.soft.gz" name="download_soft" id="download_soft">GSE92742_family.soft.gz</a>
+                  <span class="fsize">2.3 Kb</span>
+                </li>
+              </ul>
+            </div>
+            <div class="section">
+              <h2>Series MINiML file</h2>
+              <ul>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/miniml/GSE92742_family.xml.tgz" name="download_miniml" id="download_miniml">GSE92742_family.xml.tgz</a>
+                  <span class="fsize">2.7 Kb</span>
+                </li>
+              </ul>
+            </div>
+            <div class="section">
+              <h2>Series supplementary data</h2>
+              <p></p>
+              <ul>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_Level1_LXB_n1403502.tar.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_Level1_LXB_n1403502.tar.gz</a>
+                  <span class="fsize">1.2 Tb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_Level2_GEX_delta_n49216x978.gctx.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_Level2_GEX_delta_n49216x978.gctx.gz</a>
+                  <span class="fsize">98.9 Mb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_Level2_GEX_epsilon_n1269922x978.gctx.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_Level2_GEX_epsilon_n1269922x978.gctx.gz</a>
+                  <span class="fsize">2.3 Gb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_Level3_INF_mlr12k_n1319138x12328.gctx.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_Level3_INF_mlr12k_n1319138x12328.gctx.gz</a>
+                  <span class="fsize">48.8 Gb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_Level4_ZSPCINF_mlr12k_n1319138x12328.gctx.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_Level4_ZSPCINF_mlr12k_n1319138x12328.gctx.gz</a>
+                  <span class="fsize">49.6 Gb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_Level5_COMPZ.MODZ_n473647x12328.gctx.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_Level5_COMPZ.MODZ_n473647x12328.gctx.gz</a>
+                  <span class="fsize">19.9 Gb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_README.pdf" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_README.pdf</a>
+                  <span class="fsize">25.8 Kb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_auxiliary_datasets.tar.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_auxiliary_datasets.tar.gz</a>
+                  <span class="fsize">1.6 Gb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_cell_info.txt.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_cell_info.txt.gz</a>
+                  <span class="fsize">2.5 Kb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_gene_info.txt.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_gene_info.txt.gz</a>
+                  <span class="fsize">211.6 Kb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_gene_info_delta_landmark.txt.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_gene_info_delta_landmark.txt.gz</a>
+                  <span class="fsize">18.3 Kb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_inst_info.txt.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_inst_info.txt.gz</a>
+                  <span class="fsize">11.5 Mb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_pert_info.txt.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_pert_info.txt.gz</a>
+                  <span class="fsize">1.1 Mb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_pert_metrics.txt.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_pert_metrics.txt.gz</a>
+                  <span class="fsize">908.9 Kb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_sig_info.txt.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_sig_info.txt.gz</a>
+                  <span class="fsize">10.6 Mb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_Broad_LINCS_sig_metrics.txt.gz" name="download_suppl" id="download_suppl">GSE92742_Broad_LINCS_sig_metrics.txt.gz</a>
+                  <span class="fsize">11.9 Mb</span>
+                </li>
+                <li xmlns="">
+                  <a href="ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE92nnn/GSE92742/suppl/GSE92742_SHA512SUMS.txt.gz" name="download_suppl" id="download_suppl">GSE92742_SHA512SUMS.txt.gz</a>
+                  <span class="fsize">1.4 Kb</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div xmlns="" id="footer">
+    <span class="helpbar">|<a href="https://www.nlm.nih.gov"> NLM </a>|<a href="https://www.nih.gov"> NIH </a>|<a href="mailto:geo@ncbi.nlm.nih.gov"> Email GEO </a>|<a href="/geo/info/disclaimer.html"> Disclaimer </a>|<a href="https://www.nlm.nih.gov/accessibility.html"> Accessibility </a>|<a href="https://www.hhs.gov/vulnerability-disclosure-policy/index.html"> HHS Vulnerability Disclosure </a>|
+    </span>
+</div>
+    </div>
+    <script type="text/javascript" src="/portal/portal3rc.fcgi/rlib/js/InstrumentNCBIBaseJS/InstrumentPageStarterJS.js"></script>
+  </body>
+</html>
+
