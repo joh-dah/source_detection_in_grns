@@ -19,7 +19,8 @@ src/__pycache__/
 /slurm_val
 /slurm_out
 /pathway_experiment/data_phase1
-/data_exploration/data_phase2
+/pathway_experiment/experiment_data
+/data_exploration/L1000_analysis/data_phase2
 /report_vis/*.csv
 /examples/PDGrapher
 /data_exploration/pdgrapher_data
