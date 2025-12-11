@@ -25,7 +25,13 @@ class ModelValidator:
     def __init__(self, model_type: str, model_name: str = None):
         self.model_type = model_type.lower()
         self.model_name = model_name
-        self.model_path = f"{const.MODEL_PATH}/{const.MODEL}/{self.model_name}_latest.pt"
+        
+        # Use fold-specific model path if running k-fold validation
+        if const.FOLD_INDEX >= 0:
+            self.model_path = f"{const.MODEL_PATH}/{const.MODEL}/{const.MODEL_NAME_WITH_FOLD}/{self.model_name}_latest.pt"
+        else:
+            self.model_path = f"{const.MODEL_PATH}/{const.MODEL}/{self.model_name}_latest.pt"
+        
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         # Initialize cached true sources for PDGrapher
@@ -35,6 +41,9 @@ class ModelValidator:
         print(f"Model identifier: {self.model_name}")
         print(f"Model path: {self.model_path}")
         print(f"Using device: {self.device}")
+        if const.FOLD_INDEX >= 0:
+            print(f"K-Fold validation: Fold {const.FOLD_INDEX} of {const.K_FOLDS}")
+        
         
     def load_model(self):
         """Load the appropriate model based on model type."""

@@ -136,6 +136,20 @@ PROCESSED_EDGE_INDEX_PATH = f"{PROCESSED_PATH}/edge_index.pt"
 # Backwards compatibility: DATA_PATH points to experiment-specific path for graph perturbation
 DATA_PATH = EXPERIMENT_DATA_PATH
 
+# K-Fold support: get fold index from environment variable if running k-fold experiments
+FOLD_INDEX = int(os.environ.get('FOLD_INDEX', -1))  # -1 means not a k-fold run
+K_FOLDS = int(os.environ.get('K_FOLDS', 1))  # Default to 1 fold if not specified
+
+# Model name with fold information if applicable
+if FOLD_INDEX >= 0:
+    MODEL_NAME_WITH_FOLD = f"{MODEL_NAME}_fold_{FOLD_INDEX}"
+else:
+    MODEL_NAME_WITH_FOLD = MODEL_NAME
+
+# Fold-specific paths
+if FOLD_INDEX >= 0:
+    SPLITS_FILE = f"{EXPERIMENT_DATA_PATH}/splits/splits_kfold.pt"  # Use kfold splits file
+
 # Other paths
 TOPO_PATH = "topos"
 MODEL_PATH = "models"
@@ -162,6 +176,9 @@ DATA_NOISE = dc.get("data_noise", 0.0)
 ds = params.get("data_splitting", {})
 FIXED_TRAINING_SIZE = ds.get("fixed_training_size", None)
 USE_PROCESSED_DATA = ds.get("use_processed_data", False)
+
+# K-Fold Configuration
+K_FOLDS = 5  # Number of folds for cross-validation
 
 
 # Graph Perturbation

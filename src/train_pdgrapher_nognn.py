@@ -112,13 +112,15 @@ def main():
 def save_best_perturbation_model(pdgrapher_model, trainer):
     """
     Save the best perturbation discovery model for PDGrapherNoGNN.
+    Supports fold-specific saving for k-fold cross-validation.
     """
     timestamp = utils.get_current_time()
     
-    model_save_dir = Path(const.MODEL_PATH) / const.MODEL
+    # Use fold-specific directory if running k-fold
+    model_save_dir = Path(const.MODEL_PATH) / const.MODEL / const.MODEL_NAME_WITH_FOLD
     model_save_dir.mkdir(parents=True, exist_ok=True)
     
-    model_filename = f"{const.MODEL_NAME}_{timestamp}.pt"
+    model_filename = f"{const.MODEL_NAME_WITH_FOLD}_{timestamp}.pt"
     model_save_path = model_save_dir / model_filename
     
     perturbation_model = pdgrapher_model.perturbation_discovery
@@ -145,14 +147,16 @@ def save_best_perturbation_model(pdgrapher_model, trainer):
         },
         'training_performance': trainer.best_performance if hasattr(trainer, 'best_performance') else None,
         'timestamp': timestamp,
-        'model_type': 'perturbation_discovery_nognn'
+        'model_type': 'perturbation_discovery_nognn',
+        'fold_index': const.FOLD_INDEX,
+        'k_folds': const.K_FOLDS
     }
 
     torch.save(save_dict, model_save_path)
     print(f"Best perturbation discovery model (NoGNN) saved to {model_save_path}")
     
-    # Save latest version
-    latest_path = model_save_dir / f"{const.MODEL_NAME}_latest.pt"
+    # Save fold-specific latest version (no collision risk)
+    latest_path = model_save_dir / f"{const.MODEL_NAME_WITH_FOLD}_latest.pt"
     torch.save(save_dict, latest_path)
     print(f"Latest model path: {latest_path}")
     
