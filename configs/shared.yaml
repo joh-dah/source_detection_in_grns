@@ -10,7 +10,7 @@ data_creation:
   data_noise: 0.1
 
 data_splitting:
-  fixed_training_size: 9000
+  fixed_training_size: 12000
 
 graph_perturbation:
   graph_type: null # Options: null-use basic perturbation graph, barabasi-full random barabasi, self_loop-only self loops, equal-circular with equal edges, hub-2 extreme hubs
