@@ -10,11 +10,11 @@ SLURM_OUT_DIR="$BASE_DIR/slurm_out"
 TIMING_LOG_DIR="$BASE_DIR/timing_logs"
 
 # GPU configuration (excluding gx26 due to GPU errors)
-COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx25,gx27,gx28,gx29"
+COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx27,gx28,gx29"
 
 # Get experiment name and data fingerprint
 EXPERIMENT="${EXPERIMENT_NAME}"
-FINGERPRINT=656ca5f25b8e
+FINGERPRINT="${EXPERIMENT_NAME}"
 
 # K-Fold configuration
 K_FOLDS=${K_FOLDS:-5}  # Default to 5 folds
@@ -269,6 +269,7 @@ PDG_TRAIN_JOB_IDS=()
 PDGNN_TRAIN_JOB_IDS=()
 PDG_VAL_JOB_IDS=()
 PDGNN_VAL_JOB_IDS=()
+BASELINE_JOB_IDS=()
 
 # Submit training jobs for each fold (all in parallel)
 for fold in $(seq 0 $((K_FOLDS - 1))); do
@@ -361,6 +362,55 @@ EOF
 )
     PDGNN_TRAIN_JOB_IDS+=($PDGNN_TRAIN_JOB_ID)
     echo "PDGrapherNoGNN training job (fold $fold) submitted with ID: $PDGNN_TRAIN_JOB_ID"
+done
+
+# =============================================================================
+# Job 2c: Baseline Computation for each fold (after k-fold splitting)
+# =============================================================================
+
+# Submit baseline jobs for each fold (depends on k-fold split)
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    echo "Submitting Baseline job for fold $fold..."
+    BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$SPLIT_JOB_ID <<EOF
+#!/bin/bash
+#SBATCH --job-name="baseline_fold${fold}_${EXPERIMENT}"
+#SBATCH --mem=16G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --account=sci-renard
+#SBATCH --partition=cpu-batch
+#SBATCH --time=1-00:00:00
+#SBATCH --chdir=$BASE_DIR
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_baseline_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_baseline_fold${fold}_%j.err
+
+source .venv/bin/activate
+
+echo "=== STARTING BASELINE COMPUTATION (FOLD $fold of $K_FOLDS) ==="
+echo "Job ID: \$SLURM_JOB_ID"
+echo "Start time: \$(date)"
+echo "Experiment: $EXPERIMENT"
+echo "Fold: $fold / $K_FOLDS"
+echo "Depends on k-fold split job: $SPLIT_JOB_ID"
+
+START_TIME=\$(date +%s)
+export EXPERIMENT_NAME=$EXPERIMENT
+export DATA_FINGERPRINT=$FINGERPRINT
+export FOLD_INDEX=$fold
+export K_FOLDS=$K_FOLDS
+
+# Compute baseline metrics for this fold (uses GAT baseline)
+python -m src.baseline --experiment $EXPERIMENT --model gat
+
+END_TIME=\$(date +%s)
+echo "Baseline computation (fold $fold) completed at: \$(date)"
+echo "$EXPERIMENT,baseline,baseline,fold_$fold,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+EOF
+)
+    BASELINE_JOB_IDS+=($BASELINE_JOB_ID)
+    echo "Baseline job (fold $fold) submitted with ID: $BASELINE_JOB_ID"
 done
 
 # =============================================================================
@@ -498,7 +548,7 @@ export K_FOLDS=$K_FOLDS
 export DATA_FINGERPRINT=$FINGERPRINT
 
 # Run k-fold aggregation script to combine results across folds
-python -m src.aggregate_fold_results --experiment $EXPERIMENT --k_folds $K_FOLDS
+python -m src.aggregate_fold_results --experiment $EXPERIMENT --k_folds $K_FOLDS --model pdgrapher
 
 END_TIME=\$(date +%s)
 echo "K-fold aggregation completed at: \$(date)"
@@ -524,6 +574,10 @@ for fold in $(seq 0 $((K_FOLDS - 1))); do
     echo "     - PDGrapher Fold $fold:     ${PDG_TRAIN_JOB_IDS[$fold]}"
     echo "     - PDGrapherNoGNN Fold $fold: ${PDGNN_TRAIN_JOB_IDS[$fold]}"
 done
+echo "  2c. Baseline (all folds):"
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    echo "     - Baseline Fold $fold:      ${BASELINE_JOB_IDS[$fold]}"
+done
 echo "  3. Parallel Validation (all folds):"
 for fold in $(seq 0 $((K_FOLDS - 1))); do
     echo "     - PDGrapher Fold $fold:     ${PDG_VAL_JOB_IDS[$fold]}"
@@ -534,11 +588,12 @@ echo ""
 echo "Monitor progress:"
 echo "  squeue -j $SPLIT_JOB_ID"
 echo "  squeue -j $(IFS=, ; echo \"${PDG_TRAIN_JOB_IDS[*]}\")"
+echo "  squeue -j $(IFS=, ; echo \"${BASELINE_JOB_IDS[*]}\")"
 echo "  squeue -j $(IFS=, ; echo \"${PDG_VAL_JOB_IDS[*]}\")"
 echo "  squeue -j $AGGREGATE_JOB_ID"
 echo ""
 echo "Cancel all jobs if needed:"
-ALL_JOB_IDS="$SPLIT_JOB_ID,$(IFS=, ; echo \"${PDG_TRAIN_JOB_IDS[*]}\"),$(IFS=, ; echo \"${PDGNN_TRAIN_JOB_IDS[*]}\"),$(IFS=, ; echo \"${PDG_VAL_JOB_IDS[*]}\"),$(IFS=, ; echo \"${PDGNN_VAL_JOB_IDS[*]}\"),$AGGREGATE_JOB_ID"
+ALL_JOB_IDS="$SPLIT_JOB_ID,$(IFS=, ; echo \"${PDG_TRAIN_JOB_IDS[*]}\"),$(IFS=, ; echo \"${PDGNN_TRAIN_JOB_IDS[*]}\"),$(IFS=, ; echo \"${BASELINE_JOB_IDS[*]}\"),$(IFS=, ; echo \"${PDG_VAL_JOB_IDS[*]}\"),$(IFS=, ; echo \"${PDGNN_VAL_JOB_IDS[*]}\"),$AGGREGATE_JOB_ID"
 echo "  scancel $ALL_JOB_IDS"
 
 # Store first job ID for master pipeline tracking

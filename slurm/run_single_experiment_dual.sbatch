@@ -10,7 +10,7 @@ SLURM_OUT_DIR="$BASE_DIR/slurm_out"
 TIMING_LOG_DIR="$BASE_DIR/timing_logs"
 
 # GPU configuration (excluding gx26 due to GPU errors)
-COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx25,gx27,gx28,gx29"
+COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx27,gx28,gx29"
 
 # Get experiment name and shared data job dependency
 EXPERIMENT=${EXPERIMENT_NAME}
@@ -18,22 +18,33 @@ SHARED_DATA_DEPENDENCY=${SHARED_DATA_JOB_ID}
 FINGERPRINT=${DATA_FINGERPRINT}
 SKIP_SHARED_DATA_DEPENDENCY=${SKIP_SHARED_DATA_DEPENDENCY:-0}
 
+# K-Fold configuration
+K_FOLDS=${K_FOLDS:-5}  # Default to 5 folds
+
 # TRAIN_ONLY mode: if TRAIN_ONLY=1, skip shared data / perturbation / processing / baseline
 TRAIN_ONLY=${TRAIN_ONLY:-0}
 
 if [ "$TRAIN_ONLY" = "1" ] || [ "$TRAIN_ONLY" = "true" ]; then
     echo "TRAIN_ONLY mode: will skip graph perturbation, data processing and baseline. Only training+validation will be submitted."
+    echo "K-Fold configuration: $K_FOLDS folds"
     # Ensure EXPERIMENT is provided
     if [ -z "$EXPERIMENT" ]; then
         echo "ERROR: EXPERIMENT_NAME must be provided for TRAIN_ONLY mode"
         exit 1
     fi
 
-    # Submit training jobs directly (no dependencies on processing) for PDGrapher models
-    echo "Submitting PDGrapher training job (train-only)..."
-    PDG_TRAIN_JOB_ID=$(sbatch --parsable <<EOF
+    # Arrays to store job IDs for k-fold dependency tracking
+    PDG_TRAIN_JOB_IDS=()
+    PDGNN_TRAIN_JOB_IDS=()
+    PDG_VAL_JOB_IDS=()
+    PDGNN_VAL_JOB_IDS=()
+
+    # Submit training jobs for each fold (all in parallel)
+    for fold in $(seq 0 $((K_FOLDS - 1))); do
+        echo "Submitting PDGrapher training job for fold $fold (train-only)..."
+        PDG_TRAIN_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
-#SBATCH --job-name="pdg_train_${EXPERIMENT}"
+#SBATCH --job-name="pdg_train_fold${fold}_${EXPERIMENT}"
 #SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -45,34 +56,41 @@ if [ "$TRAIN_ONLY" = "1" ] || [ "$TRAIN_ONLY" = "true" ]; then
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_train_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_train_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_train_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_train_fold${fold}_%j.err
 
 source .venv/bin/activate
 
-echo "=== STARTING PDGRAPHER TRAINING (TRAIN_ONLY) ==="
+echo "=== STARTING PDGRAPHER TRAINING (TRAIN_ONLY, FOLD $fold of $K_FOLDS) ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
+echo "Fold: $fold / $K_FOLDS"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export FOLD_INDEX=$fold
+export K_FOLDS=$K_FOLDS
 
-# Train PDGrapher model
+# Train PDGrapher model for this fold
 python -m src.train_pdgrapher --experiment $EXPERIMENT --model pdgrapher
 
 END_TIME=\$(date +%s)
-echo "PDGrapher training completed at: \$(date)"
-echo "$EXPERIMENT,pdgrapher,training,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+echo "PDGrapher training (fold $fold) completed at: \$(date)"
+echo "$EXPERIMENT,pdgrapher,training,fold_$fold,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 EOF
 )
-    echo "PDGrapher training job submitted with ID: $PDG_TRAIN_JOB_ID"
+        PDG_TRAIN_JOB_IDS+=($PDG_TRAIN_JOB_ID)
+        echo "PDGrapher training job (fold $fold) submitted with ID: $PDG_TRAIN_JOB_ID"
+    done
 
-    echo "Submitting PDGrapherNoGNN training job (train-only)..."
-    PDGNN_TRAIN_JOB_ID=$(sbatch --parsable <<EOF
+    # Submit PDGrapherNoGNN training jobs for each fold (all in parallel)
+    for fold in $(seq 0 $((K_FOLDS - 1))); do
+        echo "Submitting PDGrapherNoGNN training job for fold $fold (train-only)..."
+        PDGNN_TRAIN_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
-#SBATCH --job-name="pdgnn_train_${EXPERIMENT}"
+#SBATCH --job-name="pdgnn_train_fold${fold}_${EXPERIMENT}"
 #SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -84,36 +102,42 @@ EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_train_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_train_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_train_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_train_fold${fold}_%j.err
 
 source .venv/bin/activate
 export MODEL=pdgrapher_nognn
 
-echo "=== STARTING PDGRAPHER NOGNN TRAINING (TRAIN_ONLY) ==="
+echo "=== STARTING PDGRAPHER NOGNN TRAINING (TRAIN_ONLY, FOLD $fold of $K_FOLDS) ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
+echo "Fold: $fold / $K_FOLDS"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export FOLD_INDEX=$fold
+export K_FOLDS=$K_FOLDS
 
-# Train PDGrapherNoGNN model
+# Train PDGrapherNoGNN model for this fold
 python -m src.train_pdgrapher_nognn --experiment $EXPERIMENT --model pdgrapher_nognn
 
 END_TIME=\$(date +%s)
-echo "PDGrapherNoGNN training completed at: \$(date)"
-echo "$EXPERIMENT,pdgrapher_nognn,training,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+echo "PDGrapherNoGNN training (fold $fold) completed at: \$(date)"
+echo "$EXPERIMENT,pdgrapher_nognn,training,fold_$fold,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 EOF
 )
-    echo "PDGrapherNoGNN training job submitted with ID: $PDGNN_TRAIN_JOB_ID"
+        PDGNN_TRAIN_JOB_IDS+=($PDGNN_TRAIN_JOB_ID)
+        echo "PDGrapherNoGNN training job (fold $fold) submitted with ID: $PDGNN_TRAIN_JOB_ID"
+    done
 
-    # Submit validation jobs depending on their corresponding training jobs
-    echo "Submitting validation jobs (train-only)..."
-    PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
+    # Submit validation jobs for each fold (after corresponding training completes)
+    echo "Submitting validation jobs for all folds (train-only)..."
+    for fold in $(seq 0 $((K_FOLDS - 1))); do
+        PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:${PDG_TRAIN_JOB_IDS[$fold]} <<EOF
 #!/bin/bash
-#SBATCH --job-name="pdg_val_${EXPERIMENT}"
+#SBATCH --job-name="pdg_val_fold${fold}_${EXPERIMENT}"
 #SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
@@ -125,22 +149,27 @@ EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_val_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_val_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_val_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_val_fold${fold}_%j.err
 
 source .venv/bin/activate
 
-echo "=== STARTING PDGRAPHER VALIDATION (TRAIN_ONLY) ==="
+echo "=== STARTING PDGRAPHER VALIDATION (TRAIN_ONLY, FOLD $fold of $K_FOLDS) ==="
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export FOLD_INDEX=$fold
+export K_FOLDS=$K_FOLDS
 python -m src.validation --experiment $EXPERIMENT --model pdgrapher
 EOF
 )
-    echo "PDGrapher validation job submitted with ID: $PDG_VAL_JOB_ID"
+        PDG_VAL_JOB_IDS+=($PDG_VAL_JOB_ID)
+        echo "PDGrapher validation job (fold $fold) submitted with ID: $PDG_VAL_JOB_ID"
+    done
 
-    PDGNN_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_TRAIN_JOB_ID <<EOF
+    for fold in $(seq 0 $((K_FOLDS - 1))); do
+        PDGNN_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:${PDGNN_TRAIN_JOB_IDS[$fold]} <<EOF
 #!/bin/bash
-#SBATCH --job-name="pdgnn_val_${EXPERIMENT}"
+#SBATCH --job-name="pdgnn_val_fold${fold}_${EXPERIMENT}"
 #SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
@@ -152,48 +181,58 @@ EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_val_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_val_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_val_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_val_fold${fold}_%j.err
 
 source .venv/bin/activate
 export MODEL=pdgrapher_nognn
 
-echo "=== STARTING PDGRAPHER NOGNN VALIDATION (TRAIN_ONLY) ==="
+echo "=== STARTING PDGRAPHER NOGNN VALIDATION (TRAIN_ONLY, FOLD $fold of $K_FOLDS) ==="
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export FOLD_INDEX=$fold
+export K_FOLDS=$K_FOLDS
 python -m src.validation --experiment $EXPERIMENT --model pdgrapher_nognn
 EOF
 )
-    echo "PDGrapherNoGNN validation job submitted with ID: $PDGNN_VAL_JOB_ID"
+        PDGNN_VAL_JOB_IDS+=($PDGNN_VAL_JOB_ID)
+        echo "PDGrapherNoGNN validation job (fold $fold) submitted with ID: $PDGNN_VAL_JOB_ID"
+    done
 
-    # Final comparison job depending on validations
-    DUAL_COMPARE_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_VAL_JOB_ID,$PDGNN_VAL_JOB_ID,$BASELINE_JOB_ID <<EOF
+    # Create dependency strings for all validation jobs
+    PDG_VAL_DEPS=$(IFS=, ; echo "${PDG_VAL_JOB_IDS[*]}")
+    PDGNN_VAL_DEPS=$(IFS=, ; echo "${PDGNN_VAL_JOB_IDS[*]}")
+
+    # K-fold aggregation job (depends on all validations)
+    echo "Submitting k-fold aggregation job (train-only)..."
+    AGGREGATE_JOB_ID=$(sbatch --parsable --dependency=afterok:${PDG_VAL_DEPS},${PDGNN_VAL_DEPS} <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_compare_${EXPERIMENT}"
+#SBATCH --job-name="aggregate_${EXPERIMENT}"
 #SBATCH --mem=16G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu-batch
-#SBATCH --time=2:00:00
+#SBATCH --time=1:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_dual_compare_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_dual_compare_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_aggregate_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_aggregate_%j.err
 
 source .venv/bin/activate
 
-echo "=== STARTING DUAL MODEL RESULT COMPARISON (TRAIN_ONLY) ==="
+echo "=== AGGREGATING K-FOLD RESULTS (TRAIN_ONLY) ==="
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
-python -m src.compare_results --model pdgrapher --exp_id $EXPERIMENT
+export K_FOLDS=$K_FOLDS
+python -m src.aggregate_fold_results --experiment $EXPERIMENT --k_folds $K_FOLDS --model pdgrapher
 EOF
 )
-    echo "Dual compare job submitted with ID: $DUAL_COMPARE_JOB_ID"
+    echo "K-fold aggregation job submitted with ID: $AGGREGATE_JOB_ID"
 
     # Return the first training job id for tracking
-    echo "Job ID: $PDG_TRAIN_JOB_ID"
+    echo "Job ID: ${PDG_TRAIN_JOB_IDS[0]}"
     exit 0
 fi
 
@@ -242,12 +281,13 @@ mkdir -p $TIMING_LOG_DIR
 echo "experiment,method,stage,start_time,end_time,duration_seconds,job_id" > $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 
 # =============================================================================
-# Job 1: Per-experiment Data Splitting (depends on shared data creation)
+# Job 1: K-Fold Data Splitting (depends on shared data creation)
 # =============================================================================
-echo "Submitting per-experiment data splitting job..."
+echo "Submitting k-fold data splitting job..."
+echo "K-Fold configuration: $K_FOLDS folds"
 SPLIT_JOB_ID=$(sbatch --parsable $SPLIT_DEP_FLAG <<EOF
 #!/bin/bash
-#SBATCH --job-name="split_${EXPERIMENT}"
+#SBATCH --job-name="kfold_split_${EXPERIMENT}"
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
@@ -257,30 +297,32 @@ SPLIT_JOB_ID=$(sbatch --parsable $SPLIT_DEP_FLAG <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_split_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_split_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_kfold_split_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_kfold_split_%j.err
 
 source .venv/bin/activate
 
-echo "=== STARTING DATA SPLITTING (per-experiment) ==="
+echo "=== STARTING K-FOLD DATA SPLITTING ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
+echo "K-Folds: $K_FOLDS"
 echo "Depends on shared data: $SHARED_DATA_DEP_MSG"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export K_FOLDS=$K_FOLDS
 
-# Split shared data for this experiment (must run per-experiment)
-python -m src.create_splits --experiment $EXPERIMENT --model gat
+# Create k-fold splits for this experiment
+python -m src.create_kfold_splits --experiment $EXPERIMENT --model pdgrapher
 
 END_TIME=\$(date +%s)
-echo "Data splitting completed at: \$(date)"
-echo "$EXPERIMENT,gat,data_splitting,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+echo "K-fold data splitting completed at: \$(date)"
+echo "$EXPERIMENT,kfold,data_splitting,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 EOF
 )
-echo "Data splitting job submitted with ID: $SPLIT_JOB_ID"
+echo "K-fold data splitting job submitted with ID: $SPLIT_JOB_ID"
 
 # =============================================================================
 # Job 2: Graph Perturbation (depends on per-experiment splitting)
@@ -450,16 +492,22 @@ EOF
 echo "PDGrapherNoGNN data processing job submitted with ID: $PDGNN_PROC_JOB_ID"
 
 # =============================================================================
-# Job 4: Parallel Training for all three models
+# Job 4: Parallel K-Fold Training for PDGrapher models
 # =============================================================================
 
-# (GAT training removed — only PDGrapher models will be trained)
+# Arrays to store job IDs for dependency tracking
+PDG_TRAIN_JOB_IDS=()
+PDGNN_TRAIN_JOB_IDS=()
+PDG_VAL_JOB_IDS=()
+PDGNN_VAL_JOB_IDS=()
+BASELINE_JOB_IDS=()
 
-# Job 3b: PDGrapher Training
-echo "Submitting PDGrapher training job..."
-PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
+# Submit training jobs for each fold (all in parallel)
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    echo "Submitting PDGrapher training job for fold $fold..."
+    PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="pdg_train_${EXPERIMENT}"
+#SBATCH --job-name="pdg_train_fold${fold}_${EXPERIMENT}"
 #SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -471,36 +519,42 @@ PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_train_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_train_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_train_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_train_fold${fold}_%j.err
 
 source .venv/bin/activate
 
-echo "=== STARTING PDGRAPHER TRAINING ==="
+echo "=== STARTING PDGRAPHER TRAINING (FOLD ${fold} of ${K_FOLDS}) ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
-echo "Experiment: $EXPERIMENT"
-echo "Depends on PDGrapher processing job: $PDG_PROC_JOB_ID"
+echo "Experiment: ${EXPERIMENT}"
+echo "Fold: ${fold} / ${K_FOLDS}"
+echo "Depends on PDGrapher processing job: ${PDG_PROC_JOB_ID}"
 
 START_TIME=\$(date +%s)
-export EXPERIMENT_NAME=$EXPERIMENT
-export DATA_FINGERPRINT=$FINGERPRINT
+export EXPERIMENT_NAME=${EXPERIMENT}
+export DATA_FINGERPRINT=${FINGERPRINT}
+export FOLD_INDEX=${fold}
+export K_FOLDS=${K_FOLDS}
 
-# Train PDGrapher model
-python -m src.train_pdgrapher --experiment $EXPERIMENT --model pdgrapher
+# Train PDGrapher model for this fold
+python -m src.train_pdgrapher --experiment ${EXPERIMENT} --model pdgrapher
 
 END_TIME=\$(date +%s)
-echo "PDGrapher training completed at: \$(date)"
-echo "$EXPERIMENT,pdgrapher,training,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+echo "PDGrapher training (fold ${fold}) completed at: \$(date)"
+echo "${EXPERIMENT},pdgrapher,training,fold_${fold},\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> ${TIMING_LOG_DIR}/${EXPERIMENT}_timing.csv
 EOF
 )
-echo "PDGrapher training job submitted with ID: $PDG_TRAIN_JOB_ID"
+    PDG_TRAIN_JOB_IDS+=($PDG_TRAIN_JOB_ID)
+    echo "PDGrapher training job (fold $fold) submitted with ID: $PDG_TRAIN_JOB_ID"
+done
 
-# Job 3c: PDGrapherNoGNN Training
-echo "Submitting PDGrapherNoGNN training job..."
-PDGNN_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_PROC_JOB_ID <<EOF
+# Submit PDGrapherNoGNN training jobs for each fold (all in parallel)
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    echo "Submitting PDGrapherNoGNN training job for fold $fold..."
+    PDGNN_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_PROC_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="pdgnn_train_${EXPERIMENT}"
+#SBATCH --job-name="pdgnn_train_fold${fold}_${EXPERIMENT}"
 #SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -512,40 +566,46 @@ PDGNN_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_PROC_JOB_ID <
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_train_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_train_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_train_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_train_fold${fold}_%j.err
 
 source .venv/bin/activate
 export MODEL=pdgrapher_nognn
 
-echo "=== STARTING PDGRAPHER NOGNN TRAINING ==="
+echo "=== STARTING PDGRAPHER NOGNN TRAINING (FOLD $fold of $K_FOLDS) ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
+echo "Fold: $fold / $K_FOLDS"
 echo "Depends on PDGrapherNoGNN processing job: $PDGNN_PROC_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export FOLD_INDEX=$fold
+export K_FOLDS=$K_FOLDS
 
-# Train PDGrapherNoGNN model
+# Train PDGrapherNoGNN model for this fold
 python -m src.train_pdgrapher_nognn --experiment $EXPERIMENT --model pdgrapher_nognn
 
 END_TIME=\$(date +%s)
-echo "PDGrapherNoGNN training completed at: \$(date)"
-echo "$EXPERIMENT,pdgrapher_nognn,training,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+echo "PDGrapherNoGNN training (fold $fold) completed at: \$(date)"
+echo "$EXPERIMENT,pdgrapher_nognn,training,fold_$fold,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 EOF
 )
-echo "PDGrapherNoGNN training job submitted with ID: $PDGNN_TRAIN_JOB_ID"
+    PDGNN_TRAIN_JOB_IDS+=($PDGNN_TRAIN_JOB_ID)
+    echo "PDGrapherNoGNN training job (fold $fold) submitted with ID: $PDGNN_TRAIN_JOB_ID"
+done
 
 # =============================================================================
-# Job 5: Baseline Computation (after data processing is complete for any model)
+# Job 5: Baseline Computation for each fold (after k-fold splitting)
 # =============================================================================
-echo "Submitting baseline job..."
-# Baseline should depend on GAT processing (GAT data used for baseline)
-BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
+echo "Submitting baseline jobs for all folds..."
+# Baseline should depend on k-fold split job (baseline is computed per fold)
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$SPLIT_JOB_ID <<EOF
 #!/bin/bash
-#SBATCH --job-name="baseline_${EXPERIMENT}"
+#SBATCH --job-name="baseline_fold${fold}_${EXPERIMENT}"
 #SBATCH --mem=16G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -555,42 +615,46 @@ BASELINE_JOB_ID=$(sbatch --parsable --dependency=afterok:$GAT_PROC_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_baseline_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_baseline_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_baseline_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_baseline_fold${fold}_%j.err
 
 source .venv/bin/activate
 
-echo "=== STARTING BASELINE COMPUTATION ==="
+echo "=== STARTING BASELINE COMPUTATION (FOLD $fold of $K_FOLDS) ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
-echo "Depends on GAT processing job: $GAT_PROC_JOB_ID"
+echo "Fold: $fold / $K_FOLDS"
+echo "Depends on k-fold split job: $SPLIT_JOB_ID"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export FOLD_INDEX=$fold
+export K_FOLDS=$K_FOLDS
 
-# Compute baseline metrics
+# Compute baseline metrics for this fold (uses GAT baseline)
 python -m src.baseline --experiment $EXPERIMENT --model gat
 
 END_TIME=\$(date +%s)
-echo "Baseline computation completed at: \$(date)"
-echo "$EXPERIMENT,baseline,baseline,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+echo "Baseline computation (fold $fold) completed at: \$(date)"
+echo "$EXPERIMENT,baseline,baseline,fold_$fold,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 EOF
 )
-echo "Baseline job submitted with ID: $BASELINE_JOB_ID"
+    BASELINE_JOB_IDS+=($BASELINE_JOB_ID)
+    echo "Baseline job (fold $fold) submitted with ID: $BASELINE_JOB_ID"
+done
 
 # =============================================================================
-# Job 6: Parallel Validation for all three models
+# Job 6: Parallel K-Fold Validation for PDGrapher models
 # =============================================================================
 
-# (GAT validation removed — only PDGrapher models will be validated)
-
-# Job 5b: PDGrapher Validation
-echo "Submitting PDGrapher validation job..."
-PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
+# Submit validation jobs for each fold (after corresponding training completes)
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    echo "Submitting PDGrapher validation job for fold $fold..."
+    PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:${PDG_TRAIN_JOB_IDS[$fold]} <<EOF
 #!/bin/bash
-#SBATCH --job-name="pdg_val_${EXPERIMENT}"
+#SBATCH --job-name="pdg_val_fold${fold}_${EXPERIMENT}"
 #SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
@@ -602,36 +666,42 @@ PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_val_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_val_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_val_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdg_val_fold${fold}_%j.err
 
 source .venv/bin/activate
 
-echo "=== STARTING PDGRAPHER VALIDATION ==="
+echo "=== STARTING PDGRAPHER VALIDATION (FOLD $fold of $K_FOLDS) ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
-echo "Depends on PDGrapher training job: $PDG_TRAIN_JOB_ID"
+echo "Fold: $fold / $K_FOLDS"
+echo "Depends on PDGrapher training job: ${PDG_TRAIN_JOB_IDS[$fold]}"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export FOLD_INDEX=$fold
+export K_FOLDS=$K_FOLDS
 
-# Validate PDGrapher model
+# Validate PDGrapher model for this fold
 python -m src.validation --experiment $EXPERIMENT --model pdgrapher
 
 END_TIME=\$(date +%s)
-echo "PDGrapher validation completed at: \$(date)"
-echo "$EXPERIMENT,pdgrapher,validation,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+echo "PDGrapher validation (fold $fold) completed at: \$(date)"
+echo "$EXPERIMENT,pdgrapher,validation,fold_$fold,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 EOF
 )
-echo "PDGrapher validation job submitted with ID: $PDG_VAL_JOB_ID"
+    PDG_VAL_JOB_IDS+=($PDG_VAL_JOB_ID)
+    echo "PDGrapher validation job (fold $fold) submitted with ID: $PDG_VAL_JOB_ID"
+done
 
-# Job 5c: PDGrapherNoGNN Validation
-echo "Submitting PDGrapherNoGNN validation job..."
-PDGNN_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_TRAIN_JOB_ID <<EOF
+# Submit PDGrapherNoGNN validation jobs for each fold (after corresponding training completes)
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    echo "Submitting PDGrapherNoGNN validation job for fold $fold..."
+    PDGNN_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:${PDGNN_TRAIN_JOB_IDS[$fold]} <<EOF
 #!/bin/bash
-#SBATCH --job-name="pdgnn_val_${EXPERIMENT}"
+#SBATCH --job-name="pdgnn_val_fold${fold}_${EXPERIMENT}"
 #SBATCH --mem=64G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
@@ -643,105 +713,122 @@ PDGNN_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_TRAIN_JOB_ID <<
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_val_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_val_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_val_fold${fold}_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_pdgnn_val_fold${fold}_%j.err
 
 source .venv/bin/activate
 export MODEL=pdgrapher_nognn
 
-echo "=== STARTING PDGRAPHER NOGNN VALIDATION ==="
+echo "=== STARTING PDGRAPHER NOGNN VALIDATION (FOLD $fold of $K_FOLDS) ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
-echo "Depends on PDGrapherNoGNN training job: $PDGNN_TRAIN_JOB_ID"
+echo "Fold: $fold / $K_FOLDS"
+echo "Depends on PDGrapherNoGNN training job: ${PDGNN_TRAIN_JOB_IDS[$fold]}"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export FOLD_INDEX=$fold
+export K_FOLDS=$K_FOLDS
 
-# Validate PDGrapherNoGNN model
+# Validate PDGrapherNoGNN model for this fold
 python -m src.validation --experiment $EXPERIMENT --model pdgrapher_nognn
 
 END_TIME=\$(date +%s)
-echo "PDGrapherNoGNN validation completed at: \$(date)"
-echo "$EXPERIMENT,pdgrapher_nognn,validation,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
+echo "PDGrapherNoGNN validation (fold $fold) completed at: \$(date)"
+echo "$EXPERIMENT,pdgrapher_nognn,validation,fold_$fold,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 EOF
 )
-echo "PDGrapherNoGNN validation job submitted with ID: $PDGNN_VAL_JOB_ID"
+    PDGNN_VAL_JOB_IDS+=($PDGNN_VAL_JOB_ID)
+    echo "PDGrapherNoGNN validation job (fold $fold) submitted with ID: $PDGNN_VAL_JOB_ID"
+done
 
 # =============================================================================
-# Job 7: Dual Model Result Comparison (depends on validations + baseline)
+# Job 7: K-Fold Results Aggregation (depends on all validations)
 # =============================================================================
-echo "Submitting dual-model result comparison job..."
-DUAL_COMPARE_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_VAL_JOB_ID,$PDGNN_VAL_JOB_ID,$BASELINE_JOB_ID <<EOF
+
+# Create dependency strings for all validation jobs
+PDG_VAL_DEPS=$(IFS=, ; echo "${PDG_VAL_JOB_IDS[*]}")
+PDGNN_VAL_DEPS=$(IFS=, ; echo "${PDGNN_VAL_JOB_IDS[*]}")
+
+echo "Submitting k-fold aggregation job..."
+AGGREGATE_JOB_ID=$(sbatch --parsable --dependency=afterok:${PDG_VAL_DEPS},${PDGNN_VAL_DEPS} <<EOF
 #!/bin/bash
-#SBATCH --job-name="dual_compare_${EXPERIMENT}"
+#SBATCH --job-name="aggregate_${EXPERIMENT}"
 #SBATCH --mem=16G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu-batch
-#SBATCH --time=2:00:00
+#SBATCH --time=1:00:00
 #SBATCH --chdir=$BASE_DIR
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=johanna.dahlkemper@student.hpi.de
-#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_dual_compare_%j.out
-#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_dual_compare_%j.err
+#SBATCH --output=$SLURM_OUT_DIR/${EXPERIMENT}_aggregate_%j.out
+#SBATCH --error=$SLURM_OUT_DIR/${EXPERIMENT}_aggregate_%j.err
 
 source .venv/bin/activate
 
-echo "=== STARTING DUAL MODEL RESULT COMPARISON ==="
+echo "=== AGGREGATING K-FOLD RESULTS ==="
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Start time: \$(date)"
 echo "Experiment: $EXPERIMENT"
-echo "Depends on PDGrapher validation job: $PDG_VAL_JOB_ID"
-echo "Depends on PDGrapherNoGNN validation job: $PDGNN_VAL_JOB_ID"
-echo "Depends on baseline job: $BASELINE_JOB_ID"
+echo "K-Folds: $K_FOLDS"
 
 START_TIME=\$(date +%s)
 export EXPERIMENT_NAME=$EXPERIMENT
 export DATA_FINGERPRINT=$FINGERPRINT
+export K_FOLDS=$K_FOLDS
 
-# Run dual model comparison for this experiment (use PDGrapher as reference)
-python -m src.compare_results --model pdgrapher --exp_id $EXPERIMENT
+# Run k-fold aggregation script to combine results across folds
+python -m src.aggregate_fold_results --experiment $EXPERIMENT --k_folds $K_FOLDS --model pdgrapher
 
 END_TIME=\$(date +%s)
-echo "Dual model result comparison completed at: \$(date)"
-echo "$EXPERIMENT,dual_comparison,comparison,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
-
-echo ""
-echo "=== DUAL MODEL EXPERIMENT PIPELINE COMPLETE ==="
-echo "Experiment: $EXPERIMENT"
-echo "PDGrapher and PDGrapherNoGNN have been trained, validated, and compared"
-echo "Results are available in the reports/ directory"
-echo "Total pipeline time: \$((\$END_TIME - $GRAPH_PERT_JOB_ID)) seconds"
+echo "K-fold aggregation completed at: \$(date)"
+echo "$EXPERIMENT,kfold,aggregation,\$START_TIME,\$END_TIME,\$((\$END_TIME - \$START_TIME)),\$SLURM_JOB_ID" >> $TIMING_LOG_DIR/${EXPERIMENT}_timing.csv
 EOF
 )
-echo "Dual model result comparison job submitted with ID: $DUAL_COMPARE_JOB_ID"
+echo "K-fold aggregation job submitted with ID: $AGGREGATE_JOB_ID"
 
 echo ""
-echo "=== DUAL MODEL EXPERIMENT PIPELINE SUBMISSION SUMMARY ==="
+echo "=== K-FOLD EXPERIMENT PIPELINE SUBMISSION SUMMARY ==="
 echo "Experiment: $EXPERIMENT"
+echo "K-Folds: $K_FOLDS"
 echo "Shared data dependency: $SHARED_DATA_DEP_MSG"
 echo ""
 echo "Pipeline structure:"
-echo "  1. Data Splitting (per-experiment): $SPLIT_JOB_ID (after $SHARED_DATA_DEP_MSG)"
-echo "  2. Graph Perturbation:             $GRAPH_PERT_JOB_ID (after split $SPLIT_JOB_ID)"
-echo "  3a. GAT Data Processing:           $GAT_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
-echo "  3b. PDGrapher Data Processing:     $PDG_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
-echo "  3c. PDGrapherNoGNN Data Proc:      $PDGNN_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
-echo "  4a. PDGrapher Training:            $PDG_TRAIN_JOB_ID (after $PDG_PROC_JOB_ID)"
-echo "  4b. PDGrapherNoGNN Training:       $PDGNN_TRAIN_JOB_ID (after $PDGNN_PROC_JOB_ID)"
-echo "  5. Baseline:                       $BASELINE_JOB_ID (after $GAT_PROC_JOB_ID)"
-echo "  6a. PDGrapher Validation:          $PDG_VAL_JOB_ID (after $PDG_TRAIN_JOB_ID)"
-echo "  6b. PDGrapherNoGNN Validation:     $PDGNN_VAL_JOB_ID (after $PDGNN_TRAIN_JOB_ID)"
-echo "  7. Dual Model Comparison:          $DUAL_COMPARE_JOB_ID (after validations + baseline)"
+echo "  1. K-Fold Data Splitting:  $SPLIT_JOB_ID (after $SHARED_DATA_DEP_MSG)"
+echo "  2. Graph Perturbation:     $GRAPH_PERT_JOB_ID (after split $SPLIT_JOB_ID)"
+echo "  3a. GAT Data Processing:   $GAT_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
+echo "  3b. PDGrapher Data Proc:   $PDG_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
+echo "  3c. PDGrapherNoGNN Proc:   $PDGNN_PROC_JOB_ID (after $GRAPH_PERT_JOB_ID)"
+echo "  4. Parallel Training (all folds):"
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    echo "     - PDGrapher Fold $fold:      ${PDG_TRAIN_JOB_IDS[$fold]}"
+    echo "     - PDGrapherNoGNN Fold $fold: ${PDGNN_TRAIN_JOB_IDS[$fold]}"
+done
+echo "  5. Baseline (all folds):"
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    echo "     - Baseline Fold $fold:       ${BASELINE_JOB_IDS[$fold]}"
+done
+echo "  6. Parallel Validation (all folds):"
+for fold in $(seq 0 $((K_FOLDS - 1))); do
+    echo "     - PDGrapher Fold $fold:      ${PDG_VAL_JOB_IDS[$fold]}"
+    echo "     - PDGrapherNoGNN Fold $fold: ${PDGNN_VAL_JOB_IDS[$fold]}"
+done
+echo "  7. K-Fold Aggregation:     $AGGREGATE_JOB_ID (after all validations)"
 echo ""
 echo "Monitor progress:"
-echo "  squeue -j $GRAPH_PERT_JOB_ID,$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID,$PDGNN_PROC_JOB_ID,$PDG_TRAIN_JOB_ID,$PDGNN_TRAIN_JOB_ID,$BASELINE_JOB_ID,$PDG_VAL_JOB_ID,$PDGNN_VAL_JOB_ID,$DUAL_COMPARE_JOB_ID"
+echo "  squeue -j $SPLIT_JOB_ID"
+echo "  squeue -j $(IFS=, ; echo \"${PDG_TRAIN_JOB_IDS[*]}\")"
+echo "  squeue -j $(IFS=, ; echo \"${BASELINE_JOB_IDS[*]}\")"
+echo "  squeue -j $(IFS=, ; echo \"${PDG_VAL_JOB_IDS[*]}\")"
+echo "  squeue -j $AGGREGATE_JOB_ID"
 echo ""
 echo "Cancel all jobs if needed:"
-echo "  scancel $GRAPH_PERT_JOB_ID,$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID,$PDGNN_PROC_JOB_ID,$PDG_TRAIN_JOB_ID,$PDGNN_TRAIN_JOB_ID,$BASELINE_JOB_ID,$PDG_VAL_JOB_ID,$PDGNN_VAL_JOB_ID,$DUAL_COMPARE_JOB_ID"
+ALL_JOB_IDS="$SPLIT_JOB_ID,$GRAPH_PERT_JOB_ID,$GAT_PROC_JOB_ID,$PDG_PROC_JOB_ID,$PDGNN_PROC_JOB_ID,$(IFS=, ; echo \"${PDG_TRAIN_JOB_IDS[*]}\"),$(IFS=, ; echo \"${PDGNN_TRAIN_JOB_IDS[*]}\"),$(IFS=, ; echo \"${BASELINE_JOB_IDS[*]}\"),$(IFS=, ; echo \"${PDG_VAL_JOB_IDS[*]}\"),$(IFS=, ; echo \"${PDGNN_VAL_JOB_IDS[*]}\"),$AGGREGATE_JOB_ID"
+echo "  scancel $ALL_JOB_IDS"
 
 # Store first job ID for master pipeline tracking
-echo "Job ID: $GRAPH_PERT_JOB_ID"
+echo "Job ID: $SPLIT_JOB_ID"

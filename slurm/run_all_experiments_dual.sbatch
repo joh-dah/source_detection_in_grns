@@ -13,10 +13,14 @@ TIMING_LOG_DIR="$BASE_DIR/timing_logs"
 CONFIG_DIR="$BASE_DIR/configs/experiments"
 
 # GPU configuration (excluding gx26 due to GPU errors)
-COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx25,gx27,gx28,gx29"
+COMPATIBLE_GPU_NODES="gx01,gx02,gx03,gx04,gx05,gx06,gx07,gx08,gx09,gx10,gx12,gx13,gx27,gx28,gx29"
+
+# K-Fold configuration
+K_FOLDS=${K_FOLDS:-5}  # Default to 5 folds
 
 echo "=== DUAL MODEL PIPELINE RUNNER ==="
 echo "Models: PDGrapher, PDGrapherNoGNN"
+echo "K-Fold Configuration: $K_FOLDS folds"
 echo "Base directory: $BASE_DIR"
 echo "Config directory: $CONFIG_DIR"
 echo "Start time: $(date)"
@@ -83,7 +87,7 @@ PY
         fi
 
     # Submit the per-experiment pipeline with the computed fingerprint
-    EXP_JOB_ID=$(TRAIN_ONLY=1 DATA_FINGERPRINT=$fingerprint EXPERIMENT_NAME=$experiment_name bash slurm/run_single_experiment_dual.sbatch 2>/dev/null | grep "Job ID:" | grep -o '[0-9]\+' | head -1 || echo "ERROR")
+    EXP_JOB_ID=$(TRAIN_ONLY=1 K_FOLDS=$K_FOLDS DATA_FINGERPRINT=$fingerprint EXPERIMENT_NAME=$experiment_name bash slurm/run_single_experiment_dual.sbatch 2>/dev/null | grep "Job ID:" | grep -o '[0-9]\+' | head -1 || echo "ERROR")
         if [ "$EXP_JOB_ID" = "ERROR" ]; then
             echo "    ERROR: Failed to submit train-only pipeline for $experiment_name"
             continue
@@ -188,9 +192,9 @@ while IFS=':' read -r fingerprint experiments; do
     DATA_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="shared_data_${fingerprint:0:12}"
-#SBATCH --mem=32G
+#SBATCH --mem=600G
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=32
 #SBATCH --account=sci-renard
 #SBATCH --partition=cpu-batch
 #SBATCH --time=3-00:00:00
@@ -265,7 +269,7 @@ while IFS=':' read -r fingerprint data_job_id experiments; do
     echo "  Submitting dual-model experiment: $experiment (depends on shared data job: $data_job_id)"
 
     # Submit dual-model experiment job with dependency on shared data creation
-    EXP_JOB_ID=$(SHARED_DATA_JOB_ID=$data_job_id DATA_FINGERPRINT=$fingerprint EXPERIMENT_NAME=$experiment bash slurm/run_single_experiment_dual.sbatch 2>/dev/null | grep "Job ID:" | grep -o '[0-9]\+' | head -1 || echo "ERROR")
+    EXP_JOB_ID=$(K_FOLDS=$K_FOLDS SHARED_DATA_JOB_ID=$data_job_id DATA_FINGERPRINT=$fingerprint EXPERIMENT_NAME=$experiment bash slurm/run_single_experiment_dual.sbatch 2>/dev/null | grep "Job ID:" | grep -o '[0-9]\+' | head -1 || echo "ERROR")
         
         if [ "$EXP_JOB_ID" = "ERROR" ]; then
             echo "    ERROR: Failed to submit triple model experiment $experiment"
@@ -297,6 +301,7 @@ echo ""
 echo "Each experiment will run:"
 echo "  - PDGrapher (with GNN layers)"
 echo "  - PDGrapherNoGNN (without graph neural networks)"
+echo "  - K-Fold Cross-Validation ($K_FOLDS folds per experiment)"
 
 echo ""
 echo "Monitor all jobs with:"
