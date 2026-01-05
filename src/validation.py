@@ -28,9 +28,9 @@ class ModelValidator:
         
         # Use fold-specific model path if running k-fold validation
         if const.FOLD_INDEX >= 0:
-            self.model_path = f"{const.MODEL_PATH}/{const.MODEL}/{const.MODEL_NAME_WITH_FOLD}/{self.model_name}_latest.pt"
+            self.model_path = f"{const.MODEL_PATH}/{const.MODEL}/{const.MODEL_NAME_WITH_FOLD}/{const.MODEL_NAME_WITH_FOLD}_latest.pt"
         else:
-            self.model_path = f"{const.MODEL_PATH}/{const.MODEL}/{self.model_name}_latest.pt"
+            self.model_path = f"{const.MODEL_PATH}/{const.MODEL}/{const.MODEL_NAME_WITH_FOLD}_latest.pt"
         
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
@@ -214,6 +214,15 @@ class ModelValidator:
             backward_path=str(data_path / "data_backward.pt"),
             splits_path=str(const.SPLITS_FILE)
         )
+        
+        # For k-fold experiments, prepare the correct fold
+        if const.FOLD_INDEX >= 0:
+            fold_idx = const.FOLD_INDEX + 1  # PDGrapher folds are 1-indexed
+            if fold_idx > dataset.num_of_folds:
+                raise ValueError(f"Fold {fold_idx} exceeds number of available folds {dataset.num_of_folds}")
+            dataset.prepare_fold(fold_idx)
+            print(f"K-Fold validation: Fold {fold_idx} of {dataset.num_of_folds}")
+        
         # Get test data loader with reduced workers for cluster compatibility
         (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1, num_workers=0)
 
@@ -228,6 +237,15 @@ class ModelValidator:
             backward_path=str(data_path / "data_backward.pt"),
             splits_path=str(const.SPLITS_FILE)
         )
+        
+        # For k-fold experiments, prepare the correct fold
+        if const.FOLD_INDEX >= 0:
+            fold_idx = const.FOLD_INDEX + 1  # PDGrapher folds are 1-indexed
+            if fold_idx > dataset.num_of_folds:
+                raise ValueError(f"Fold {fold_idx} exceeds number of available folds {dataset.num_of_folds}")
+            dataset.prepare_fold(fold_idx)
+            print(f"K-Fold validation: Fold {fold_idx} of {dataset.num_of_folds}")
+        
         # Get test data loader with reduced workers for cluster compatibility
         (_, _, _, _, _, test_loader_backward) = dataset.get_dataloaders(batch_size=1, num_workers=0)
 
@@ -1159,7 +1177,7 @@ def main():
     else:
         print("Raw data not available, skipping data statistics")
     
-    utils.save_metrics(metrics_dict)
+    utils.save_metrics(metrics_dict, fold_index=const.FOLD_INDEX)
 
     print(f"Validation complete! Results saved for {model_type} model with {network} network")
 

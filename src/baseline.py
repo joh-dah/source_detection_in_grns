@@ -6,6 +6,7 @@ import src.constants as const
 import src.utils as utils
 import src.validation as validation
 from typing import List, Dict, Tuple
+from pathlib import Path
 
 
 class BaselineSourceDetector:
@@ -196,11 +197,13 @@ class OverlapDetector(BaselineSourceDetector):
         edge_list = data.edge_index.t().tolist()
         G = nx.from_edgelist(edge_list, create_using=nx.DiGraph)
 
+        infection_threshold = 0.01
+
         # Infektionsstatus bestimmen
         current_state = data.x[:, 1]
         initial_state = data.x[:, 0]
-        infection_level = current_state - initial_state
-        infected_nodes = set(torch.where(infection_level > 0)[0].tolist())
+        infection_level = abs(current_state - initial_state)
+        infected_nodes = set(torch.where(infection_level > infection_threshold)[0].tolist())
 
         num_nodes = data.x.shape[0]
         scores = torch.zeros(num_nodes)
@@ -277,8 +280,63 @@ class AdvancedRandomDetector(BaselineSourceDetector):
 
 
 def load_test_data() -> Tuple[List, List]:
-    """Load test data for baseline evaluation."""
-    # load gat processed data because it has individual files
+    """Load test data for baseline evaluation.
+
+    Handles both standard splits and k-fold splits. For k-fold runs, uses
+    the environment-provided fold index (const.FOLD_INDEX) and loads indices
+    from the k-fold splits file.
+    """
+    # K-fold branch: use fold-specific indices from splits_kfold.pt
+    if const.FOLD_INDEX >= 0:
+        splits_path = Path(const.SPLITS_FILE)
+        if not splits_path.exists():
+            raise FileNotFoundError(f"K-fold splits file not found: {splits_path}")
+        splits = torch.load(splits_path, weights_only=False)
+
+        fold_key = const.FOLD_INDEX + 1  # k-fold file stores folds as 1..K
+        if fold_key not in splits:
+            raise KeyError(f"Fold {fold_key} not found in k-fold splits at {splits_path}")
+
+        fold_splits = splits[fold_key]
+        required_keys = ["test_index_backward"]
+        for k in required_keys:
+            if k not in fold_splits:
+                raise KeyError(f"Missing key '{k}' in k-fold splits for fold {fold_key}")
+
+        test_indices = fold_splits["test_index_backward"]
+        if not isinstance(test_indices, (list, tuple)):
+            raise ValueError("test_index_backward must be a list/tuple of indices")
+
+        # Load processed GAT data (individual files per index)
+        processed_dir = Path(const.PROCESSED_PATH)
+        if not processed_dir.exists():
+            raise FileNotFoundError(f"Processed data directory not found: {processed_dir}")
+
+        processed_data = []
+        for idx in test_indices:
+            file_path = processed_dir / f"{idx}.pt"
+            if not file_path.exists():
+                raise FileNotFoundError(f"Processed sample not found: {file_path}")
+            processed_data.append(torch.load(file_path, weights_only=False))
+
+        # Load raw data corresponding to the same indices
+        raw_dir = Path(const.RAW_PATH)
+        if not raw_dir.exists():
+            raise FileNotFoundError(f"Raw data directory not found: {raw_dir}")
+        raw_files = sorted(list(raw_dir.glob("*.pt")))
+        if not raw_files:
+            raise FileNotFoundError(f"No raw data files found in: {raw_dir}")
+
+        raw_data = []
+        for idx in test_indices:
+            try:
+                raw_data.append(torch.load(raw_files[idx], weights_only=False))
+            except IndexError:
+                raise IndexError(f"Raw data index {idx} out of range (found {len(raw_files)} files)")
+
+        return processed_data, raw_data
+
+    # Standard (non k-fold) branch: use existing utilities
     test_data_processed = utils.load_processed_data(split="test", model_type="gat")
     test_data_raw = utils.load_raw_test_data()
     return test_data_processed, test_data_raw
@@ -384,7 +442,8 @@ def main():
                 "model_type": method_name
             }
 
-            utils.save_metrics(output_data, method_name=method)
+            # Save with fold_index if running k-fold experiments
+            utils.save_metrics(output_data, method_name=method, fold_index=const.FOLD_INDEX if const.FOLD_INDEX >= 0 else None)
 
     # Print summary comparison
     print(f"\n{'='*60}")

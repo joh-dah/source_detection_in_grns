@@ -249,6 +249,9 @@ network_dict = {
     "10716_hub": 10716,
     "10716_weakly_connected_10": 10716,
     "10716_weakly_connected_100": 10716,
+    "apoptosis": 114,
+    "mtor": 55,
+    "egfr": 72
 }
 
 

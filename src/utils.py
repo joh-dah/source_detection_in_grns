@@ -79,21 +79,48 @@ def get_current_time() -> str:
     return datetime.now().strftime("%m%d_%H%M")
 
 
-def save_metrics(metrics: dict, method_name: str = None):
+def save_metrics(metrics: dict, method_name: str = None, fold_index: int = None):
     """
     Save dictionary with metrics as json in reports folder.
-    One "latest.json" is created and named after the corresponding model.
+    For k-fold experiments, results are saved in fold-specific subdirectories.
+    Creates timestamped files and a 'latest' symlink to prevent overwriting.
+    
     :params metrics: dictionary containing metrics
-    :params model_name: name of the corresponding model
+    :params method_name: name of the corresponding model
+    :params fold_index: fold number for k-fold cross-validation
     """
     timestamp = datetime.now().strftime("%m%d_%H%M")
     if method_name is None:
         method_name = const.MODEL
-    report_dir = Path(const.REPORT_PATH) / const.EXPERIMENT
-    report_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{method_name}_{timestamp}.json"
-    with open(report_dir / filename, "w") as file:
-        json.dump(metrics, file, indent=4)
+    
+    # Determine report directory structure
+    if fold_index is not None:
+        # K-fold experiment: save in fold subdirectory
+        report_dir = Path(const.REPORT_PATH) / const.EXPERIMENT / f"fold_{fold_index}"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save timestamped file
+        filename = f"{method_name}_{timestamp}.json"
+        filepath = report_dir / filename
+        with open(filepath, "w") as file:
+            json.dump(metrics, file, indent=4)
+        
+        # Create/update symlink to latest results for this model
+        latest_link = report_dir / f"{method_name}_results.json"
+        if latest_link.is_symlink() or latest_link.exists():
+            latest_link.unlink()
+        latest_link.symlink_to(filename)
+        
+        print(f"Saved fold {fold_index} results to: {filepath}")
+        print(f"Updated latest link: {latest_link} -> {filename}")
+    else:
+        # Non-k-fold experiment: save directly in experiment directory
+        report_dir = Path(const.REPORT_PATH) / const.EXPERIMENT
+        report_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"{method_name}_{timestamp}.json"
+        filepath = report_dir / filename
+        with open(filepath, "w") as file:
+            json.dump(metrics, file, indent=4)
 
 
 def extract_gat_true_sources(processed_test_data):

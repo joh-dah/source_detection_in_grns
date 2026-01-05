@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from collections import defaultdict
 import numpy as np
+from datetime import datetime
 import src.constants as const
 
 
@@ -31,12 +32,14 @@ def aggregate_fold_results(k_folds=5):
             print(f"Warning: No results found for fold {fold_idx} at {fold_report_dir}")
             continue
         
-        # Look for results files for each model
-        for model_type in ["pdgrapher", "pdgrapher_nognn"]:
-            results_file = fold_report_dir / f"{model_type}_results.json"
+        # Look for results files for each model and baseline methods
+        methods_to_collect = ["pdgrapher", "pdgraphernognn", "baseline_smallestSuperset", "baseline_overlap", "baseline_random", "baseline_advanced_random"]
+        
+        for method_type in methods_to_collect:
+            results_file = fold_report_dir / f"{method_type}_results.json"
             
             if not results_file.exists():
-                print(f"Warning: No results file for {model_type} fold {fold_idx}")
+                print(f"Warning: No results file for {method_type} fold {fold_idx}")
                 continue
             
             try:
@@ -48,41 +51,55 @@ def aggregate_fold_results(k_folds=5):
                     for metric_name, metric_value in fold_metrics['metrics'].items():
                         # Skip non-numeric metrics
                         if isinstance(metric_value, (int, float)):
-                            all_fold_results[model_type][metric_name].append(metric_value)
+                            all_fold_results[method_type][metric_name].append(metric_value)
                         # Handle nested dicts (like gene-specific metrics)
                         elif isinstance(metric_value, dict):
                             for sub_metric, sub_value in metric_value.items():
                                 if isinstance(sub_value, (int, float)):
                                     key = f"{metric_name}_{sub_metric}"
-                                    all_fold_results[model_type][key].append(sub_value)
+                                    all_fold_results[method_type][key].append(sub_value)
                 
-                print(f"Loaded results for {model_type} fold {fold_idx}")
+                print(f"Loaded results for {method_type} fold {fold_idx}")
             except Exception as e:
-                print(f"Error loading results for {model_type} fold {fold_idx}: {e}")
+                print(f"Error loading results for {method_type} fold {fold_idx}: {e}")
     
     # Compute aggregate statistics
     aggregate_results = {}
     
-    for model_type in ["pdgrapher", "pdgrapher_nognn"]:
-        model_results = {}
-        model_results['num_folds'] = k_folds
+    methods_to_aggregate = ["pdgrapher", "pdgraphernognn", "baseline_smallestSuperset", "baseline_overlap", "baseline_random", "baseline_advanced_random"]
+    
+    for method_type in methods_to_aggregate:
+        method_results = {}
+        method_results['num_folds'] = k_folds
         
-        if model_type in all_fold_results:
-            metrics_data = all_fold_results[model_type]
+        if method_type in all_fold_results:
+            metrics_data = all_fold_results[method_type]
             
             for metric_name, values in metrics_data.items():
                 if len(values) > 0:
-                    model_results[f"{metric_name}_mean"] = round(float(np.mean(values)), 4)
-                    model_results[f"{metric_name}_std"] = round(float(np.std(values)), 4)
-                    model_results[f"{metric_name}_min"] = round(float(np.min(values)), 4)
-                    model_results[f"{metric_name}_max"] = round(float(np.max(values)), 4)
+                    method_results[f"{metric_name}_mean"] = round(float(np.mean(values)), 4)
+                    method_results[f"{metric_name}_std"] = round(float(np.std(values)), 4)
+                    method_results[f"{metric_name}_min"] = round(float(np.min(values)), 4)
+                    method_results[f"{metric_name}_max"] = round(float(np.max(values)), 4)
             
-            aggregate_results[model_type] = model_results
+            aggregate_results[method_type] = method_results
     
-    # Save aggregate results
-    aggregate_file = report_base / f"{const.EXPERIMENT}_kfold_aggregated_results.json"
+    # Save aggregate results with timestamp to prevent overwriting
+    timestamp = datetime.now().strftime("%m%d_%H%M")
+    aggregate_filename = f"{const.EXPERIMENT}_kfold_aggregated_{timestamp}.json"
+    aggregate_file = report_base / aggregate_filename
+    
+    # Add metadata to results
+    final_results = {
+        "experiment": const.EXPERIMENT,
+        "timestamp": timestamp,
+        "k_folds": k_folds,
+        "results": aggregate_results
+    }
+    
     with open(aggregate_file, 'w') as f:
-        json.dump(aggregate_results, f, indent=2)
+        json.dump(final_results, f, indent=2)
+    
     
     print(f"Aggregated results saved to: {aggregate_file}")
     
@@ -91,9 +108,9 @@ def aggregate_fold_results(k_folds=5):
     print("K-FOLD AGGREGATION SUMMARY")
     print("="*80)
     
-    for model_type, metrics in aggregate_results.items():
-        print(f"\n{model_type.upper()}:")
-        print(f"  Number of folds: {metrics['num_folds']}")
+    for method_type, metrics in aggregate_results.items():
+        print(f"\n{method_type.upper()}:")
+        print(f"  Number of folds: {metrics.get('num_folds', k_folds)}")
         
         # Print selected key metrics
         for key in sorted(metrics.keys()):
