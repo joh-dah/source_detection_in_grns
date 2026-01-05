@@ -39,6 +39,14 @@
         "number_of_perturbed_genes_in_pathway": 39,
         "number_of_sig_info_in_pathway": 4310
     },
+    "Egfr Signaling (hsa01521)": {
+        "number_of_nodes": 72,
+        "number_of_edges": 175,
+        "average_degree": 2.4305555555555554,
+        "density": 0.03375771604938271,
+        "number_of_perturbed_genes_in_pathway": 68,
+        "number_of_sig_info_in_pathway": 7921
+    },
     "Mapk Signaling (hsa04010)": {
         "number_of_nodes": 74,
         "number_of_edges": 1225,
