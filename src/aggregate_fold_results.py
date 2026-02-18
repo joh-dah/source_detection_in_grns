@@ -8,7 +8,7 @@ from datetime import datetime
 import src.constants as const
 
 
-def aggregate_fold_results(k_folds=5):
+def aggregate_fold_results(k_folds=const.K_FOLDS):
     """
     Aggregate validation results from all k-folds.
     
@@ -130,7 +130,7 @@ def main():
     print("Starting K-Fold Results Aggregation...")
     
     # Get k-folds from environment or use default
-    k_folds = int(os.environ.get('K_FOLDS', 5))
+    k_folds = int(os.environ.get('K_FOLDS', const.K_FOLDS))
     print(f"K-Folds: {k_folds}")
     print(f"Experiment: {const.EXPERIMENT}")
     

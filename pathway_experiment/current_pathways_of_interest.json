@@ -1,0 +1,18 @@
+    {
+    "circadian_entrainment": "hsa04713",
+    "endocrine_resistance": "hsa01522",
+    "estrogen_signaling": "hsa04915",
+    "human_papillomavirus_infection": "hsa05165",
+    "il_17_signaling": "hsa04657",
+    "olfactory_transduction": "hsa04740",
+    "pd_l1_expression_and_pd_1_checkpoint_in_cancer": "hsa05235",
+    "prolactin_signaling": "hsa04917",
+    "prostate_cancer": "hsa05215",
+    "tgf_beta_signaling": "hsa04350",
+    "tgf-beta_signaling": "hsa04350",
+    "tuberculosis": "hsa05152",
+    "vascular_smooth_muscle_contraction": "hsa04270",
+    "neurodegeneration_multiples": "hsa05022",
+    "igsf_cam_signaling": "hsa04517",
+    "immune_deficiency": "hsa05170"
+}

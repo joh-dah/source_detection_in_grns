@@ -37,7 +37,7 @@ if [ "$TRAIN_ONLY" = "1" ] || [ "$TRAIN_ONLY" = "true" ]; then
     PDG_TRAIN_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdg_train_${EXPERIMENT}"
-#SBATCH --mem=128G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
@@ -76,7 +76,7 @@ EOF
     PDGNN_TRAIN_JOB_ID=$(sbatch --parsable <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdgnn_train_${EXPERIMENT}"
-#SBATCH --mem=128G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
@@ -117,7 +117,7 @@ EOF
     PDG_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_TRAIN_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdg_val_${EXPERIMENT}"
-#SBATCH --mem=64G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1
@@ -144,7 +144,7 @@ EOF
     PDGNN_VAL_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_TRAIN_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdgnn_val_${EXPERIMENT}"
-#SBATCH --mem=64G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1
@@ -441,7 +441,7 @@ for fold in $(seq 0 $((K_FOLDS - 1))); do
     PDG_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDG_PROC_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdg_train_fold${fold}_${EXPERIMENT}"
-#SBATCH --mem=128G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
@@ -488,7 +488,7 @@ for fold in $(seq 0 $((K_FOLDS - 1))); do
     PDGNN_TRAIN_JOB_ID=$(sbatch --parsable --dependency=afterok:$PDGNN_PROC_JOB_ID <<EOF
 #!/bin/bash
 #SBATCH --job-name="pdgnn_train_fold${fold}_${EXPERIMENT}"
-#SBATCH --mem=128G
+#SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1

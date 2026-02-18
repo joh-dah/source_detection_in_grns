@@ -2966,5 +2966,69 @@
         "density": 0.0027938072738660966,
         "number_of_perturbed_genes_in_pathway": 1439,
         "number_of_sig_info_in_pathway": 77771
+    },
+    "synth_ref": {
+        "number_of_nodes": 500,
+        "number_of_edges": 1000,
+        "average_degree": 2.0,
+        "density": 0.004008016032064129,
+        "number_of_perturbed_genes_in_pathway": 279,
+        "number_of_sig_info_in_pathway": 12544
+    },
+    "synth_graph_1": {
+        "number_of_nodes": 500,
+        "number_of_edges": 550,
+        "average_degree": 1.1,
+        "density": 0.002204408816633267,
+        "number_of_perturbed_genes_in_pathway": 246,
+        "number_of_sig_info_in_pathway": 12544
+    },
+    "synth_graph_2": {
+        "number_of_nodes": 500,
+        "number_of_edges": 800,
+        "average_degree": 1.6,
+        "density": 0.003206412825651303,
+        "number_of_perturbed_genes_in_pathway": 263,
+        "number_of_sig_info_in_pathway": 12544
+    },
+    "synth_graph_3": {
+        "number_of_nodes": 500,
+        "number_of_edges": 1250,
+        "average_degree": 2.5,
+        "density": 0.005012524050048096,
+        "number_of_perturbed_genes_in_pathway": 298,
+        "number_of_sig_info_in_pathway": 12544
+    },
+    "synth_graph_4": {
+        "number_of_nodes": 500,
+        "number_of_edges": 2000,
+        "average_degree": 4.0,
+        "density": 0.008032064128256513,
+        "number_of_perturbed_genes_in_pathway": 322,
+        "number_of_sig_info_in_pathway": 12544
+    },
+    "synth_graph_5": {
+        "number_of_nodes": 100,
+        "number_of_edges": 200,
+        "average_degree": 2.0,
+        "density": 0.020202020202020204,
+        "number_of_perturbed_genes_in_pathway": 71,
+        "number_of_sig_info_in_pathway": 12544
+    },
+    "synth_graph_6": {
+        "number_of_nodes": 250,
+        "number_of_edges": 500,
+        "average_degree": 2.0,
+        "density": 0.008032128512,
+        "number_of_perturbed_genes_in_pathway": 195,
+        "number_of_sig_info_in_pathway": 12544
+    },
+    "synth_graph_7": {
+        "number_of_nodes": 600,
+        "number_of_edges": 1200,
+        "average_degree": 2.0,
+        "density": 0.006678782970,
+        "number_of_perturbed_genes_in_pathway": 271,
+        "number_of_sig_info_in_pathway": 12544
     }
 }

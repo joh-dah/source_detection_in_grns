@@ -82,9 +82,9 @@ def main():
         accelerator = "cpu"
 
     trainer = Trainer(
-        # Ask Lightning Fabric to use mixed precision which typically reduces GPU memory usage
-        # and speeds up training on Tensor-Core GPUs.
-        fabric_kwargs={"accelerator": accelerator, "devices": 1, "precision": "16-mixed"},
+        # Use 32-bit precision to avoid numerical instability causing NaN values
+        # (16-bit mixed precision can cause NaN in some edge cases)
+        fabric_kwargs={"accelerator": accelerator, "devices": 1, "precision": "32"},
         log=True, logging_name=f"{const.EXPERIMENT}_tuned",
         use_forward_data=True, use_backward_data=True, use_supervision=True,
         use_intervention_data=True, supervision_multiplier=0.05,
