@@ -47,6 +47,14 @@
         "number_of_perturbed_genes_in_pathway": 74,
         "number_of_sig_info_in_pathway": 6934
     },
+    "Alanine Aspartate And Glutamate Metabolism (hsa00250)": {
+        "number_of_nodes": 337,
+        "number_of_edges": 1406,
+        "average_degree": 4.172106824925816,
+        "density": 0.012380138946367407,
+        "number_of_perturbed_genes_in_pathway": 232,
+        "number_of_sig_info_in_pathway": 18244
+    },
     "Alcoholic Liver (hsa04936)": {
         "number_of_nodes": 36,
         "number_of_edges": 76,
@@ -87,6 +95,14 @@
         "number_of_perturbed_genes_in_pathway": 0,
         "number_of_sig_info_in_pathway": 0
     },
+    "Alpha Linolenic Acid Metabolism (hsa00592)": {
+        "number_of_nodes": 2614,
+        "number_of_edges": 19683,
+        "average_degree": 7.529839326702372,
+        "density": 0.002880581226741535,
+        "number_of_perturbed_genes_in_pathway": 1403,
+        "number_of_sig_info_in_pathway": 76151
+    },
     "Alzheimer (hsa05010)": {
         "number_of_nodes": 116,
         "number_of_edges": 163,
@@ -94,6 +110,22 @@
         "density": 0.012113555291319857,
         "number_of_perturbed_genes_in_pathway": 89,
         "number_of_sig_info_in_pathway": 5995
+    },
+    "Amino Sugar And Nucleotide Sugar Metabolism (hsa00520)": {
+        "number_of_nodes": 498,
+        "number_of_edges": 1791,
+        "average_degree": 3.5963855421686746,
+        "density": 0.007221657715198142,
+        "number_of_perturbed_genes_in_pathway": 340,
+        "number_of_sig_info_in_pathway": 23482
+    },
+    "Aminoacyl Trna Biosynthesis (hsa00970)": {
+        "number_of_nodes": 498,
+        "number_of_edges": 1791,
+        "average_degree": 3.5963855421686746,
+        "density": 0.007221657715198142,
+        "number_of_perturbed_genes_in_pathway": 340,
+        "number_of_sig_info_in_pathway": 23482
     },
     "Amoebiasis (hsa05146)": {
         "number_of_nodes": 11,
@@ -167,6 +199,30 @@
         "number_of_perturbed_genes_in_pathway": 17,
         "number_of_sig_info_in_pathway": 1167
     },
+    "Arachidonic Acid Metabolism (hsa00590)": {
+        "number_of_nodes": 640,
+        "number_of_edges": 2810,
+        "average_degree": 4.390625,
+        "density": 0.0068603515625,
+        "number_of_perturbed_genes_in_pathway": 429,
+        "number_of_sig_info_in_pathway": 28969
+    },
+    "Arginine And Proline Metabolism (hsa00330)": {
+        "number_of_nodes": 640,
+        "number_of_edges": 2810,
+        "average_degree": 4.390625,
+        "density": 0.0068603515625,
+        "number_of_perturbed_genes_in_pathway": 429,
+        "number_of_sig_info_in_pathway": 28969
+    },
+    "Arginine Biosynthesis (hsa00220)": {
+        "number_of_nodes": 640,
+        "number_of_edges": 2810,
+        "average_degree": 4.390625,
+        "density": 0.0068603515625,
+        "number_of_perturbed_genes_in_pathway": 429,
+        "number_of_sig_info_in_pathway": 28969
+    },
     "Arrhythmogenic Right Ventricular Cardiomyopathy (hsa05412)": {
         "number_of_nodes": 6,
         "number_of_edges": 8,
@@ -175,6 +231,14 @@
         "number_of_perturbed_genes_in_pathway": 5,
         "number_of_sig_info_in_pathway": 291
     },
+    "Ascorbate And Aldarate Metabolism (hsa00053)": {
+        "number_of_nodes": 640,
+        "number_of_edges": 2814,
+        "average_degree": 4.396875,
+        "density": 0.0068701171875,
+        "number_of_perturbed_genes_in_pathway": 429,
+        "number_of_sig_info_in_pathway": 28969
+    },
     "Asthma (hsa05310)": {
         "number_of_nodes": 2,
         "number_of_edges": 1,
@@ -182,6 +246,14 @@
         "density": 0.25,
         "number_of_perturbed_genes_in_pathway": 1,
         "number_of_sig_info_in_pathway": 49
+    },
+    "Atp Dependent Chromatin Remodeling (hsa03082)": {
+        "number_of_nodes": 137,
+        "number_of_edges": 452,
+        "average_degree": 3.2992700729927007,
+        "density": 0.024082263306516062,
+        "number_of_perturbed_genes_in_pathway": 113,
+        "number_of_sig_info_in_pathway": 9986
     },
     "Autoimmune Thyroid (hsa05320)": {
         "number_of_nodes": 3,
@@ -239,6 +311,30 @@
         "number_of_perturbed_genes_in_pathway": 27,
         "number_of_sig_info_in_pathway": 1560
     },
+    "Basal Transcription Factors (hsa03022)": {
+        "number_of_nodes": 832,
+        "number_of_edges": 3520,
+        "average_degree": 4.230769230769231,
+        "density": 0.005085059171597633,
+        "number_of_perturbed_genes_in_pathway": 544,
+        "number_of_sig_info_in_pathway": 35119
+    },
+    "Base Excision Repair (hsa03410)": {
+        "number_of_nodes": 832,
+        "number_of_edges": 3520,
+        "average_degree": 4.230769230769231,
+        "density": 0.005085059171597633,
+        "number_of_perturbed_genes_in_pathway": 544,
+        "number_of_sig_info_in_pathway": 35119
+    },
+    "Beta Alanine Metabolism (hsa00410)": {
+        "number_of_nodes": 2614,
+        "number_of_edges": 19683,
+        "average_degree": 7.529839326702372,
+        "density": 0.002880581226741535,
+        "number_of_perturbed_genes_in_pathway": 1403,
+        "number_of_sig_info_in_pathway": 76151
+    },
     "Bile Secretion (hsa04976)": {
         "number_of_nodes": 10,
         "number_of_edges": 9,
@@ -246,6 +342,54 @@
         "density": 0.09,
         "number_of_perturbed_genes_in_pathway": 3,
         "number_of_sig_info_in_pathway": 280
+    },
+    "Biosynthesis Of Amino Acids (hsa01230)": {
+        "number_of_nodes": 834,
+        "number_of_edges": 3525,
+        "average_degree": 4.226618705035971,
+        "density": 0.0050678881355347375,
+        "number_of_perturbed_genes_in_pathway": 544,
+        "number_of_sig_info_in_pathway": 35119
+    },
+    "Biosynthesis Of Cofactors (hsa01240)": {
+        "number_of_nodes": 834,
+        "number_of_edges": 3525,
+        "average_degree": 4.226618705035971,
+        "density": 0.0050678881355347375,
+        "number_of_perturbed_genes_in_pathway": 544,
+        "number_of_sig_info_in_pathway": 35119
+    },
+    "Biosynthesis Of Nucleotide Sugars (hsa01250)": {
+        "number_of_nodes": 834,
+        "number_of_edges": 3525,
+        "average_degree": 4.226618705035971,
+        "density": 0.0050678881355347375,
+        "number_of_perturbed_genes_in_pathway": 544,
+        "number_of_sig_info_in_pathway": 35119
+    },
+    "Biosynthesis Of Unsaturated Fatty Acids (hsa01040)": {
+        "number_of_nodes": 834,
+        "number_of_edges": 3525,
+        "average_degree": 4.226618705035971,
+        "density": 0.0050678881355347375,
+        "number_of_perturbed_genes_in_pathway": 544,
+        "number_of_sig_info_in_pathway": 35119
+    },
+    "Biosynthesis Of Various Nucleotide Sugars (hsa00541)": {
+        "number_of_nodes": 834,
+        "number_of_edges": 3525,
+        "average_degree": 4.226618705035971,
+        "density": 0.0050678881355347375,
+        "number_of_perturbed_genes_in_pathway": 544,
+        "number_of_sig_info_in_pathway": 35119
+    },
+    "Biotin Metabolism (hsa00780)": {
+        "number_of_nodes": 834,
+        "number_of_edges": 3525,
+        "average_degree": 4.226618705035971,
+        "density": 0.0050678881355347375,
+        "number_of_perturbed_genes_in_pathway": 544,
+        "number_of_sig_info_in_pathway": 35119
     },
     "Bladder Cancer (hsa05219)": {
         "number_of_nodes": 11,
@@ -263,6 +407,14 @@
         "number_of_perturbed_genes_in_pathway": 71,
         "number_of_sig_info_in_pathway": 6186
     },
+    "Butanoate Metabolism (hsa00650)": {
+        "number_of_nodes": 871,
+        "number_of_edges": 3646,
+        "average_degree": 4.185993111366246,
+        "density": 0.004805962240374564,
+        "number_of_perturbed_genes_in_pathway": 573,
+        "number_of_sig_info_in_pathway": 36841
+    },
     "C Type Lectin Receptor Signaling (hsa04625)": {
         "number_of_nodes": 17,
         "number_of_edges": 17,
@@ -270,6 +422,14 @@
         "density": 0.058823529411764705,
         "number_of_perturbed_genes_in_pathway": 16,
         "number_of_sig_info_in_pathway": 1633
+    },
+    "Caffeine Metabolism (hsa00232)": {
+        "number_of_nodes": 883,
+        "number_of_edges": 3697,
+        "average_degree": 4.186862967157418,
+        "density": 0.004741634164391187,
+        "number_of_perturbed_genes_in_pathway": 584,
+        "number_of_sig_info_in_pathway": 37480
     },
     "Calcium Signaling (hsa04020)": {
         "number_of_nodes": 73,
@@ -294,6 +454,22 @@
         "density": 0.16,
         "number_of_perturbed_genes_in_pathway": 3,
         "number_of_sig_info_in_pathway": 110
+    },
+    "Carbon Metabolism (hsa01200)": {
+        "number_of_nodes": 951,
+        "number_of_edges": 4486,
+        "average_degree": 4.7171398527865405,
+        "density": 0.004960189119649359,
+        "number_of_perturbed_genes_in_pathway": 614,
+        "number_of_sig_info_in_pathway": 39831
+    },
+    "Cardiac Muscle Contraction (hsa04260)": {
+        "number_of_nodes": 951,
+        "number_of_edges": 4486,
+        "average_degree": 4.7171398527865405,
+        "density": 0.004960189119649359,
+        "number_of_perturbed_genes_in_pathway": 614,
+        "number_of_sig_info_in_pathway": 39831
     },
     "Cell Adhesion Molecule Cam Interaction (hsa04514)": {
         "number_of_nodes": 12,
@@ -342,6 +518,14 @@
         "density": 0.03864447086801427,
         "number_of_perturbed_genes_in_pathway": 48,
         "number_of_sig_info_in_pathway": 4186
+    },
+    "Chemical Carcinogenesis Dna Adducts (hsa05204)": {
+        "number_of_nodes": 1036,
+        "number_of_edges": 4866,
+        "average_degree": 4.696911196911197,
+        "density": 0.0045336980665166,
+        "number_of_perturbed_genes_in_pathway": 685,
+        "number_of_sig_info_in_pathway": 44279
     },
     "Chemical Carcinogenesis Reactive Oxygen Species (hsa05208)": {
         "number_of_nodes": 36,
@@ -407,6 +591,22 @@
         "number_of_perturbed_genes_in_pathway": 31,
         "number_of_sig_info_in_pathway": 1777
     },
+    "Circadian Rhythm (hsa04710)": {
+        "number_of_nodes": 1158,
+        "number_of_edges": 6499,
+        "average_degree": 5.612262521588947,
+        "density": 0.004846513403790109,
+        "number_of_perturbed_genes_in_pathway": 752,
+        "number_of_sig_info_in_pathway": 46821
+    },
+    "Citrate Cycle Tca Cycle (hsa00020)": {
+        "number_of_nodes": 1158,
+        "number_of_edges": 6499,
+        "average_degree": 5.612262521588947,
+        "density": 0.004846513403790109,
+        "number_of_perturbed_genes_in_pathway": 752,
+        "number_of_sig_info_in_pathway": 46821
+    },
     "Cobalamin Transport And Metabolism (hsa04980)": {
         "number_of_nodes": 2,
         "number_of_edges": 1,
@@ -423,6 +623,14 @@
         "number_of_perturbed_genes_in_pathway": 12,
         "number_of_sig_info_in_pathway": 697
     },
+    "Collecting Duct Acid Secretion (hsa04966)": {
+        "number_of_nodes": 1162,
+        "number_of_edges": 6509,
+        "average_degree": 5.601549053356282,
+        "density": 0.004820610200822963,
+        "number_of_perturbed_genes_in_pathway": 753,
+        "number_of_sig_info_in_pathway": 46822
+    },
     "Colorectal Cancer (hsa05210)": {
         "number_of_nodes": 40,
         "number_of_edges": 90,
@@ -438,6 +646,14 @@
         "density": 0.0859375,
         "number_of_perturbed_genes_in_pathway": 11,
         "number_of_sig_info_in_pathway": 463
+    },
+    "Cornified Envelope Formation (hsa04382)": {
+        "number_of_nodes": 1179,
+        "number_of_edges": 6560,
+        "average_degree": 5.564037319762511,
+        "density": 0.004719285258492375,
+        "number_of_perturbed_genes_in_pathway": 765,
+        "number_of_sig_info_in_pathway": 47307
     },
     "Coronavirus Covid 19 (hsa05171)": {
         "number_of_nodes": 35,
@@ -463,6 +679,14 @@
         "number_of_perturbed_genes_in_pathway": 27,
         "number_of_sig_info_in_pathway": 1799
     },
+    "Cysteine And Methionine Metabolism (hsa00270)": {
+        "number_of_nodes": 1237,
+        "number_of_edges": 6772,
+        "average_degree": 5.474535165723525,
+        "density": 0.004425654943996382,
+        "number_of_perturbed_genes_in_pathway": 792,
+        "number_of_sig_info_in_pathway": 48673
+    },
     "Cytokine Cytokine Receptor Interaction (hsa04060)": {
         "number_of_nodes": 27,
         "number_of_edges": 35,
@@ -471,6 +695,14 @@
         "number_of_perturbed_genes_in_pathway": 15,
         "number_of_sig_info_in_pathway": 341
     },
+    "Cytoskeleton In Muscle Cells (hsa04820)": {
+        "number_of_nodes": 1250,
+        "number_of_edges": 6794,
+        "average_degree": 5.4352,
+        "density": 0.00434816,
+        "number_of_perturbed_genes_in_pathway": 800,
+        "number_of_sig_info_in_pathway": 48888
+    },
     "Cytosolic Dna Sensing (hsa04623)": {
         "number_of_nodes": 15,
         "number_of_edges": 26,
@@ -478,6 +710,14 @@
         "density": 0.11555555555555555,
         "number_of_perturbed_genes_in_pathway": 6,
         "number_of_sig_info_in_pathway": 187
+    },
+    "D Amino Acid Metabolism (hsa00470)": {
+        "number_of_nodes": 1259,
+        "number_of_edges": 6826,
+        "average_degree": 5.421763304209691,
+        "density": 0.004306404530746378,
+        "number_of_perturbed_genes_in_pathway": 804,
+        "number_of_sig_info_in_pathway": 49020
     },
     "Diabetic Cardiomyopathy (hsa05415)": {
         "number_of_nodes": 32,
@@ -495,6 +735,14 @@
         "number_of_perturbed_genes_in_pathway": 6,
         "number_of_sig_info_in_pathway": 361
     },
+    "Dna Replication (hsa03030)": {
+        "number_of_nodes": 1259,
+        "number_of_edges": 6826,
+        "average_degree": 5.421763304209691,
+        "density": 0.004306404530746378,
+        "number_of_perturbed_genes_in_pathway": 804,
+        "number_of_sig_info_in_pathway": 49020
+    },
     "Dopaminergic Synapse (hsa04728)": {
         "number_of_nodes": 100,
         "number_of_edges": 437,
@@ -502,6 +750,22 @@
         "density": 0.0437,
         "number_of_perturbed_genes_in_pathway": 62,
         "number_of_sig_info_in_pathway": 4350
+    },
+    "Drug Metabolism Cytochrome P450 (hsa00982)": {
+        "number_of_nodes": 1272,
+        "number_of_edges": 7059,
+        "average_degree": 5.5495283018867925,
+        "density": 0.004362836715319805,
+        "number_of_perturbed_genes_in_pathway": 810,
+        "number_of_sig_info_in_pathway": 49248
+    },
+    "Drug Metabolism Other Enzymes (hsa00983)": {
+        "number_of_nodes": 1272,
+        "number_of_edges": 7059,
+        "average_degree": 5.5495283018867925,
+        "density": 0.004362836715319805,
+        "number_of_perturbed_genes_in_pathway": 810,
+        "number_of_sig_info_in_pathway": 49248
     },
     "Ecm Receptor Interaction (hsa04512)": {
         "number_of_nodes": 46,
@@ -518,6 +782,14 @@
         "density": 0.03512396694214876,
         "number_of_perturbed_genes_in_pathway": 33,
         "number_of_sig_info_in_pathway": 2041
+    },
+    "Egfr Signaling (hsa01521)": {
+        "number_of_nodes": 72,
+        "number_of_edges": 175,
+        "average_degree": 2.4305555555555554,
+        "density": 0.03375771604938271,
+        "number_of_perturbed_genes_in_pathway": 68,
+        "number_of_sig_info_in_pathway": 7921
     },
     "Egfr Tyrosine Kinase Inhibitor Resistance (hsa01521)": {
         "number_of_nodes": 72,
@@ -542,6 +814,14 @@
         "density": 0.055411030176899065,
         "number_of_perturbed_genes_in_pathway": 52,
         "number_of_sig_info_in_pathway": 6560
+    },
+    "Endocytosis (hsa04144)": {
+        "number_of_nodes": 1364,
+        "number_of_edges": 7532,
+        "average_degree": 5.521994134897361,
+        "density": 0.004048382796845573,
+        "number_of_perturbed_genes_in_pathway": 849,
+        "number_of_sig_info_in_pathway": 51364
     },
     "Endometrial Cancer (hsa05213)": {
         "number_of_nodes": 22,
@@ -583,6 +863,14 @@
         "number_of_perturbed_genes_in_pathway": 49,
         "number_of_sig_info_in_pathway": 4565
     },
+    "Ether Lipid Metabolism (hsa00565)": {
+        "number_of_nodes": 1396,
+        "number_of_edges": 7757,
+        "average_degree": 5.556590257879656,
+        "density": 0.0039803655142404415,
+        "number_of_perturbed_genes_in_pathway": 869,
+        "number_of_sig_info_in_pathway": 52638
+    },
     "Fanconi Anemia (hsa03460)": {
         "number_of_nodes": 2,
         "number_of_edges": 1,
@@ -590,6 +878,46 @@
         "density": 0.25,
         "number_of_perturbed_genes_in_pathway": 1,
         "number_of_sig_info_in_pathway": 121
+    },
+    "Fat Digestion And Absorption (hsa04975)": {
+        "number_of_nodes": 1397,
+        "number_of_edges": 7758,
+        "average_degree": 5.553328561202577,
+        "density": 0.003975181504082016,
+        "number_of_perturbed_genes_in_pathway": 869,
+        "number_of_sig_info_in_pathway": 52638
+    },
+    "Fatty Acid Biosynthesis (hsa00061)": {
+        "number_of_nodes": 1397,
+        "number_of_edges": 7758,
+        "average_degree": 5.553328561202577,
+        "density": 0.003975181504082016,
+        "number_of_perturbed_genes_in_pathway": 869,
+        "number_of_sig_info_in_pathway": 52638
+    },
+    "Fatty Acid Degradation (hsa00071)": {
+        "number_of_nodes": 1397,
+        "number_of_edges": 7758,
+        "average_degree": 5.553328561202577,
+        "density": 0.003975181504082016,
+        "number_of_perturbed_genes_in_pathway": 869,
+        "number_of_sig_info_in_pathway": 52638
+    },
+    "Fatty Acid Elongation (hsa00062)": {
+        "number_of_nodes": 1397,
+        "number_of_edges": 7758,
+        "average_degree": 5.553328561202577,
+        "density": 0.003975181504082016,
+        "number_of_perturbed_genes_in_pathway": 869,
+        "number_of_sig_info_in_pathway": 52638
+    },
+    "Fatty Acid Metabolism (hsa01212)": {
+        "number_of_nodes": 1397,
+        "number_of_edges": 7758,
+        "average_degree": 5.553328561202577,
+        "density": 0.003975181504082016,
+        "number_of_perturbed_genes_in_pathway": 869,
+        "number_of_sig_info_in_pathway": 52638
     },
     "Fc Epsilon Ri Signaling (hsa04664)": {
         "number_of_nodes": 36,
@@ -631,6 +959,22 @@
         "number_of_perturbed_genes_in_pathway": 77,
         "number_of_sig_info_in_pathway": 6860
     },
+    "Folate Biosynthesis (hsa00790)": {
+        "number_of_nodes": 1463,
+        "number_of_edges": 8221,
+        "average_degree": 5.619275461380725,
+        "density": 0.003840926494450256,
+        "number_of_perturbed_genes_in_pathway": 901,
+        "number_of_sig_info_in_pathway": 54244
+    },
+    "Folate Transport And Metabolism (hsa04981)": {
+        "number_of_nodes": 1463,
+        "number_of_edges": 8221,
+        "average_degree": 5.619275461380725,
+        "density": 0.003840926494450256,
+        "number_of_perturbed_genes_in_pathway": 901,
+        "number_of_sig_info_in_pathway": 54244
+    },
     "Foxo Signaling (hsa04068)": {
         "number_of_nodes": 89,
         "number_of_edges": 259,
@@ -639,6 +983,14 @@
         "number_of_perturbed_genes_in_pathway": 80,
         "number_of_sig_info_in_pathway": 7362
     },
+    "Fructose And Mannose Metabolism (hsa00051)": {
+        "number_of_nodes": 1484,
+        "number_of_edges": 8449,
+        "average_degree": 5.693396226415095,
+        "density": 0.0038365203682042413,
+        "number_of_perturbed_genes_in_pathway": 915,
+        "number_of_sig_info_in_pathway": 54933
+    },
     "Gabaergic Synapse (hsa04727)": {
         "number_of_nodes": 33,
         "number_of_edges": 272,
@@ -646,6 +998,14 @@
         "density": 0.2497704315886134,
         "number_of_perturbed_genes_in_pathway": 14,
         "number_of_sig_info_in_pathway": 738
+    },
+    "Galactose Metabolism (hsa00052)": {
+        "number_of_nodes": 1484,
+        "number_of_edges": 8543,
+        "average_degree": 5.756738544474394,
+        "density": 0.003879203870939618,
+        "number_of_perturbed_genes_in_pathway": 915,
+        "number_of_sig_info_in_pathway": 54933
     },
     "Gap Junction (hsa04540)": {
         "number_of_nodes": 42,
@@ -695,6 +1055,126 @@
         "number_of_perturbed_genes_in_pathway": 21,
         "number_of_sig_info_in_pathway": 1124
     },
+    "Glutathione Metabolism (hsa00480)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycerolipid Metabolism (hsa00561)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycerophospholipid Metabolism (hsa00564)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycine Serine And Threonine Metabolism (hsa00260)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycolysis Gluconeogenesis (hsa00010)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycosaminoglycan Biosynthesis Chondroitin Sulfate Dermatan Sulfate (hsa00532)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycosaminoglycan Biosynthesis Heparan Sulfate Heparin (hsa00534)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycosaminoglycan Biosynthesis Keratan Sulfate (hsa00533)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycosaminoglycan Degradation (hsa00531)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycosphingolipid Biosynthesis Ganglio Series (hsa00604)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycosphingolipid Biosynthesis Globo And Isoglobo Series (hsa00603)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycosphingolipid Biosynthesis Lacto And Neolacto Series (hsa00601)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glycosylphosphatidylinositol Gpi Anchor Biosynthesis (hsa00563)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Glyoxylate And Dicarboxylate Metabolism (hsa00630)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
+    "Gnrh Secretion (hsa04929)": {
+        "number_of_nodes": 1510,
+        "number_of_edges": 8792,
+        "average_degree": 5.822516556291391,
+        "density": 0.003855971229332047,
+        "number_of_perturbed_genes_in_pathway": 928,
+        "number_of_sig_info_in_pathway": 55352
+    },
     "Gnrh Signaling (hsa04912)": {
         "number_of_nodes": 20,
         "number_of_edges": 31,
@@ -727,6 +1207,14 @@
         "number_of_perturbed_genes_in_pathway": 20,
         "number_of_sig_info_in_pathway": 1372
     },
+    "Hematopoietic Cell Lineage (hsa04640)": {
+        "number_of_nodes": 1548,
+        "number_of_edges": 9041,
+        "average_degree": 5.840439276485788,
+        "density": 0.0037728935894611034,
+        "number_of_perturbed_genes_in_pathway": 950,
+        "number_of_sig_info_in_pathway": 56257
+    },
     "Hepatitis B (hsa05161)": {
         "number_of_nodes": 75,
         "number_of_edges": 176,
@@ -736,12 +1224,12 @@
         "number_of_sig_info_in_pathway": 7604
     },
     "Hepatitis C (hsa05160)": {
-        "number_of_nodes": 51,
-        "number_of_edges": 76,
-        "average_degree": 1.4901960784313726,
-        "density": 0.029219530949634757,
-        "number_of_perturbed_genes_in_pathway": 32,
-        "number_of_sig_info_in_pathway": 2364
+        "number_of_nodes": 53,
+        "number_of_edges": 88,
+        "average_degree": 1.6603773584905661,
+        "density": 0.03132787468850125,
+        "number_of_perturbed_genes_in_pathway": 34,
+        "number_of_sig_info_in_pathway": 2583
     },
     "Hepatocellular Carcinoma (hsa05225)": {
         "number_of_nodes": 29,
@@ -782,6 +1270,22 @@
         "density": 0.09,
         "number_of_perturbed_genes_in_pathway": 6,
         "number_of_sig_info_in_pathway": 284
+    },
+    "Histidine Metabolism (hsa00340)": {
+        "number_of_nodes": 1594,
+        "number_of_edges": 9307,
+        "average_degree": 5.8387703889585945,
+        "density": 0.0036629676216804233,
+        "number_of_perturbed_genes_in_pathway": 977,
+        "number_of_sig_info_in_pathway": 57543
+    },
+    "Homologous Recombination (hsa03440)": {
+        "number_of_nodes": 1594,
+        "number_of_edges": 9307,
+        "average_degree": 5.8387703889585945,
+        "density": 0.0036629676216804233,
+        "number_of_perturbed_genes_in_pathway": 977,
+        "number_of_sig_info_in_pathway": 57543
     },
     "Hormone Signaling (hsa04081)": {
         "number_of_nodes": 148,
@@ -831,6 +1335,14 @@
         "number_of_perturbed_genes_in_pathway": 20,
         "number_of_sig_info_in_pathway": 1190
     },
+    "Hypertrophic Cardiomyopathy (hsa05410)": {
+        "number_of_nodes": 1747,
+        "number_of_edges": 10824,
+        "average_degree": 6.1957641671436745,
+        "density": 0.0035465164093552806,
+        "number_of_perturbed_genes_in_pathway": 1050,
+        "number_of_sig_info_in_pathway": 60517
+    },
     "Igsf Cam Signaling (hsa04517)": {
         "number_of_nodes": 162,
         "number_of_edges": 365,
@@ -870,6 +1382,14 @@
         "density": 0.0945821854912764,
         "number_of_perturbed_genes_in_pathway": 20,
         "number_of_sig_info_in_pathway": 1050
+    },
+    "Inositol Phosphate Metabolism (hsa00562)": {
+        "number_of_nodes": 1876,
+        "number_of_edges": 11517,
+        "average_degree": 6.139125799573561,
+        "density": 0.0032724551170434757,
+        "number_of_perturbed_genes_in_pathway": 1099,
+        "number_of_sig_info_in_pathway": 62811
     },
     "Insulin Resistance (hsa04931)": {
         "number_of_nodes": 83,
@@ -951,6 +1471,14 @@
         "number_of_perturbed_genes_in_pathway": 24,
         "number_of_sig_info_in_pathway": 1508
     },
+    "Linoleic Acid Metabolism (hsa00591)": {
+        "number_of_nodes": 1932,
+        "number_of_edges": 11958,
+        "average_degree": 6.1894409937888195,
+        "density": 0.0032036444067229915,
+        "number_of_perturbed_genes_in_pathway": 1130,
+        "number_of_sig_info_in_pathway": 64501
+    },
     "Lipid And Atherosclerosis (hsa05417)": {
         "number_of_nodes": 132,
         "number_of_edges": 279,
@@ -958,6 +1486,14 @@
         "density": 0.016012396694214875,
         "number_of_perturbed_genes_in_pathway": 104,
         "number_of_sig_info_in_pathway": 8800
+    },
+    "Lipoic Acid Metabolism (hsa00785)": {
+        "number_of_nodes": 1955,
+        "number_of_edges": 12062,
+        "average_degree": 6.169820971867008,
+        "density": 0.003155918655686449,
+        "number_of_perturbed_genes_in_pathway": 1141,
+        "number_of_sig_info_in_pathway": 65044
     },
     "Long Term Depression (hsa04730)": {
         "number_of_nodes": 45,
@@ -991,6 +1527,22 @@
         "number_of_perturbed_genes_in_pathway": 30,
         "number_of_sig_info_in_pathway": 2490
     },
+    "Lysine Degradation (hsa00310)": {
+        "number_of_nodes": 1964,
+        "number_of_edges": 12275,
+        "average_degree": 6.25,
+        "density": 0.0031822810590631367,
+        "number_of_perturbed_genes_in_pathway": 1147,
+        "number_of_sig_info_in_pathway": 65291
+    },
+    "Lysosome (hsa04142)": {
+        "number_of_nodes": 1964,
+        "number_of_edges": 12275,
+        "average_degree": 6.25,
+        "density": 0.0031822810590631367,
+        "number_of_perturbed_genes_in_pathway": 1147,
+        "number_of_sig_info_in_pathway": 65291
+    },
     "Malaria (hsa05144)": {
         "number_of_nodes": 3,
         "number_of_edges": 2,
@@ -998,6 +1550,14 @@
         "density": 0.2222222222222222,
         "number_of_perturbed_genes_in_pathway": 3,
         "number_of_sig_info_in_pathway": 132
+    },
+    "Mannose Type O Glycan Biosynthesis (hsa00515)": {
+        "number_of_nodes": 1988,
+        "number_of_edges": 13169,
+        "average_degree": 6.624245472837022,
+        "density": 0.0033321154289924658,
+        "number_of_perturbed_genes_in_pathway": 1165,
+        "number_of_sig_info_in_pathway": 65915
     },
     "Mapk Signaling (hsa04010)": {
         "number_of_nodes": 74,
@@ -1039,6 +1599,30 @@
         "number_of_perturbed_genes_in_pathway": 47,
         "number_of_sig_info_in_pathway": 5273
     },
+    "Metabolics (hsa01100)": {
+        "number_of_nodes": 2008,
+        "number_of_edges": 13260,
+        "average_degree": 6.603585657370518,
+        "density": 0.003288638275582927,
+        "number_of_perturbed_genes_in_pathway": 1174,
+        "number_of_sig_info_in_pathway": 66319
+    },
+    "Metabolism Of Xenobiotics By Cytochrome P450 (hsa00980)": {
+        "number_of_nodes": 2008,
+        "number_of_edges": 13260,
+        "average_degree": 6.603585657370518,
+        "density": 0.003288638275582927,
+        "number_of_perturbed_genes_in_pathway": 1174,
+        "number_of_sig_info_in_pathway": 66319
+    },
+    "Micrornas In Cancer (hsa05206)": {
+        "number_of_nodes": 2008,
+        "number_of_edges": 13260,
+        "average_degree": 6.603585657370518,
+        "density": 0.003288638275582927,
+        "number_of_perturbed_genes_in_pathway": 1174,
+        "number_of_sig_info_in_pathway": 66319
+    },
     "Mineral Absorption (hsa04978)": {
         "number_of_nodes": 11,
         "number_of_edges": 10,
@@ -1046,6 +1630,14 @@
         "density": 0.08264462809917356,
         "number_of_perturbed_genes_in_pathway": 1,
         "number_of_sig_info_in_pathway": 54
+    },
+    "Mismatch Repair (hsa03430)": {
+        "number_of_nodes": 2012,
+        "number_of_edges": 13268,
+        "average_degree": 6.594433399602385,
+        "density": 0.003277551391452478,
+        "number_of_perturbed_genes_in_pathway": 1174,
+        "number_of_sig_info_in_pathway": 66319
     },
     "Mitophagy Animal (hsa04137)": {
         "number_of_nodes": 16,
@@ -1063,6 +1655,14 @@
         "number_of_perturbed_genes_in_pathway": 25,
         "number_of_sig_info_in_pathway": 1341
     },
+    "Motor Proteins (hsa04814)": {
+        "number_of_nodes": 2029,
+        "number_of_edges": 13430,
+        "average_degree": 6.619024149827501,
+        "density": 0.0032622100294862006,
+        "number_of_perturbed_genes_in_pathway": 1183,
+        "number_of_sig_info_in_pathway": 66641
+    },
     "Mrna Surveillance (hsa03015)": {
         "number_of_nodes": 2,
         "number_of_edges": 1,
@@ -1079,6 +1679,22 @@
         "number_of_perturbed_genes_in_pathway": 51,
         "number_of_sig_info_in_pathway": 5466
     },
+    "Mucin Type O Glycan Biosynthesis (hsa00512)": {
+        "number_of_nodes": 2029,
+        "number_of_edges": 13430,
+        "average_degree": 6.619024149827501,
+        "density": 0.0032622100294862006,
+        "number_of_perturbed_genes_in_pathway": 1183,
+        "number_of_sig_info_in_pathway": 66641
+    },
+    "N Glycan Biosynthesis (hsa00510)": {
+        "number_of_nodes": 2057,
+        "number_of_edges": 13524,
+        "average_degree": 6.574623237724842,
+        "density": 0.003196219366905611,
+        "number_of_perturbed_genes_in_pathway": 1197,
+        "number_of_sig_info_in_pathway": 67197
+    },
     "Natural Killer Cell Mediated Cytotoxicity (hsa04650)": {
         "number_of_nodes": 52,
         "number_of_edges": 129,
@@ -1094,6 +1710,14 @@
         "density": 0.06190926275992439,
         "number_of_perturbed_genes_in_pathway": 32,
         "number_of_sig_info_in_pathway": 2272
+    },
+    "Neomycin Kanamycin And Gentamicin Biosynthesis (hsa00524)": {
+        "number_of_nodes": 2077,
+        "number_of_edges": 13664,
+        "average_degree": 6.578719306692345,
+        "density": 0.003167414206399781,
+        "number_of_perturbed_genes_in_pathway": 1205,
+        "number_of_sig_info_in_pathway": 67566
     },
     "Neuroactive Ligand Receptor Interaction (hsa04080)": {
         "number_of_nodes": 16,
@@ -1135,6 +1759,38 @@
         "number_of_perturbed_genes_in_pathway": 6,
         "number_of_sig_info_in_pathway": 510
     },
+    "Nf Kb Signaling (hsa04064)": {
+        "number_of_nodes": 6,
+        "number_of_edges": 5,
+        "average_degree": 0.8333333333333334,
+        "density": 0.1388888888888889,
+        "number_of_perturbed_genes_in_pathway": 6,
+        "number_of_sig_info_in_pathway": 510
+    },
+    "Nicotinate And Nicotinamide Metabolism (hsa00760)": {
+        "number_of_nodes": 2144,
+        "number_of_edges": 14172,
+        "average_degree": 6.610074626865671,
+        "density": 0.0030830571953664515,
+        "number_of_perturbed_genes_in_pathway": 1220,
+        "number_of_sig_info_in_pathway": 67935
+    },
+    "Nicotine Addiction (hsa05033)": {
+        "number_of_nodes": 2144,
+        "number_of_edges": 14172,
+        "average_degree": 6.610074626865671,
+        "density": 0.0030830571953664515,
+        "number_of_perturbed_genes_in_pathway": 1220,
+        "number_of_sig_info_in_pathway": 67935
+    },
+    "Nitrogen Metabolism (hsa00910)": {
+        "number_of_nodes": 2144,
+        "number_of_edges": 14172,
+        "average_degree": 6.610074626865671,
+        "density": 0.0030830571953664515,
+        "number_of_perturbed_genes_in_pathway": 1220,
+        "number_of_sig_info_in_pathway": 67935
+    },
     "Nod Like Receptor Signaling (hsa04621)": {
         "number_of_nodes": 100,
         "number_of_edges": 215,
@@ -1150,6 +1806,14 @@
         "density": 0.04158790170132325,
         "number_of_perturbed_genes_in_pathway": 46,
         "number_of_sig_info_in_pathway": 4701
+    },
+    "Non Homologous End Joining (hsa03450)": {
+        "number_of_nodes": 2146,
+        "number_of_edges": 14214,
+        "average_degree": 6.6234855545200375,
+        "density": 0.003086433156812692,
+        "number_of_perturbed_genes_in_pathway": 1222,
+        "number_of_sig_info_in_pathway": 67985
     },
     "Non Small Cell Lung Cancer (hsa05223)": {
         "number_of_nodes": 38,
@@ -1167,6 +1831,30 @@
         "number_of_perturbed_genes_in_pathway": 12,
         "number_of_sig_info_in_pathway": 485
     },
+    "Nucleocytoplasmic Transport (hsa03013)": {
+        "number_of_nodes": 2155,
+        "number_of_edges": 14280,
+        "average_degree": 6.626450116009281,
+        "density": 0.003074918847336093,
+        "number_of_perturbed_genes_in_pathway": 1228,
+        "number_of_sig_info_in_pathway": 68191
+    },
+    "Nucleotide Excision Repair (hsa03420)": {
+        "number_of_nodes": 2155,
+        "number_of_edges": 14280,
+        "average_degree": 6.626450116009281,
+        "density": 0.003074918847336093,
+        "number_of_perturbed_genes_in_pathway": 1228,
+        "number_of_sig_info_in_pathway": 68191
+    },
+    "Nucleotide Metabolism (hsa01232)": {
+        "number_of_nodes": 2155,
+        "number_of_edges": 14280,
+        "average_degree": 6.626450116009281,
+        "density": 0.003074918847336093,
+        "number_of_perturbed_genes_in_pathway": 1228,
+        "number_of_sig_info_in_pathway": 68191
+    },
     "Olfactory Transduction (hsa04740)": {
         "number_of_nodes": 62,
         "number_of_edges": 454,
@@ -1174,6 +1862,14 @@
         "density": 0.11810613943808533,
         "number_of_perturbed_genes_in_pathway": 14,
         "number_of_sig_info_in_pathway": 664
+    },
+    "One Carbon Pool By Folate (hsa00670)": {
+        "number_of_nodes": 2195,
+        "number_of_edges": 14706,
+        "average_degree": 6.6997722095671985,
+        "density": 0.003052288022581867,
+        "number_of_perturbed_genes_in_pathway": 1229,
+        "number_of_sig_info_in_pathway": 68265
     },
     "Oocyte Meiosis (hsa04114)": {
         "number_of_nodes": 49,
@@ -1191,6 +1887,22 @@
         "number_of_perturbed_genes_in_pathway": 34,
         "number_of_sig_info_in_pathway": 2840
     },
+    "Other Glycan Degradation (hsa00511)": {
+        "number_of_nodes": 2213,
+        "number_of_edges": 14867,
+        "average_degree": 6.7180298237686396,
+        "density": 0.003035711623935219,
+        "number_of_perturbed_genes_in_pathway": 1239,
+        "number_of_sig_info_in_pathway": 68807
+    },
+    "Other Types Of O Glycan Biosynthesis (hsa00514)": {
+        "number_of_nodes": 2213,
+        "number_of_edges": 14867,
+        "average_degree": 6.7180298237686396,
+        "density": 0.003035711623935219,
+        "number_of_perturbed_genes_in_pathway": 1239,
+        "number_of_sig_info_in_pathway": 68807
+    },
     "Ovarian Steroidogenesis (hsa04913)": {
         "number_of_nodes": 15,
         "number_of_edges": 15,
@@ -1198,6 +1910,14 @@
         "density": 0.06666666666666667,
         "number_of_perturbed_genes_in_pathway": 5,
         "number_of_sig_info_in_pathway": 331
+    },
+    "Oxidative Phosphorylation (hsa00190)": {
+        "number_of_nodes": 2220,
+        "number_of_edges": 14894,
+        "average_degree": 6.709009009009009,
+        "density": 0.0030220761301842382,
+        "number_of_perturbed_genes_in_pathway": 1242,
+        "number_of_sig_info_in_pathway": 68945
     },
     "Oxytocin Signaling (hsa04921)": {
         "number_of_nodes": 111,
@@ -1230,6 +1950,14 @@
         "density": 0.09876543209876543,
         "number_of_perturbed_genes_in_pathway": 5,
         "number_of_sig_info_in_pathway": 195
+    },
+    "Pantothenate And Coa Biosynthesis (hsa00770)": {
+        "number_of_nodes": 2238,
+        "number_of_edges": 15174,
+        "average_degree": 6.7801608579088475,
+        "density": 0.0030295624923632027,
+        "number_of_perturbed_genes_in_pathway": 1252,
+        "number_of_sig_info_in_pathway": 69422
     },
     "Parathyroid Hormone Synthesis Secretion And Action (hsa04928)": {
         "number_of_nodes": 89,
@@ -1279,6 +2007,30 @@
         "number_of_perturbed_genes_in_pathway": 58,
         "number_of_sig_info_in_pathway": 6032
     },
+    "Pentose And Glucuronate Interconversions (hsa00040)": {
+        "number_of_nodes": 2319,
+        "number_of_edges": 16141,
+        "average_degree": 6.960327727468736,
+        "density": 0.0030014349838157553,
+        "number_of_perturbed_genes_in_pathway": 1288,
+        "number_of_sig_info_in_pathway": 70958
+    },
+    "Pentose Phosphate (hsa00030)": {
+        "number_of_nodes": 2319,
+        "number_of_edges": 16141,
+        "average_degree": 6.960327727468736,
+        "density": 0.0030014349838157553,
+        "number_of_perturbed_genes_in_pathway": 1288,
+        "number_of_sig_info_in_pathway": 70958
+    },
+    "Peroxisome (hsa04146)": {
+        "number_of_nodes": 2319,
+        "number_of_edges": 16141,
+        "average_degree": 6.960327727468736,
+        "density": 0.0030014349838157553,
+        "number_of_perturbed_genes_in_pathway": 1288,
+        "number_of_sig_info_in_pathway": 70958
+    },
     "Pertussis (hsa05133)": {
         "number_of_nodes": 17,
         "number_of_edges": 53,
@@ -1287,6 +2039,38 @@
         "number_of_perturbed_genes_in_pathway": 17,
         "number_of_sig_info_in_pathway": 1700
     },
+    "Phagosome (hsa04145)": {
+        "number_of_nodes": 2320,
+        "number_of_edges": 16173,
+        "average_degree": 6.971120689655172,
+        "density": 0.0030047934007134364,
+        "number_of_perturbed_genes_in_pathway": 1289,
+        "number_of_sig_info_in_pathway": 70959
+    },
+    "Phenylalanine Metabolism (hsa00360)": {
+        "number_of_nodes": 2320,
+        "number_of_edges": 16173,
+        "average_degree": 6.971120689655172,
+        "density": 0.0030047934007134364,
+        "number_of_perturbed_genes_in_pathway": 1289,
+        "number_of_sig_info_in_pathway": 70959
+    },
+    "Phenylalanine Tyrosine And Tryptophan Biosynthesis (hsa00400)": {
+        "number_of_nodes": 2320,
+        "number_of_edges": 16173,
+        "average_degree": 6.971120689655172,
+        "density": 0.0030047934007134364,
+        "number_of_perturbed_genes_in_pathway": 1289,
+        "number_of_sig_info_in_pathway": 70959
+    },
+    "Phosphatidylinositol Signaling System (hsa04070)": {
+        "number_of_nodes": 2320,
+        "number_of_edges": 16173,
+        "average_degree": 6.971120689655172,
+        "density": 0.0030047934007134364,
+        "number_of_perturbed_genes_in_pathway": 1289,
+        "number_of_sig_info_in_pathway": 70959
+    },
     "Phospholipase D Signaling (hsa04072)": {
         "number_of_nodes": 94,
         "number_of_edges": 407,
@@ -1294,6 +2078,14 @@
         "density": 0.04606156631960163,
         "number_of_perturbed_genes_in_pathway": 62,
         "number_of_sig_info_in_pathway": 4602
+    },
+    "Phosphonate And Phosphinate Metabolism (hsa00440)": {
+        "number_of_nodes": 2321,
+        "number_of_edges": 16415,
+        "average_degree": 7.072382593709608,
+        "density": 0.0030471273561868194,
+        "number_of_perturbed_genes_in_pathway": 1289,
+        "number_of_sig_info_in_pathway": 70959
     },
     "Phototransduction (hsa04744)": {
         "number_of_nodes": 12,
@@ -1327,6 +2119,46 @@
         "number_of_perturbed_genes_in_pathway": 37,
         "number_of_sig_info_in_pathway": 3742
     },
+    "Polycomb Repressive Complex (hsa03083)": {
+        "number_of_nodes": 2336,
+        "number_of_edges": 16529,
+        "average_degree": 7.075770547945205,
+        "density": 0.003029011364702571,
+        "number_of_perturbed_genes_in_pathway": 1291,
+        "number_of_sig_info_in_pathway": 71004
+    },
+    "Porphyrin Metabolism (hsa00860)": {
+        "number_of_nodes": 2336,
+        "number_of_edges": 16529,
+        "average_degree": 7.075770547945205,
+        "density": 0.003029011364702571,
+        "number_of_perturbed_genes_in_pathway": 1291,
+        "number_of_sig_info_in_pathway": 71004
+    },
+    "Ppar Signaling (hsa03320)": {
+        "number_of_nodes": 2236,
+        "number_of_edges": 15155,
+        "average_degree": 6.77772808586762,
+        "density": 0.003031184296005197,
+        "number_of_perturbed_genes_in_pathway": 1251,
+        "number_of_sig_info_in_pathway": 69369
+    },
+    "Primary Bile Acid Biosynthesis (hsa00120)": {
+        "number_of_nodes": 2336,
+        "number_of_edges": 16529,
+        "average_degree": 7.075770547945205,
+        "density": 0.003029011364702571,
+        "number_of_perturbed_genes_in_pathway": 1291,
+        "number_of_sig_info_in_pathway": 71004
+    },
+    "Primary Immunodeficiency (hsa05340)": {
+        "number_of_nodes": 2336,
+        "number_of_edges": 16529,
+        "average_degree": 7.075770547945205,
+        "density": 0.003029011364702571,
+        "number_of_perturbed_genes_in_pathway": 1291,
+        "number_of_sig_info_in_pathway": 71004
+    },
     "Prion (hsa05020)": {
         "number_of_nodes": 52,
         "number_of_edges": 88,
@@ -1351,6 +2183,14 @@
         "number_of_perturbed_genes_in_pathway": 58,
         "number_of_sig_info_in_pathway": 5297
     },
+    "Propanoate Metabolism (hsa00640)": {
+        "number_of_nodes": 2341,
+        "number_of_edges": 16680,
+        "average_degree": 7.125160187953866,
+        "density": 0.0030436395505996864,
+        "number_of_perturbed_genes_in_pathway": 1292,
+        "number_of_sig_info_in_pathway": 71049
+    },
     "Prostate Cancer (hsa05215)": {
         "number_of_nodes": 66,
         "number_of_edges": 240,
@@ -1358,6 +2198,30 @@
         "density": 0.05509641873278237,
         "number_of_perturbed_genes_in_pathway": 64,
         "number_of_sig_info_in_pathway": 7153
+    },
+    "Proteasome (hsa03050)": {
+        "number_of_nodes": 2342,
+        "number_of_edges": 16721,
+        "average_degree": 7.1396242527754055,
+        "density": 0.0030485159063942807,
+        "number_of_perturbed_genes_in_pathway": 1293,
+        "number_of_sig_info_in_pathway": 71061
+    },
+    "Protein Digestion And Absorption (hsa04974)": {
+        "number_of_nodes": 2342,
+        "number_of_edges": 16721,
+        "average_degree": 7.1396242527754055,
+        "density": 0.0030485159063942807,
+        "number_of_perturbed_genes_in_pathway": 1293,
+        "number_of_sig_info_in_pathway": 71061
+    },
+    "Protein Export (hsa03060)": {
+        "number_of_nodes": 2342,
+        "number_of_edges": 16721,
+        "average_degree": 7.1396242527754055,
+        "density": 0.0030485159063942807,
+        "number_of_perturbed_genes_in_pathway": 1293,
+        "number_of_sig_info_in_pathway": 71061
     },
     "Protein Processing In Endoplasmic Reticulum (hsa04141)": {
         "number_of_nodes": 22,
@@ -1374,6 +2238,38 @@
         "density": 0.02387004774009548,
         "number_of_perturbed_genes_in_pathway": 99,
         "number_of_sig_info_in_pathway": 9463
+    },
+    "Proximal Tubule Bicarbonate Reclamation (hsa04964)": {
+        "number_of_nodes": 2359,
+        "number_of_edges": 16893,
+        "average_degree": 7.161085205595591,
+        "density": 0.003035644427976088,
+        "number_of_perturbed_genes_in_pathway": 1301,
+        "number_of_sig_info_in_pathway": 71480
+    },
+    "Purine Metabolism (hsa00230)": {
+        "number_of_nodes": 2359,
+        "number_of_edges": 16893,
+        "average_degree": 7.161085205595591,
+        "density": 0.003035644427976088,
+        "number_of_perturbed_genes_in_pathway": 1301,
+        "number_of_sig_info_in_pathway": 71480
+    },
+    "Pyrimidine Metabolism (hsa00240)": {
+        "number_of_nodes": 2359,
+        "number_of_edges": 16893,
+        "average_degree": 7.161085205595591,
+        "density": 0.003035644427976088,
+        "number_of_perturbed_genes_in_pathway": 1301,
+        "number_of_sig_info_in_pathway": 71480
+    },
+    "Pyruvate Metabolism (hsa00620)": {
+        "number_of_nodes": 2359,
+        "number_of_edges": 16893,
+        "average_degree": 7.161085205595591,
+        "density": 0.003035644427976088,
+        "number_of_perturbed_genes_in_pathway": 1301,
+        "number_of_sig_info_in_pathway": 71480
     },
     "Rap1 Signaling (hsa04015)": {
         "number_of_nodes": 164,
@@ -1439,6 +2335,14 @@
         "number_of_perturbed_genes_in_pathway": 6,
         "number_of_sig_info_in_pathway": 396
     },
+    "Retinol Metabolism (hsa00830)": {
+        "number_of_nodes": 2438,
+        "number_of_edges": 17623,
+        "average_degree": 7.228465955701394,
+        "density": 0.00296491630668638,
+        "number_of_perturbed_genes_in_pathway": 1328,
+        "number_of_sig_info_in_pathway": 72681
+    },
     "Retrograde Endocannabinoid Signaling (hsa04723)": {
         "number_of_nodes": 39,
         "number_of_edges": 374,
@@ -1454,6 +2358,30 @@
         "density": 0.25,
         "number_of_perturbed_genes_in_pathway": 1,
         "number_of_sig_info_in_pathway": 74
+    },
+    "Riboflavin Metabolism (hsa00740)": {
+        "number_of_nodes": 2439,
+        "number_of_edges": 17819,
+        "average_degree": 7.305863058630586,
+        "density": 0.0029954338083766244,
+        "number_of_perturbed_genes_in_pathway": 1329,
+        "number_of_sig_info_in_pathway": 72755
+    },
+    "Ribosome (hsa03010)": {
+        "number_of_nodes": 2439,
+        "number_of_edges": 17819,
+        "average_degree": 7.305863058630586,
+        "density": 0.0029954338083766244,
+        "number_of_perturbed_genes_in_pathway": 1329,
+        "number_of_sig_info_in_pathway": 72755
+    },
+    "Ribosome Biogenesis In Eukaryotes (hsa03008)": {
+        "number_of_nodes": 2439,
+        "number_of_edges": 17819,
+        "average_degree": 7.305863058630586,
+        "density": 0.0029954338083766244,
+        "number_of_perturbed_genes_in_pathway": 1329,
+        "number_of_sig_info_in_pathway": 72755
     },
     "Rig I Like Receptor Signaling (hsa04622)": {
         "number_of_nodes": 33,
@@ -1471,6 +2399,14 @@
         "number_of_perturbed_genes_in_pathway": 3,
         "number_of_sig_info_in_pathway": 129
     },
+    "Rna Polymerase (hsa03020)": {
+        "number_of_nodes": 2364,
+        "number_of_edges": 16913,
+        "average_degree": 7.154399323181049,
+        "density": 0.0030263956527838616,
+        "number_of_perturbed_genes_in_pathway": 1303,
+        "number_of_sig_info_in_pathway": 71531
+    },
     "Salivary Secretion (hsa04970)": {
         "number_of_nodes": 11,
         "number_of_edges": 10,
@@ -1486,6 +2422,14 @@
         "density": 0.02774234693877551,
         "number_of_perturbed_genes_in_pathway": 43,
         "number_of_sig_info_in_pathway": 3838
+    },
+    "Selenocompound Metabolism (hsa00450)": {
+        "number_of_nodes": 2449,
+        "number_of_edges": 17867,
+        "average_degree": 7.2956308697427525,
+        "density": 0.002979024446607902,
+        "number_of_perturbed_genes_in_pathway": 1334,
+        "number_of_sig_info_in_pathway": 73091
     },
     "Serotonergic Synapse (hsa04726)": {
         "number_of_nodes": 43,
@@ -1519,6 +2463,22 @@
         "number_of_perturbed_genes_in_pathway": 14,
         "number_of_sig_info_in_pathway": 757
     },
+    "Snare Interactions In Vesicular Transport (hsa04130)": {
+        "number_of_nodes": 2439,
+        "number_of_edges": 17819,
+        "average_degree": 7.305863058630586,
+        "density": 0.0029954338083766244,
+        "number_of_perturbed_genes_in_pathway": 1329,
+        "number_of_sig_info_in_pathway": 72755
+    },
+    "Sphingolipid Metabolism (hsa00600)": {
+        "number_of_nodes": 2479,
+        "number_of_edges": 18072,
+        "average_degree": 7.290036304961678,
+        "density": 0.0029407165409284703,
+        "number_of_perturbed_genes_in_pathway": 1354,
+        "number_of_sig_info_in_pathway": 73988
+    },
     "Sphingolipid Signaling (hsa04071)": {
         "number_of_nodes": 54,
         "number_of_edges": 139,
@@ -1535,6 +2495,14 @@
         "number_of_perturbed_genes_in_pathway": 9,
         "number_of_sig_info_in_pathway": 1152
     },
+    "Spliceosome (hsa03040)": {
+        "number_of_nodes": 2489,
+        "number_of_edges": 18162,
+        "average_degree": 7.296906388107674,
+        "density": 0.002931661867459893,
+        "number_of_perturbed_genes_in_pathway": 1360,
+        "number_of_sig_info_in_pathway": 74218
+    },
     "Staphylococcus Aureus Infection (hsa05150)": {
         "number_of_nodes": 6,
         "number_of_edges": 5,
@@ -1543,6 +2511,46 @@
         "number_of_perturbed_genes_in_pathway": 3,
         "number_of_sig_info_in_pathway": 86
     },
+    "Starch And Sucrose Metabolism (hsa00500)": {
+        "number_of_nodes": 2490,
+        "number_of_edges": 18166,
+        "average_degree": 7.295582329317269,
+        "density": 0.0029299527426976985,
+        "number_of_perturbed_genes_in_pathway": 1361,
+        "number_of_sig_info_in_pathway": 74237
+    },
+    "Steroid Biosynthesis (hsa00100)": {
+        "number_of_nodes": 2490,
+        "number_of_edges": 18166,
+        "average_degree": 7.295582329317269,
+        "density": 0.0029299527426976985,
+        "number_of_perturbed_genes_in_pathway": 1361,
+        "number_of_sig_info_in_pathway": 74237
+    },
+    "Steroid Hormone Biosynthesis (hsa00140)": {
+        "number_of_nodes": 2490,
+        "number_of_edges": 18166,
+        "average_degree": 7.295582329317269,
+        "density": 0.0029299527426976985,
+        "number_of_perturbed_genes_in_pathway": 1361,
+        "number_of_sig_info_in_pathway": 74237
+    },
+    "Sulfur Cycle (hsa01320)": {
+        "number_of_nodes": 2490,
+        "number_of_edges": 18166,
+        "average_degree": 7.295582329317269,
+        "density": 0.0029299527426976985,
+        "number_of_perturbed_genes_in_pathway": 1361,
+        "number_of_sig_info_in_pathway": 74237
+    },
+    "Sulfur Metabolism (hsa00920)": {
+        "number_of_nodes": 2490,
+        "number_of_edges": 18166,
+        "average_degree": 7.295582329317269,
+        "density": 0.0029299527426976985,
+        "number_of_perturbed_genes_in_pathway": 1361,
+        "number_of_sig_info_in_pathway": 74237
+    },
     "Sulfur Relay System (hsa04122)": {
         "number_of_nodes": 5,
         "number_of_edges": 6,
@@ -1550,6 +2558,14 @@
         "density": 0.24,
         "number_of_perturbed_genes_in_pathway": 1,
         "number_of_sig_info_in_pathway": 36
+    },
+    "Synaptic Vesicle Cycle (hsa04721)": {
+        "number_of_nodes": 2490,
+        "number_of_edges": 18166,
+        "average_degree": 7.295582329317269,
+        "density": 0.0029299527426976985,
+        "number_of_perturbed_genes_in_pathway": 1361,
+        "number_of_sig_info_in_pathway": 74237
     },
     "Systemic Lupus Erythematosus (hsa05322)": {
         "number_of_nodes": 3,
@@ -1575,7 +2591,31 @@
         "number_of_perturbed_genes_in_pathway": 3,
         "number_of_sig_info_in_pathway": 110
     },
+    "Taurine And Hypotaurine Metabolism (hsa00430)": {
+        "number_of_nodes": 2511,
+        "number_of_edges": 18411,
+        "average_degree": 7.332138590203106,
+        "density": 0.002920007403505817,
+        "number_of_perturbed_genes_in_pathway": 1371,
+        "number_of_sig_info_in_pathway": 74675
+    },
+    "Terpenoid Backbone Biosynthesis (hsa00900)": {
+        "number_of_nodes": 2511,
+        "number_of_edges": 18411,
+        "average_degree": 7.332138590203106,
+        "density": 0.002920007403505817,
+        "number_of_perturbed_genes_in_pathway": 1371,
+        "number_of_sig_info_in_pathway": 74675
+    },
     "Tgf Beta Signaling (hsa04350)": {
+        "number_of_nodes": 63,
+        "number_of_edges": 186,
+        "average_degree": 2.9523809523809526,
+        "density": 0.04686318972033258,
+        "number_of_perturbed_genes_in_pathway": 45,
+        "number_of_sig_info_in_pathway": 2733
+    },
+    "Tgf-Beta Signaling (hsa04350)": {
         "number_of_nodes": 63,
         "number_of_edges": 186,
         "average_degree": 2.9523809523809526,
@@ -1606,6 +2646,14 @@
         "density": 0.05578512396694215,
         "number_of_perturbed_genes_in_pathway": 39,
         "number_of_sig_info_in_pathway": 3385
+    },
+    "Thiamine Metabolism (hsa00730)": {
+        "number_of_nodes": 2517,
+        "number_of_edges": 18626,
+        "average_degree": 7.400079459674215,
+        "density": 0.0029400395151665537,
+        "number_of_perturbed_genes_in_pathway": 1374,
+        "number_of_sig_info_in_pathway": 74874
     },
     "Thyroid Cancer (hsa05216)": {
         "number_of_nodes": 8,
@@ -1671,6 +2719,14 @@
         "number_of_perturbed_genes_in_pathway": 1,
         "number_of_sig_info_in_pathway": 56
     },
+    "Tryptophan Metabolism (hsa00380)": {
+        "number_of_nodes": 2566,
+        "number_of_edges": 18962,
+        "average_degree": 7.38971161340608,
+        "density": 0.002879856435466126,
+        "number_of_perturbed_genes_in_pathway": 1382,
+        "number_of_sig_info_in_pathway": 75307
+    },
     "Tuberculosis (hsa05152)": {
         "number_of_nodes": 67,
         "number_of_edges": 262,
@@ -1694,6 +2750,54 @@
         "density": 0.08471074380165289,
         "number_of_perturbed_genes_in_pathway": 22,
         "number_of_sig_info_in_pathway": 2219
+    },
+    "Tyrosine Metabolism (hsa00350)": {
+        "number_of_nodes": 2576,
+        "number_of_edges": 19181,
+        "average_degree": 7.446040372670807,
+        "density": 0.002890543622931214,
+        "number_of_perturbed_genes_in_pathway": 1386,
+        "number_of_sig_info_in_pathway": 75462
+    },
+    "Ubiquinone And Other Terpenoid Quinone Biosynthesis (hsa00130)": {
+        "number_of_nodes": 2576,
+        "number_of_edges": 19181,
+        "average_degree": 7.446040372670807,
+        "density": 0.002890543622931214,
+        "number_of_perturbed_genes_in_pathway": 1386,
+        "number_of_sig_info_in_pathway": 75462
+    },
+    "Ubiquitin Mediated Proteolysis (hsa04120)": {
+        "number_of_nodes": 2576,
+        "number_of_edges": 19181,
+        "average_degree": 7.446040372670807,
+        "density": 0.002890543622931214,
+        "number_of_perturbed_genes_in_pathway": 1386,
+        "number_of_sig_info_in_pathway": 75462
+    },
+    "Valine Leucine And Isoleucine Biosynthesis (hsa00290)": {
+        "number_of_nodes": 2578,
+        "number_of_edges": 19209,
+        "average_degree": 7.451124903025601,
+        "density": 0.0028902734301883637,
+        "number_of_perturbed_genes_in_pathway": 1387,
+        "number_of_sig_info_in_pathway": 75567
+    },
+    "Valine Leucine And Isoleucine Degradation (hsa00280)": {
+        "number_of_nodes": 2578,
+        "number_of_edges": 19209,
+        "average_degree": 7.451124903025601,
+        "density": 0.0028902734301883637,
+        "number_of_perturbed_genes_in_pathway": 1387,
+        "number_of_sig_info_in_pathway": 75567
+    },
+    "Various Types Of N Glycan Biosynthesis (hsa00513)": {
+        "number_of_nodes": 2578,
+        "number_of_edges": 19209,
+        "average_degree": 7.451124903025601,
+        "density": 0.0028902734301883637,
+        "number_of_perturbed_genes_in_pathway": 1387,
+        "number_of_sig_info_in_pathway": 75567
     },
     "Vascular Smooth Muscle Contraction (hsa04270)": {
         "number_of_nodes": 64,
@@ -1735,6 +2839,14 @@
         "number_of_perturbed_genes_in_pathway": 4,
         "number_of_sig_info_in_pathway": 362
     },
+    "Viral Life Cycle Hiv 1 (hsa03250)": {
+        "number_of_nodes": 2585,
+        "number_of_edges": 19326,
+        "average_degree": 7.476208897485494,
+        "density": 0.002892150443901545,
+        "number_of_perturbed_genes_in_pathway": 1388,
+        "number_of_sig_info_in_pathway": 75597
+    },
     "Viral Myocarditis (hsa05416)": {
         "number_of_nodes": 8,
         "number_of_edges": 10,
@@ -1750,6 +2862,86 @@
         "density": 0.06925207756232687,
         "number_of_perturbed_genes_in_pathway": 11,
         "number_of_sig_info_in_pathway": 265
+    },
+    "Virion Adenovirus (hsa03267)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
+    },
+    "Virion Ebolavirus Lyssavirus And Morbillivirus (hsa03265)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
+    },
+    "Virion Flavivirus And Alphavirus (hsa03264)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
+    },
+    "Virion Hepatitis Viruses (hsa03272)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
+    },
+    "Virion Herpesvirus (hsa03266)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
+    },
+    "Virion Human Immunodeficiency Virus (hsa03260)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
+    },
+    "Virion Lassa Virus And Sfts Virus (hsa03273)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
+    },
+    "Virion Rotavirus (hsa03271)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
+    },
+    "Vitamin B6 Metabolism (hsa00750)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
+    },
+    "Vitamin Digestion And Absorption (hsa04977)": {
+        "number_of_nodes": 2586,
+        "number_of_edges": 19338,
+        "average_degree": 7.477958236658933,
+        "density": 0.002891708521523176,
+        "number_of_perturbed_genes_in_pathway": 1389,
+        "number_of_sig_info_in_pathway": 75640
     },
     "Wnt Signaling (hsa04310)": {
         "number_of_nodes": 77,
@@ -1774,69 +2966,5 @@
         "density": 0.0027938072738660966,
         "number_of_perturbed_genes_in_pathway": 1439,
         "number_of_sig_info_in_pathway": 77771
-    },
-        "synth_ref": {
-        "number_of_nodes": 500,
-        "number_of_edges": 1000,
-        "average_degree": 2.0,
-        "density": 0.004008016032064129,
-        "number_of_perturbed_genes_in_pathway": 279,
-        "number_of_sig_info_in_pathway": 12544
-    },
-    "synth_graph_1": {
-        "number_of_nodes": 500,
-        "number_of_edges": 550,
-        "average_degree": 1.1,
-        "density": 0.002204408816633267,
-        "number_of_perturbed_genes_in_pathway": 246,
-        "number_of_sig_info_in_pathway": 12544
-    },
-    "synth_graph_2": {
-        "number_of_nodes": 500,
-        "number_of_edges": 800,
-        "average_degree": 1.6,
-        "density": 0.003206412825651303,
-        "number_of_perturbed_genes_in_pathway": 263,
-        "number_of_sig_info_in_pathway": 12544
-    },
-    "synth_graph_3": {
-        "number_of_nodes": 500,
-        "number_of_edges": 1250,
-        "average_degree": 2.5,
-        "density": 0.005012524050048096,
-        "number_of_perturbed_genes_in_pathway": 298,
-        "number_of_sig_info_in_pathway": 12544
-    },
-    "synth_graph_4": {
-        "number_of_nodes": 500,
-        "number_of_edges": 2000,
-        "average_degree": 4.0,
-        "density": 0.008032064128256513,
-        "number_of_perturbed_genes_in_pathway": 322,
-        "number_of_sig_info_in_pathway": 12544
-    },
-    "synth_graph_5": {
-        "number_of_nodes": 100,
-        "number_of_edges": 200,
-        "average_degree": 2.0,
-        "density": 0.020202020202020204,
-        "number_of_perturbed_genes_in_pathway": 71,
-        "number_of_sig_info_in_pathway": 12544
-    },
-    "synth_graph_6": {
-        "number_of_nodes": 250,
-        "number_of_edges": 500,
-        "average_degree": 2.0,
-        "density": 0.008032128512,
-        "number_of_perturbed_genes_in_pathway": 195,
-        "number_of_sig_info_in_pathway": 12544
-    },
-    "synth_graph_7": {
-        "number_of_nodes": 600,
-        "number_of_edges": 1200,
-        "average_degree": 2.0,
-        "density": 0.006678782970,
-        "number_of_perturbed_genes_in_pathway": 271,
-        "number_of_sig_info_in_pathway": 12544
     }
 }
