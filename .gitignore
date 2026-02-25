@@ -16,7 +16,10 @@ src/__pycache__/
 /reports/combined
 /reports/non_
 /reports/00_temp/samples_sizes
-/reports/*/*.json
+/reports/**/*.json
+/reports/**/runtime_summary*
+/reports/**/runtime_comparison*
+/reports/**/overview_comparison*
 /runs
 /slurm_data_creation
 /slurm_training

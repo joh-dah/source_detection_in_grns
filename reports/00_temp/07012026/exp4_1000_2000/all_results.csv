@@ -1,0 +1,9 @@
+filename,model_type,network,num_nodes,num_possible_sources,avg_num_sources,avg_portion_affected,accuracy,avg rank of source,avg norm rank of source,avg prediction for source,avg prediction over all nodes,min prediction over all nodes,max prediction over all nodes,source in top 5,source in top 20,source in top 40,source in top 80
+baseline_advanced_random_1124_2246,advanced_random,dorothea_1000_2000,,,,,0.0,156.373,0.156,0.003,0.001,0.0,0.008,0.015,0.075,0.104,0.269
+baseline_advanced_random_1125_1528,advanced_random,dorothea_1000_2000,,,,,0.0,156.373,0.156,0.003,0.001,0.0,0.008,0.015,0.075,0.104,0.269
+baseline_overlap_1124_2246,overlap,dorothea_1000_2000,,,,,0.0,195.925,0.196,0.003,0.001,0.0,0.005,0.015,0.06,0.119,0.254
+baseline_overlap_1125_1528,overlap,dorothea_1000_2000,,,,,0.0,195.925,0.196,0.003,0.001,0.0,0.005,0.015,0.06,0.119,0.254
+baseline_random_1124_2246,random,dorothea_1000_2000,,,,,0.0,542.224,0.542,0.001,0.001,0.0,0.002,0.015,0.03,0.03,0.075
+baseline_random_1125_1528,random,dorothea_1000_2000,,,,,0.0,542.224,0.542,0.001,0.001,0.0,0.002,0.015,0.03,0.03,0.075
+baseline_smallestSuperset_1124_2246,smallestSuperset,dorothea_1000_2000,,,,,0.0,536.463,0.536,0.001,0.001,0.001,0.001,0.0,0.0,0.015,0.075
+baseline_smallestSuperset_1125_1528,smallestSuperset,dorothea_1000_2000,,,,,0.0,536.463,0.536,0.001,0.001,0.001,0.001,0.0,0.0,0.015,0.075
